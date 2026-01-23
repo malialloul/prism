@@ -1,6 +1,7 @@
 import { styled } from '@mui/material/styles'
 import { Box, Card, CardContent, Avatar } from '@mui/material'
 import { motion } from 'motion/react'
+import { authColors } from '../../../styles/theme'
 
 export const HowItWorksWrapper = styled(Box)(({ theme }) => ({
   padding: '3rem 0',
@@ -55,14 +56,14 @@ export const ActionButton = styled(motion.button)(({ theme }) => ({
   fontSize: '1rem',
   fontWeight: 600,
   color: 'white',
-  background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+  background: `linear-gradient(135deg, ${authColors.primary} 0%, ${authColors.secondary} 100%)`,
   border: 'none',
   borderRadius: '8px',
   cursor: 'pointer',
   boxShadow: theme.shadows[3],
   transition: 'all 0.3s',
   '&:hover': {
-    background: 'linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)',
+    background: `linear-gradient(135deg, ${authColors.primaryHover} 0%, #2563eb 100%)`,
     boxShadow: '0 8px 24px rgba(139, 92, 246, 0.3)',
     transform: 'translateY(-2px)',
   },

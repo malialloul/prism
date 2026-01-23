@@ -52,9 +52,18 @@ export default function Navigation() {
               {darkMode ? <Brightness7 /> : <Brightness4 />}
             </IconButton>
             <Button
+              variant="text"
+              component={RouterLink}
+              to="/signin"
+              color="inherit"
+              sx={{ fontWeight: 500 }}
+            >
+              Sign In
+            </Button>
+            <Button
               variant="contained"
               component={RouterLink}
-              to="/dashboard"
+              to="/signup"
               sx={{
                 background: "linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)",
                 "&:hover": {
@@ -63,7 +72,7 @@ export default function Navigation() {
                 },
               }}
             >
-              Get Started
+              Sign Up
             </Button>
           </RightBox>
         </StyledToolbar>

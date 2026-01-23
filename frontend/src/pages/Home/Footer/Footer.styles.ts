@@ -1,5 +1,6 @@
 import { styled } from '@mui/material/styles'
 import { Box, IconButton, Paper } from '@mui/material'
+import { authColors } from '../../../styles/theme'
 
 export const FooterWrapper = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
@@ -23,7 +24,7 @@ export const LogoBox = styled(Box)({
   width: '40px',
   height: '40px',
   borderRadius: '8px',
-  background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+  background: `linear-gradient(135deg, ${authColors.primary} 0%, ${authColors.secondary} 100%)`,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

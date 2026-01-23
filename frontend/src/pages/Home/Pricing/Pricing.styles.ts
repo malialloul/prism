@@ -1,6 +1,7 @@
 import { styled } from '@mui/material/styles'
 import { Box, Card, CardContent, ListItem } from '@mui/material'
 import { motion } from 'motion/react'
+import { authColors } from '../../../styles/theme'
 
 export const PricingWrapper = styled(Box)(({ theme }) => ({
   padding: '3rem 0',
@@ -58,7 +59,7 @@ export const FeatureCheckbox = styled(Box)({
   width: '20px',
   height: '20px',
   borderRadius: '50%',
-  background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+  background: `linear-gradient(135deg, ${authColors.primary} 0%, ${authColors.secondary} 100%)`,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

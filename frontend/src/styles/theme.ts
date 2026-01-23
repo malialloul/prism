@@ -1,5 +1,25 @@
 import { createTheme } from "@mui/material";
 
+// Auth page colors - exported for use in styled components
+export const authColors = {
+  primary: '#8b5cf6',
+  primaryHover: '#7c3aed',
+  secondary: '#3b82f6',
+  accent: '#3b82f6',
+  accentLight: 'rgba(139, 92, 246, 0.1)',
+  background: '#FFFFFF',
+  backgroundAlt: '#F9FAFB',
+  border: '#E2E8F0',
+  borderHover: '#CBD5E1',
+  text: '#1E293B',
+  textSecondary: '#64748B',
+  textMuted: '#94A3B8',
+  error: '#EF4444',
+  success: '#22C55E',
+  warning: '#F97316',
+  info: '#EAB308',
+};
+
 const createAppTheme = (darkMode = false) =>
     createTheme({
         palette: {
@@ -13,6 +33,15 @@ const createAppTheme = (darkMode = false) =>
             background: {
                 default: darkMode ? "#0a0e1a" : "#ffffff",
                 paper: darkMode ? "#1a1f35" : "#f9fafb",
+            },
+            error: {
+                main: authColors.error,
+            },
+            success: {
+                main: authColors.success,
+            },
+            warning: {
+                main: authColors.warning,
             },
         },
         typography: {

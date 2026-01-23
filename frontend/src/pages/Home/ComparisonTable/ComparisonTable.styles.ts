@@ -1,6 +1,7 @@
 import { styled } from '@mui/material/styles'
 import { Box, TableHead, TableRow, TableCell, Avatar, Paper } from '@mui/material'
 import { motion } from 'motion/react'
+import { authColors } from '../../../styles/theme'
 
 export const ComparisonWrapper = styled(Box)(({ theme }) => ({
   padding: '3rem 0',
@@ -49,6 +50,6 @@ export const PrismAvatarBox = styled(Box)({
 export const PrismAvatar = styled(Avatar)({
   width: '40px',
   height: '40px',
-  background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+  background: `linear-gradient(135deg, ${authColors.primary} 0%, ${authColors.secondary} 100%)`,
   fontWeight: 700,
 })

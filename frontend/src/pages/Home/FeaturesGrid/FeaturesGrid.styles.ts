@@ -20,8 +20,8 @@ export const MotionCard = styled(motion(Card))(({ theme }) => ({
   '&:hover': {
     borderColor: theme.palette.primary.main,
     boxShadow: theme.palette.mode === 'dark'
-      ? '0 8px 24px rgba(139, 92, 246, 0.2)'
-      : '0 8px 24px rgba(139, 92, 246, 0.15)',
+      ? `0 8px 24px rgba(139, 92, 246, 0.2)`
+      : `0 8px 24px rgba(139, 92, 246, 0.15)`,
     transform: 'translateY(-4px)',
   },
 }))

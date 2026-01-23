@@ -4,8 +4,14 @@ import { ThemeProvider } from "@emotion/react";
 import { CssBaseline } from "@mui/material";
 import {
   BrowserRouter as Router,
+  Routes,
+  Route,
 } from "react-router-dom";
 import Home from "./pages/Home/Home";
+import SignIn from "./pages/SignIn/SignIn";
+import SignUp from "./pages/SignUp/SignUp";
+import ChangePassword from "./pages/ChangePassword/ChangePassword";
+import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
 
 type AppContextType = {
   darkMode: boolean;
@@ -27,7 +33,13 @@ const App: React.FC = () => {
       <AppContext.Provider value={{ darkMode, setDarkMode }}>
         <CssBaseline />
         <Router>
-          <Home />
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/change-password" element={<ChangePassword />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+          </Routes>
         </Router>
       </AppContext.Provider>
     </ThemeProvider>

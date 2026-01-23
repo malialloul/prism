@@ -1,5 +1,6 @@
 import { styled } from '@mui/material/styles'
 import { AppBar, Toolbar, Box } from '@mui/material'
+import { authColors } from '../../../styles/theme'
 
 export const StyledAppBar = styled(AppBar)(({ theme }) => ({
   backdropFilter: 'blur(10px)',
@@ -20,7 +21,7 @@ export const LogoIcon = styled(Box)({
   width: '40px',
   height: '40px',
   borderRadius: '8px',
-  background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+  background: `linear-gradient(135deg, ${authColors.primary} 0%, ${authColors.secondary} 100%)`,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

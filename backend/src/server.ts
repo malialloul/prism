@@ -1,27 +1,35 @@
-import express, { Express, Request, Response } from 'express';
-import cors from 'cors';
+// src/server.ts
+import app from './app';
 import dotenv from 'dotenv';
+import { autoMigrate } from './config/auto-migrate';
+
+// Import all schemas to register tables
+import './schemas/auth.schema';
 
 dotenv.config();
 
-const app: Express = express();
-const port = process.env.PORT || 3001;
+async function startServer() {
+  try {
+    // Run auto-migration
+    console.log('\n🔄 Running database auto-migration...');
+    const migrationResult = await autoMigrate({ verbose: true });
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+    if (!migrationResult.success) {
+      console.error('❌ Migration failed with errors:', migrationResult.errors);
+      process.exit(1);
+    }
 
-// Routes
-app.get('/', (req: Request, res: Response) => {
-  res.json({ message: 'Welcome to the API' });
-});
+    console.log('✅ Database migration complete\n');
 
-app.get('/api/health', (req: Request, res: Response) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
+    // Start server
+    app.listen(4000, () => {
+      console.log('🚀 API running on http://localhost:4000');
+      console.log('📚 Docs: http://localhost:4000/docs');
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
 
-// Start server
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-});
+startServer();
