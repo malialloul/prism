@@ -193,6 +193,12 @@ export const StyledTextField = styled(TextField)({
       },
     },
   },
+  '& .MuiInputAdornment-root .MuiIconButton-root': {
+    color: colors.textSecondary,
+    '&:hover': {
+      color: colors.text,
+    },
+  },
 });
 
 export const ErrorText = styled('span')({

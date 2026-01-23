@@ -3,10 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * API response status
+ * Schema for forgot password request
  */
-export enum ApiResponseStatus {
-    SUCCESS = 'success',
-    ERROR = 'error',
-    FAIL = 'fail',
-}
+export type ForgotPasswordDto = {
+    email: string;
+};
+

@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
-import { Box, Typography, CircularProgress } from '@mui/material';
+import { Box, Typography, CircularProgress, InputAdornment, IconButton } from '@mui/material';
 import { Api, ArrowBack, CheckCircle } from '../../assets/icons';
+import { Visibility, VisibilityOff, Check, Close } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
 import { authColors } from '../../styles/theme';
+import { useChangePassword } from '../../api/entities/auth';
 import {
   AuthWrapper,
   LeftPanel,
@@ -79,19 +81,21 @@ interface FormValues {
 }
 
 export default function ChangePassword() {
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { changePassword, isLoading, isSuccess } = useChangePassword();
 
   const handleSubmit = async (
     values: FormValues,
-    { setSubmitting, resetForm }: { setSubmitting: (isSubmitting: boolean) => void; resetForm: () => void }
+    { resetForm }: { setSubmitting: (isSubmitting: boolean) => void; resetForm: () => void }
   ) => {
-    try {
-      console.log('Change password values:', values);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setIsSuccess(true);
+    changePassword({
+      currentPassword: values.currentPassword,
+      newPassword: values.newPassword,
+    });
+    if (isSuccess) {
       resetForm();
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -178,6 +182,8 @@ export default function ChangePassword() {
                 [values.newPassword]
               );
 
+              const passwordsMatch = values.confirmPassword.length > 0 && values.newPassword === values.confirmPassword;
+
               return (
                 <Form style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                   {/* Current Password */}
@@ -187,13 +193,26 @@ export default function ChangePassword() {
                       fullWidth
                       id="currentPassword"
                       name="currentPassword"
-                      type="password"
+                      type={showCurrentPassword ? 'text' : 'password'}
                       value={values.currentPassword}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || isLoading}
                       placeholder="Enter your current password"
                       error={touched.currentPassword && Boolean(errors.currentPassword)}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                              edge="end"
+                              size="small"
+                            >
+                              {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
                     />
                     {touched.currentPassword && errors.currentPassword && (
                       <ErrorText>{errors.currentPassword}</ErrorText>
@@ -207,16 +226,26 @@ export default function ChangePassword() {
                       fullWidth
                       id="newPassword"
                       name="newPassword"
-                      type="password"
+                      type={showNewPassword ? 'text' : 'password'}
                       value={values.newPassword}
-                      onChange={(e) => {
-                        handleChange(e);
-                        setIsSuccess(false);
-                      }}
+                      onChange={handleChange}
                       onBlur={handleBlur}
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || isLoading}
                       placeholder="Create a strong new password"
                       error={touched.newPassword && Boolean(errors.newPassword)}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setShowNewPassword(!showNewPassword)}
+                              edge="end"
+                              size="small"
+                            >
+                              {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
                     />
                     {touched.newPassword && errors.newPassword && (
                       <ErrorText>{errors.newPassword}</ErrorText>
@@ -249,13 +278,35 @@ export default function ChangePassword() {
                       fullWidth
                       id="confirmPassword"
                       name="confirmPassword"
-                      type="password"
+                      type={showConfirmPassword ? 'text' : 'password'}
                       value={values.confirmPassword}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || isLoading}
                       placeholder="Confirm your new password"
                       error={touched.confirmPassword && Boolean(errors.confirmPassword)}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            {values.confirmPassword && (
+                              <Box sx={{ mr: 0.5, display: 'flex', alignItems: 'center' }}>
+                                {passwordsMatch ? (
+                                  <Check sx={{ color: authColors.success, fontSize: 20 }} />
+                                ) : (
+                                  <Close sx={{ color: authColors.error, fontSize: 20 }} />
+                                )}
+                              </Box>
+                            )}
+                            <IconButton
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              edge="end"
+                              size="small"
+                            >
+                              {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
                     />
                     {touched.confirmPassword && errors.confirmPassword && (
                       <ErrorText>{errors.confirmPassword}</ErrorText>
@@ -268,15 +319,15 @@ export default function ChangePassword() {
                       fullWidth
                       type="submit"
                       variant="contained"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || isLoading}
                     >
-                      {isSubmitting ? (
+                      {isSubmitting || isLoading ? (
                         <CircularProgress size={20} sx={{ color: 'white' }} />
                       ) : (
                         'Change Password'
                       )}
                     </PrimaryButton>
-                    <RouterLink to="/signin" style={{ textDecoration: 'none' }}>
+                    <RouterLink to="/" style={{ textDecoration: 'none' }}>
                       <SecondaryButton fullWidth variant="outlined">
                         Cancel
                       </SecondaryButton>

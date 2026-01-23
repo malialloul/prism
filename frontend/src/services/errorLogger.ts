@@ -1,5 +1,13 @@
 import { httpClient } from '../api/httpClient';
-import type { ClientErrorDto } from '../api/models/ClientErrorDto';
+
+interface ClientErrorDto {
+  message: string;
+  stack?: string;
+  componentStack?: string;
+  url: string;
+  userAgent: string;
+  timestamp: string;
+}
 
 /**
  * Send error to backend logging service

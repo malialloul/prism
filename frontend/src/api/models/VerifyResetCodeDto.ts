@@ -3,10 +3,10 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Log response
+ * Schema for verifying reset code
  */
-export type LogResponseDto = {
-    success: boolean;
-    id: string;
+export type VerifyResetCodeDto = {
+    email: string;
+    code: string;
 };
 

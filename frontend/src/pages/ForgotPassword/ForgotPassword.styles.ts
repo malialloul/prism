@@ -193,6 +193,12 @@ export const StyledTextField = styled(TextField)({
       },
     },
   },
+  '& .MuiInputAdornment-root .MuiIconButton-root': {
+    color: colors.textSecondary,
+    '&:hover': {
+      color: colors.text,
+    },
+  },
 });
 
 export const ErrorText = styled('span')({
@@ -331,7 +337,9 @@ export const StepIndicator = styled(Box)({
   marginBottom: '1rem',
 });
 
-export const StepDot = styled(Box)<{ active?: boolean; completed?: boolean }>(({ active, completed }) => ({
+export const StepDot = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'active' && prop !== 'completed',
+})<{ active?: boolean; completed?: boolean }>(({ active, completed }) => ({
   width: '2.5rem',
   height: '2.5rem',
   borderRadius: '50%',
@@ -355,7 +363,9 @@ export const StepDot = styled(Box)<{ active?: boolean; completed?: boolean }>(({
   }),
 }));
 
-export const StepLine = styled(Box)<{ completed?: boolean }>(({ completed }) => ({
+export const StepLine = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'completed',
+})<{ completed?: boolean }>(({ completed }) => ({
   width: '3rem',
   height: '2px',
   backgroundColor: completed ? colors.primary : colors.border,
@@ -367,7 +377,9 @@ export const StepLabel = styled(Box)({
   marginTop: '0.5rem',
 });
 
-export const StepTitle = styled('span')<{ active?: boolean }>(({ active }) => ({
+export const StepTitle = styled('span', {
+  shouldForwardProp: (prop) => prop !== 'active',
+})<{ active?: boolean }>(({ active }) => ({
   fontSize: '0.75rem',
   fontWeight: active ? 600 : 400,
   color: active ? colors.text : colors.textMuted,

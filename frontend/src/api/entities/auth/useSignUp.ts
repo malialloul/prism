@@ -4,7 +4,7 @@ import { AuthenticationService } from '../../services/AuthenticationService';
 import { ApiError } from '../../core/ApiError';
 import { setAuthToken } from '../../httpClient';
 import type { SignupDto } from '../../models/SignupDto';
-import type { SignupResponseDto } from '../../models/SignupResponseDto';
+import type { TokenResponseDto } from '../../models/TokenResponseDto';
 
 interface UseSignUpOptions {
   redirectTo?: string;
@@ -20,7 +20,7 @@ export function useSignUp(options: UseSignUpOptions = {}): UseSignUpReturn {
   const { redirectTo = '/' } = options;
   const navigate = useNavigate();
 
-  const mutation = useMutation<SignupResponseDto, ApiError, SignupDto>({
+  const mutation = useMutation<TokenResponseDto, ApiError, SignupDto>({
     mutationFn: (data: SignupDto) =>
       AuthenticationService.postAuthSignup(data),
     onSuccess: (response) => {

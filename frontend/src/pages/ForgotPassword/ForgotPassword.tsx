@@ -1,10 +1,12 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
-import { Box, Typography, CircularProgress } from '@mui/material';
+import { Box, Typography, CircularProgress, InputAdornment, IconButton } from '@mui/material';
 import { Api, ArrowBack, CheckCircle, Email } from '../../assets/icons';
+import { Visibility, VisibilityOff, Check, Close } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
 import { authColors } from '../../styles/theme';
+import { useForgotPassword, useVerifyResetCode, useResetPassword } from '../../api/entities/auth';
 import {
   AuthWrapper,
   LeftPanel,
@@ -91,7 +93,17 @@ export default function ForgotPassword() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // API hooks
+  const { requestReset, isLoading: isSendingCode } = useForgotPassword();
+  const { verifyCode, isLoading: isVerifying, isValid } = useVerifyResetCode();
+  const { resetPassword, isLoading: isResetting } = useResetPassword();
+
+  // Combined loading state for email step
+  const isEmailStepLoading = isSendingCode;
 
   // Resend timer
   useEffect(() => {
@@ -108,8 +120,7 @@ export default function ForgotPassword() {
     { setSubmitting }: { setSubmitting: (isSubmitting: boolean) => void }
   ) => {
     try {
-      console.log('Sending OTP to:', values.email);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      requestReset({ email: values.email });
       setEmail(values.email);
       setCurrentStep(2);
       setResendTimer(60);
@@ -155,15 +166,21 @@ export default function ForgotPassword() {
     const otpValue = otp.join('');
     if (otpValue.length !== 6) return;
 
-    console.log('Verifying OTP:', otpValue);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setCurrentStep(3);
+    verifyCode(
+      { email, code: otpValue },
+    );
   };
+
+  // Handle verification result
+  useEffect(() => {
+    if (isValid === true) {
+      setCurrentStep(3);
+    }
+  }, [isValid]);
 
   const handleResendOtp = async () => {
     if (!canResend) return;
-    console.log('Resending OTP to:', email);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    requestReset({ email });
     setOtp(['', '', '', '', '', '']);
     setResendTimer(60);
     setCanResend(false);
@@ -171,12 +188,16 @@ export default function ForgotPassword() {
   };
 
   const handlePasswordSubmit = async (
-    _values: { newPassword: string; confirmPassword: string },
+    values: { newPassword: string; confirmPassword: string },
     { setSubmitting }: { setSubmitting: (isSubmitting: boolean) => void }
   ) => {
     try {
-      console.log('Resetting password for:', email);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const otpValue = otp.join('');
+      resetPassword({
+        email,
+        code: otpValue,
+        newPassword: values.newPassword,
+      });
       setIsSuccess(true);
     } finally {
       setSubmitting(false);
@@ -303,7 +324,7 @@ export default function ForgotPassword() {
                           value={values.email}
                           onChange={handleChange}
                           onBlur={handleBlur}
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || isEmailStepLoading}
                           placeholder="Enter your email address"
                           error={touched.email && Boolean(errors.email)}
                         />
@@ -316,9 +337,9 @@ export default function ForgotPassword() {
                         fullWidth
                         type="submit"
                         variant="contained"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || isEmailStepLoading}
                       >
-                        {isSubmitting ? (
+                        {isSubmitting || isEmailStepLoading ? (
                           <CircularProgress size={20} sx={{ color: 'white' }} />
                         ) : (
                           'Send Reset Code'
@@ -370,9 +391,13 @@ export default function ForgotPassword() {
                   <PrimaryButton
                     fullWidth
                     onClick={handleVerifyOtp}
-                    disabled={otp.join('').length !== 6}
+                    disabled={otp.join('').length !== 6 || isVerifying}
                   >
-                    Verify Code
+                    {isVerifying ? (
+                      <CircularProgress size={20} sx={{ color: 'white' }} />
+                    ) : (
+                      'Verify Code'
+                    )}
                   </PrimaryButton>
 
                   <ResendLink>
@@ -412,6 +437,8 @@ export default function ForgotPassword() {
                       [values.newPassword]
                     );
 
+                    const passwordsMatch = values.confirmPassword.length > 0 && values.newPassword === values.confirmPassword;
+
                     return (
                       <Form style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <FormGroup>
@@ -420,13 +447,26 @@ export default function ForgotPassword() {
                             fullWidth
                             id="newPassword"
                             name="newPassword"
-                            type="password"
+                            type={showPassword ? 'text' : 'password'}
                             value={values.newPassword}
                             onChange={handleChange}
                             onBlur={handleBlur}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isResetting}
                             placeholder="Create a strong new password"
                             error={touched.newPassword && Boolean(errors.newPassword)}
+                            InputProps={{
+                              endAdornment: (
+                                <InputAdornment position="end">
+                                  <IconButton
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    edge="end"
+                                    size="small"
+                                  >
+                                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                                  </IconButton>
+                                </InputAdornment>
+                              ),
+                            }}
                           />
                           {touched.newPassword && errors.newPassword && (
                             <ErrorText>{errors.newPassword}</ErrorText>
@@ -457,13 +497,35 @@ export default function ForgotPassword() {
                             fullWidth
                             id="confirmPassword"
                             name="confirmPassword"
-                            type="password"
+                            type={showConfirmPassword ? 'text' : 'password'}
                             value={values.confirmPassword}
                             onChange={handleChange}
                             onBlur={handleBlur}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isResetting}
                             placeholder="Confirm your new password"
                             error={touched.confirmPassword && Boolean(errors.confirmPassword)}
+                            InputProps={{
+                              endAdornment: (
+                                <InputAdornment position="end">
+                                  {values.confirmPassword && (
+                                    <Box sx={{ mr: 0.5, display: 'flex', alignItems: 'center' }}>
+                                      {passwordsMatch ? (
+                                        <Check sx={{ color: authColors.success, fontSize: 20 }} />
+                                      ) : (
+                                        <Close sx={{ color: authColors.error, fontSize: 20 }} />
+                                      )}
+                                    </Box>
+                                  )}
+                                  <IconButton
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    edge="end"
+                                    size="small"
+                                  >
+                                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                                  </IconButton>
+                                </InputAdornment>
+                              ),
+                            }}
                           />
                           {touched.confirmPassword && errors.confirmPassword && (
                             <ErrorText>{errors.confirmPassword}</ErrorText>
@@ -474,9 +536,9 @@ export default function ForgotPassword() {
                           fullWidth
                           type="submit"
                           variant="contained"
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || isResetting}
                         >
-                          {isSubmitting ? (
+                          {isSubmitting || isResetting ? (
                             <CircularProgress size={20} sx={{ color: 'white' }} />
                           ) : (
                             'Reset Password'

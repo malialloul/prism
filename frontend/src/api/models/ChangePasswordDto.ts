@@ -3,9 +3,10 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Authentication data - token only (user details encoded in JWT)
+ * Schema for changing password (authenticated)
  */
-export type AuthDataDto = {
-    token: string;
+export type ChangePasswordDto = {
+    currentPassword: string;
+    newPassword: string;
 };
 

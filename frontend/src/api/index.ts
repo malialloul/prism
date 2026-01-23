@@ -7,16 +7,15 @@ export { CancelablePromise, CancelError } from './core/CancelablePromise';
 export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
-export type { ApiErrorResponseDto } from './models/ApiErrorResponseDto';
-export { ApiResponseStatus } from './models/ApiResponseStatus';
-export type { AuthDataDto } from './models/AuthDataDto';
-export type { ClientErrorDto } from './models/ClientErrorDto';
+export { AuthResponseDto } from './models/AuthResponseDto';
+export type { ChangePasswordDto } from './models/ChangePasswordDto';
+export type { ForgotPasswordDto } from './models/ForgotPasswordDto';
 export type { LoginDto } from './models/LoginDto';
-export type { LoginResponseDto } from './models/LoginResponseDto';
-export type { LogResponseDto } from './models/LogResponseDto';
+export { PasswordActionResponseDto } from './models/PasswordActionResponseDto';
+export type { ResetPasswordDto } from './models/ResetPasswordDto';
 export type { SignupDto } from './models/SignupDto';
-export type { SignupResponseDto } from './models/SignupResponseDto';
-export type { UserDto } from './models/UserDto';
+export { TokenResponseDto } from './models/TokenResponseDto';
+export { VerifyCodeResponseDto } from './models/VerifyCodeResponseDto';
+export type { VerifyResetCodeDto } from './models/VerifyResetCodeDto';
 
 export { AuthenticationService } from './services/AuthenticationService';
-export { LogsService } from './services/LogsService';

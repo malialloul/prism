@@ -1,7 +1,12 @@
 import axios, { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import type { ApiErrorResponseDto } from './models/ApiErrorResponseDto';
-import type { ApiResponseStatus } from './models/ApiResponseStatus';
 import { toastService } from '../services/toastService';
+
+type ApiResponseStatus = 'success' | 'error' | 'fail';
+
+interface ApiErrorResponseDto {
+  status: ApiResponseStatus;
+  message: string;
+}
 
 interface ApiResponse {
   status: ApiResponseStatus;

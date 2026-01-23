@@ -4,7 +4,7 @@ import { AuthenticationService } from '../../services/AuthenticationService';
 import { ApiError } from '../../core/ApiError';
 import { setAuthToken } from '../../httpClient';
 import type { LoginDto } from '../../models/LoginDto';
-import type { LoginResponseDto } from '../../models/LoginResponseDto';
+import type { TokenResponseDto } from '../../models/TokenResponseDto';
 
 interface UseSignInOptions {
   redirectTo?: string;
@@ -20,7 +20,7 @@ export function useSignIn(options: UseSignInOptions = {}): UseSignInReturn {
   const { redirectTo = '/' } = options;
   const navigate = useNavigate();
 
-  const mutation = useMutation<LoginResponseDto, ApiError, { credentials: LoginDto; rememberMe: boolean }>({
+  const mutation = useMutation<TokenResponseDto, ApiError, { credentials: LoginDto; rememberMe: boolean }>({
     mutationFn: ({ credentials }) =>
       AuthenticationService.postAuthLogin(credentials),
     onSuccess: (response, { rememberMe }) => {

@@ -3,11 +3,11 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * User information
+ * Schema for resetting password
  */
-export type UserDto = {
-    id: string;
+export type ResetPasswordDto = {
     email: string;
-    fullName?: string;
+    code: string;
+    newPassword: string;
 };
 
