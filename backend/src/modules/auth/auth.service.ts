@@ -1,11 +1,13 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { pool } from '../../config/db';
+import { config } from '../../config/env';
 import {
-  SignupRequestDto,
-  LoginRequestDto,
-  AuthResponseDto,
+  SignupDto,
+  LoginDto,
 } from './auth.types';
+import { ConflictError, AuthenticationError } from '../../utils/errors';
+import type { TokenResponseDto } from './auth.types';
 
 interface DbUser {
   id: string;
@@ -16,11 +18,9 @@ interface DbUser {
   updated_at: Date;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
-
 export const signupService = async (
-  body: SignupRequestDto,
-): Promise<AuthResponseDto> => {
+  body: SignupDto,
+): Promise<TokenResponseDto> => {
   const { email, password, fullName } = body;
 
   const exists = await pool.query<{ id: string }>(
@@ -29,7 +29,7 @@ export const signupService = async (
   );
 
   if (exists.rowCount && exists.rowCount > 0) {
-    throw new Error('Email already exists');
+    throw new ConflictError('An account with this email already exists');
   }
 
   const hash = await bcrypt.hash(password, 12);
@@ -43,23 +43,23 @@ export const signupService = async (
 
   const user = userResult.rows[0];
 
-  const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
-    expiresIn: '7d',
-  });
-
-  return {
-    user: {
-      id: user.id,
+  // Token contains encrypted user details
+  const token = jwt.sign(
+    {
+      userId: user.id,
       email: user.email,
       fullName: user.full_name ?? undefined,
     },
-    token,
-  };
+    config.jwt.secret,
+    { expiresIn: config.jwt.expiresIn },
+  );
+
+  return { token };
 };
 
 export const loginService = async (
-  body: LoginRequestDto,
-): Promise<AuthResponseDto> => {
+  body: LoginDto,
+): Promise<TokenResponseDto> => {
   const { email, password } = body;
 
   const result = await pool.query<DbUser>(
@@ -68,24 +68,24 @@ export const loginService = async (
   );
 
   if (!result.rowCount) {
-    throw new Error('Invalid credentials');
+    throw new AuthenticationError('Invalid email or password');
   }
 
   const user = result.rows[0];
 
   const valid = await bcrypt.compare(password, user.password_hash);
-  if (!valid) throw new Error('Invalid credentials');
+  if (!valid) throw new AuthenticationError('Invalid email or password');
 
-  const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
-    expiresIn: '7d',
-  });
-
-  return {
-    user: {
-      id: user.id,
+  // Token contains encrypted user details
+  const token = jwt.sign(
+    {
+      userId: user.id,
       email: user.email,
       fullName: user.full_name ?? undefined,
     },
-    token,
-  };
+    config.jwt.secret,
+    { expiresIn: config.jwt.expiresIn },
+  );
+
+  return { token };
 };

@@ -1,12 +1,12 @@
 // src/server.ts
+// Load and validate environment variables FIRST
+import './config/env';
+
 import app from './app';
-import dotenv from 'dotenv';
 import { autoMigrate } from './config/auto-migrate';
 
 // Import all schemas to register tables
 import './schemas/auth.schema';
-
-dotenv.config();
 
 async function startServer() {
   try {

@@ -29,22 +29,24 @@ const LoginSchemaRef = registry.register(
 const AuthResponseSchema = registry.register(
   "AuthResponse",
   z.object({
+    status: z.enum(['success', 'error', 'fail']),
     message: z.string(),
-    user: z.object({
-      id: z.string(),
-      email: z.string().email(),
-      name: z.string(),
+    data: z.object({
+      token: z.string(),
     }).optional(),
   }).openapi({
-    description: "Authentication response",
+    description: "Authentication response with token",
   })
 );
 
 const TokenResponseSchema = registry.register(
   "TokenResponse",
   z.object({
-    token: z.string(),
-    expiresIn: z.number(),
+    status: z.enum(['success', 'error', 'fail']),
+    message: z.string(),
+    data: z.object({
+      token: z.string(),
+    }).optional(),
   }).openapi({
     description: "JWT token response",
   })

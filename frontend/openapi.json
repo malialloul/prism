@@ -1,1 +1,188 @@
-{"info":{"title":"Auth API","version":"1.0.0","description":"Authentication API for Cloud API Builder"},"servers":[{"url":"http://localhost:4000","description":"Development server"}],"openapi":"3.0.0","components":{"schemas":{"Signup":{"type":"object","properties":{"email":{"type":"string","format":"email"},"password":{"type":"string","minLength":8},"name":{"type":"string","minLength":2}},"required":["email","password","name"],"description":"Schema for user signup"},"Login":{"type":"object","properties":{"email":{"type":"string","format":"email"},"password":{"type":"string"}},"required":["email","password"],"description":"Schema for user login"},"AuthResponse":{"type":"object","properties":{"message":{"type":"string"},"user":{"type":"object","properties":{"id":{"type":"string"},"email":{"type":"string","format":"email"},"name":{"type":"string"}},"required":["id","email","name"]}},"required":["message"],"description":"Authentication response"},"TokenResponse":{"type":"object","properties":{"token":{"type":"string"},"expiresIn":{"type":"number"}},"required":["token","expiresIn"],"description":"JWT token response"}},"parameters":{}},"paths":{"/auth/signup":{"post":{"summary":"Create a new user account","tags":["Authentication"],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/Signup"}}}},"responses":{"201":{"description":"User created successfully","content":{"application/json":{"schema":{"$ref":"#/components/schemas/AuthResponse"}}}},"400":{"description":"Validation error"},"409":{"description":"User already exists"}}}},"/auth/login":{"post":{"summary":"Authenticate user and get JWT token","tags":["Authentication"],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/Login"}}}},"responses":{"200":{"description":"Login successful","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TokenResponse"}}}},"401":{"description":"Invalid credentials"}}}}}}
+{
+  "info": {
+    "title": "Auth API",
+    "version": "1.0.0",
+    "description": "Authentication API for Cloud API Builder"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4000",
+      "description": "Development server"
+    }
+  ],
+  "openapi": "3.0.0",
+  "components": {
+    "schemas": {
+      "ApiResponseStatus": {
+        "type": "string",
+        "enum": ["success", "error", "fail"],
+        "description": "API response status"
+      },
+      "SignupDto": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 8 },
+          "fullName": { "type": "string", "minLength": 2 }
+        },
+        "required": ["email", "password", "fullName"],
+        "description": "Schema for user signup"
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string" }
+        },
+        "required": ["email", "password"],
+        "description": "Schema for user login"
+      },
+      "UserDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "fullName": { "type": "string" }
+        },
+        "required": ["id", "email"],
+        "description": "User information"
+      },
+      "AuthDataDto": {
+        "type": "object",
+        "properties": {
+          "user": { "$ref": "#/components/schemas/UserDto" },
+          "token": { "type": "string" }
+        },
+        "required": ["user", "token"],
+        "description": "Authentication data"
+      },
+      "SignupResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": { "$ref": "#/components/schemas/ApiResponseStatus" },
+          "message": { "type": "string" },
+          "data": { "$ref": "#/components/schemas/AuthDataDto" }
+        },
+        "required": ["status", "message"],
+        "description": "Signup response"
+      },
+      "LoginResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": { "$ref": "#/components/schemas/ApiResponseStatus" },
+          "message": { "type": "string" },
+          "data": { "$ref": "#/components/schemas/AuthDataDto" }
+        },
+        "required": ["status", "message"],
+        "description": "Login response"
+      },
+      "ApiErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": { "$ref": "#/components/schemas/ApiResponseStatus" },
+          "message": { "type": "string" },
+          "code": { "type": "string" },
+          "statusCode": { "type": "number" },
+          "requestUrl": { "type": "string" },
+          "body": { "type": "object" }
+        },
+        "required": ["status", "message", "code", "statusCode", "requestUrl"],
+        "description": "API error response"
+      },
+      "ClientErrorDto": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "stack": { "type": "string" },
+          "componentStack": { "type": "string" },
+          "url": { "type": "string" },
+          "userAgent": { "type": "string" },
+          "timestamp": { "type": "string" }
+        },
+        "required": ["message", "url", "userAgent", "timestamp"],
+        "description": "Client error payload for logging"
+      },
+      "LogResponseDto": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "id": { "type": "string" }
+        },
+        "required": ["success", "id"],
+        "description": "Log response"
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/auth/signup": {
+      "post": {
+        "summary": "Create a new user account",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SignupDto" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SignupResponseDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Authenticate user and get JWT token",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LoginResponseDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/logs/error": {
+      "post": {
+        "summary": "Log client-side error",
+        "tags": ["Logs"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ClientErrorDto" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Error logged successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LogResponseDto" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

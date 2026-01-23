@@ -1,0 +1,1 @@
+export { logErrorToService } from './errorLogger';

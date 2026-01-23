@@ -207,7 +207,7 @@ export default function Pricing() {
             </Typography>
             <Grid container spacing={2}>
               {allFeatures.map((feature, idx) => (
-                <Grid xs={12} sm={6} key={idx}>
+                <Grid item xs={12} sm={6} key={idx}>
                   <FeatureRow>
                     <FeatureCheckbox>
                       <CheckCircle sx={{ color: "white", fontSize: 14 }} />

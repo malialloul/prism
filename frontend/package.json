@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate:api": "npx openapi-typescript-codegen --input openapi.json --output src/api --client axios"
+    "generate:api": "npx openapi-typescript-codegen --input openapi.json --output src/api --client axios && node scripts/patch-api.cjs"
   },
   "dependencies": {
     "@emotion/react": "^11.11.1",

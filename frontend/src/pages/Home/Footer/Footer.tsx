@@ -17,7 +17,7 @@ export default function Footer() {
       <Container maxWidth="lg" sx={{ py: 8 }}>
         <Grid container spacing={4} sx={{ mb: 6 }}>
           {/* Brand */}
-          <Grid xs={12} md={3}>
+          <Grid item xs={12} md={3}>
             <BrandBox>
               <LogoBox>
                 <Storage sx={{ color: 'white', fontSize: 24 }} />
@@ -49,7 +49,7 @@ export default function Footer() {
           </Grid>
 
           {/* Product */}
-          <Grid xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={3}>
             <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
               Product
             </Typography>
@@ -73,7 +73,7 @@ export default function Footer() {
           </Grid>
 
           {/* Resources */}
-          <Grid xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={3}>
             <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
               Resources
             </Typography>
@@ -97,7 +97,7 @@ export default function Footer() {
           </Grid>
 
           {/* Company */}
-          <Grid xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={3}>
             <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
               Company
             </Typography>

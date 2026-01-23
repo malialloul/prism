@@ -3,10 +3,10 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * JWT token response
+ * Schema for user login
  */
-export type TokenResponse = {
-    token: string;
-    expiresIn: number;
+export type LoginDto = {
+    email: string;
+    password: string;
 };
 

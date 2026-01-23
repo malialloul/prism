@@ -3,10 +3,11 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Schema for user login
+ * Schema for user signup
  */
-export type Login = {
+export type SignupDto = {
     email: string;
     password: string;
+    fullName: string;
 };
 

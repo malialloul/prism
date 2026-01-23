@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
-import { Box, Typography, CircularProgress } from '@mui/material';
-import { Google, Microsoft, Api, ArrowBack } from '../../assets/icons';
+import { Box, Typography, CircularProgress, InputAdornment, IconButton } from '@mui/material';
+import { Google, Microsoft, Api, ArrowBack, DatabaseIcon, SparklesIcon, RocketIcon, SecurityIcon } from '../../assets/icons';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
+import { useSignIn } from '../../api/entities/auth';
+import { hashPassword } from '../../utils/crypto';
 import {
   AuthWrapper,
   LeftPanel,
@@ -48,21 +51,21 @@ const validationSchema = Yup.object().shape({
 
 export default function SignIn() {
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const { signIn, isLoading } = useSignIn();
 
-  const handleSubmit = async (values: { email: string; password: string }, { setSubmitting }: { setSubmitting: (isSubmitting: boolean) => void }) => {
-    try {
-      console.log('Sign in values:', values, 'Remember me:', rememberMe);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-    } finally {
-      setSubmitting(false);
-    }
+  const handleSubmit = async (
+    values: { email: string; password: string },
+  ): Promise<void> => {
+    const hashedPassword = await hashPassword(values.password);
+    signIn({ email: values.email, password: hashedPassword }, rememberMe);
   };
 
   const features = [
-    { icon: '�', text: 'Connect any database in seconds' },
-    { icon: '✨', text: 'Visual schema designer - no coding required' },
-    { icon: '🚀', text: 'Generate production-ready APIs instantly' },
-    { icon: '🔒', text: 'Enterprise-grade security built-in' },
+    { icon: DatabaseIcon, text: 'Connect any database in seconds' },
+    { icon: SparklesIcon, text: 'Visual schema designer - no coding required' },
+    { icon: RocketIcon, text: 'Generate production-ready APIs instantly' },
+    { icon: SecurityIcon, text: 'Enterprise-grade security built-in' },
   ];
 
   return (
@@ -80,7 +83,7 @@ export default function SignIn() {
           <FeatureList>
             {features.map((feature, index) => (
               <FeatureItem key={index}>
-                <FeatureIcon>{feature.icon}</FeatureIcon>
+                <FeatureIcon as={feature.icon} />
                 {feature.text}
               </FeatureItem>
             ))}
@@ -117,8 +120,9 @@ export default function SignIn() {
             validationSchema={validationSchema}
             onSubmit={handleSubmit}
           >
-            {({ values, errors, touched, isSubmitting, handleChange, handleBlur }) => (
+            {({ values, errors, touched, handleChange, handleBlur }) => (
               <Form style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
                 <FormGroup>
                   <InputLabel htmlFor="email">Email Address</InputLabel>
                   <StyledTextField
@@ -129,7 +133,7 @@ export default function SignIn() {
                     value={values.email}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    disabled={isSubmitting}
+                    disabled={isLoading}
                     placeholder="Enter your email address"
                     error={touched.email && Boolean(errors.email)}
                   />
@@ -144,13 +148,27 @@ export default function SignIn() {
                     fullWidth
                     id="password"
                     name="password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     value={values.password}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    disabled={isSubmitting}
+                    disabled={isLoading}
                     placeholder="Enter your password"
                     error={touched.password && Boolean(errors.password)}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge="end"
+                            size="small"
+                            sx={{ color: 'rgba(255,255,255,0.5)' }}
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
                   />
                   {touched.password && errors.password && (
                     <ErrorText>{errors.password}</ErrorText>
@@ -177,9 +195,9 @@ export default function SignIn() {
                   fullWidth
                   type="submit"
                   variant="contained"
-                  disabled={isSubmitting}
+                  disabled={isLoading}
                 >
-                  {isSubmitting ? (
+                  {isLoading ? (
                     <CircularProgress size={20} sx={{ color: 'white' }} />
                   ) : (
                     'Sign In'
@@ -194,14 +212,14 @@ export default function SignIn() {
                   <OAuthButton
                     variant="outlined"
                     startIcon={<Google sx={{ fontSize: 18, color: '#DB4437' }} />}
-                    disabled={isSubmitting}
+                    disabled={isLoading}
                   >
                     Google
                   </OAuthButton>
                   <OAuthButton
                     variant="outlined"
                     startIcon={<Microsoft sx={{ fontSize: 18, color: '#00A4EF' }} />}
-                    disabled={isSubmitting}
+                    disabled={isLoading}
                   >
                     Microsoft
                   </OAuthButton>

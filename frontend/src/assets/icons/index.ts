@@ -43,3 +43,12 @@ export {
   Help,
   Logout,
 } from '@mui/icons-material';
+
+// Custom SVG Icons
+export { DatabaseIcon } from './DatabaseIcon';
+export { SparklesIcon } from './SparklesIcon';
+export { RocketIcon } from './RocketIcon';
+export { SecurityIcon } from './SecurityIcon';
+export { BrushIcon } from './BrushIcon';
+export { LightningIcon } from './LightningIcon';
+export { DocumentationIcon } from './DocumentationIcon';

@@ -1,12 +1,14 @@
 // src/modules/auth/auth.types.ts
 
-export interface SignupRequestDto {
+import type { ApiResponseDto } from '../../utils/errors';
+
+export interface SignupDto {
   email: string;
   password: string;
   fullName?: string;
 }
 
-export interface LoginRequestDto {
+export interface LoginDto {
   email: string;
   password: string;
 }
@@ -17,7 +19,10 @@ export interface UserDto {
   fullName?: string;
 }
 
-export interface AuthResponseDto {
-  user: UserDto;
+export interface TokenResponseDto {
   token: string;
 }
+
+export type LoginResponseDto = ApiResponseDto<TokenResponseDto>;
+
+export type SignupResponseDto = ApiResponseDto<TokenResponseDto>;

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createAppTheme } from "./styles/theme";
 import { ThemeProvider } from "@emotion/react";
 import { CssBaseline } from "@mui/material";
@@ -12,6 +13,19 @@ import SignIn from "./pages/SignIn/SignIn";
 import SignUp from "./pages/SignUp/SignUp";
 import ChangePassword from "./pages/ChangePassword/ChangePassword";
 import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
+import { ErrorBoundary, ToastProvider } from "./components";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+});
 
 type AppContextType = {
   darkMode: boolean;
@@ -29,20 +43,26 @@ const App: React.FC = () => {
   const appTheme = useMemo(() => createAppTheme(darkMode), [darkMode]);
 
   return (
-    <ThemeProvider theme={appTheme}>
-      <AppContext.Provider value={{ darkMode, setDarkMode }}>
-        <CssBaseline />
-        <Router>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/signin" element={<SignIn />} />
-            <Route path="/signup" element={<SignUp />} />
-            <Route path="/change-password" element={<ChangePassword />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-          </Routes>
-        </Router>
-      </AppContext.Provider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={appTheme}>
+          <AppContext.Provider value={{ darkMode, setDarkMode }}>
+            <CssBaseline />
+            <ToastProvider>
+              <Router>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/signin" element={<SignIn />} />
+                  <Route path="/signup" element={<SignUp />} />
+                  <Route path="/change-password" element={<ChangePassword />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                </Routes>
+              </Router>
+            </ToastProvider>
+          </AppContext.Provider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 

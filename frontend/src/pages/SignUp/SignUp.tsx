@@ -1,10 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
-import { Box, Typography, CircularProgress } from '@mui/material';
-import { Google, Microsoft, Api, ArrowBack } from '../../assets/icons';
+import { Box, Typography, CircularProgress, InputAdornment, IconButton } from '@mui/material';
+import { Google, Microsoft, Api, ArrowBack, DatabaseIcon, BrushIcon, LightningIcon, DocumentationIcon } from '../../assets/icons';
+import { Visibility, VisibilityOff, Check, Close } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
 import { authColors } from '../../styles/theme';
+import { useSignUp } from '../../api/entities/auth';
+import { hashPassword } from '../../utils/crypto';
 import {
   AuthWrapper,
   LeftPanel,
@@ -91,23 +94,24 @@ interface FormValues {
 }
 
 export default function SignUp() {
-  const handleSubmit = async (
-    values: FormValues,
-    { setSubmitting }: { setSubmitting: (isSubmitting: boolean) => void }
-  ) => {
-    try {
-      console.log('Sign up values:', values);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-    } finally {
-      setSubmitting(false);
-    }
+  const { signUp, isLoading } = useSignUp();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const handleSubmit = async (values: FormValues): Promise<void> => {
+    const hashedPassword = await hashPassword(values.password);
+    signUp({
+      fullName: values.fullName,
+      email: values.email,
+      password: hashedPassword,
+    });
   };
 
   const features = [
-    { icon: '�', text: 'Connect PostgreSQL, MySQL, MongoDB & more' },
-    { icon: '🎨', text: 'Visual drag-and-drop schema builder' },
-    { icon: '⚡', text: 'Auto-generate REST & GraphQL endpoints' },
-    { icon: '📚', text: 'Interactive API documentation included' },
+    { icon: DatabaseIcon, text: 'Connect PostgreSQL and MySQL' },
+    { icon: BrushIcon, text: 'Visual drag-and-drop schema builder' },
+    { icon: LightningIcon, text: 'Auto-generate REST & GraphQL endpoints' },
+    { icon: DocumentationIcon, text: 'Interactive API documentation included' },
   ];
 
   return (
@@ -125,7 +129,7 @@ export default function SignUp() {
           <FeatureList>
             {features.map((feature, index) => (
               <FeatureItem key={index}>
-                <FeatureIcon>{feature.icon}</FeatureIcon>
+                <FeatureIcon as={feature.icon} />
                 {feature.text}
               </FeatureItem>
             ))}
@@ -172,7 +176,6 @@ export default function SignUp() {
               values,
               errors,
               touched,
-              isSubmitting,
               handleChange,
               handleBlur,
               setFieldValue,
@@ -195,7 +198,7 @@ export default function SignUp() {
                       value={values.fullName}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      disabled={isSubmitting}
+                      disabled={isLoading}
                       placeholder="Enter your full name"
                       error={touched.fullName && Boolean(errors.fullName)}
                     />
@@ -215,7 +218,7 @@ export default function SignUp() {
                       value={values.email}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      disabled={isSubmitting}
+                      disabled={isLoading}
                       placeholder="Enter your email address"
                       error={touched.email && Boolean(errors.email)}
                     />
@@ -231,13 +234,27 @@ export default function SignUp() {
                       fullWidth
                       id="password"
                       name="password"
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       value={values.password}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      disabled={isSubmitting}
+                      disabled={isLoading}
                       placeholder="Create a strong password"
                       error={touched.password && Boolean(errors.password)}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setShowPassword(!showPassword)}
+                              edge="end"
+                              size="small"
+                              sx={{ color: 'rgba(255,255,255,0.5)' }}
+                            >
+                              {showPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
                     />
                     {touched.password && errors.password && (
                       <ErrorText>{errors.password}</ErrorText>
@@ -270,16 +287,42 @@ export default function SignUp() {
                       fullWidth
                       id="confirmPassword"
                       name="confirmPassword"
-                      type="password"
+                      type={showConfirmPassword ? 'text' : 'password'}
                       value={values.confirmPassword}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      disabled={isSubmitting}
+                      disabled={isLoading}
                       placeholder="Confirm your password"
                       error={touched.confirmPassword && Boolean(errors.confirmPassword)}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            {values.confirmPassword && values.password && (
+                              values.confirmPassword === values.password ? (
+                                <Check sx={{ color: authColors.success, mr: 1 }} />
+                              ) : (
+                                <Close sx={{ color: authColors.error, mr: 1 }} />
+                              )
+                            )}
+                            <IconButton
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              edge="end"
+                              size="small"
+                              sx={{ color: 'rgba(255,255,255,0.5)' }}
+                            >
+                              {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
                     />
                     {touched.confirmPassword && errors.confirmPassword && (
                       <ErrorText>{errors.confirmPassword}</ErrorText>
+                    )}
+                    {values.confirmPassword && values.password && values.confirmPassword === values.password && (
+                      <Typography sx={{ color: authColors.success, fontSize: '0.75rem', mt: 0.5 }}>
+                        Passwords match
+                      </Typography>
                     )}
                   </FormGroup>
 
@@ -288,7 +331,7 @@ export default function SignUp() {
                     <StyledCheckbox
                       checked={values.agreeTerms}
                       onChange={(e) => setFieldValue('agreeTerms', e.target.checked)}
-                      disabled={isSubmitting}
+                      disabled={isLoading}
                       size="small"
                     />
                     <TermsLabel>
@@ -311,9 +354,9 @@ export default function SignUp() {
                     fullWidth
                     type="submit"
                     variant="contained"
-                    disabled={isSubmitting}
+                    disabled={isLoading}
                   >
-                    {isSubmitting ? (
+                    {isLoading ? (
                       <CircularProgress size={20} sx={{ color: 'white' }} />
                     ) : (
                       'Create Account'
@@ -330,14 +373,14 @@ export default function SignUp() {
                     <OAuthButton
                       variant="outlined"
                       startIcon={<Google sx={{ fontSize: 18, color: '#DB4437' }} />}
-                      disabled={isSubmitting}
+                      disabled={isLoading}
                     >
                       Google
                     </OAuthButton>
                     <OAuthButton
                       variant="outlined"
                       startIcon={<Microsoft sx={{ fontSize: 18, color: '#00A4EF' }} />}
-                      disabled={isSubmitting}
+                      disabled={isLoading}
                     >
                       Microsoft
                     </OAuthButton>

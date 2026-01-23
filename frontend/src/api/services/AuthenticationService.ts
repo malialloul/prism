@@ -2,10 +2,10 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { AuthResponse } from '../models/AuthResponse';
-import type { Login } from '../models/Login';
-import type { Signup } from '../models/Signup';
-import type { TokenResponse } from '../models/TokenResponse';
+import type { LoginDto } from '../models/LoginDto';
+import type { LoginResponseDto } from '../models/LoginResponseDto';
+import type { SignupDto } from '../models/SignupDto';
+import type { SignupResponseDto } from '../models/SignupResponseDto';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -13,40 +13,33 @@ export class AuthenticationService {
     /**
      * Create a new user account
      * @param requestBody
-     * @returns AuthResponse User created successfully
+     * @returns SignupResponseDto User created successfully
      * @throws ApiError
      */
     public static postAuthSignup(
-        requestBody?: Signup,
-    ): CancelablePromise<AuthResponse> {
+        requestBody?: SignupDto,
+    ): CancelablePromise<SignupResponseDto> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/auth/signup',
             body: requestBody,
             mediaType: 'application/json',
-            errors: {
-                400: `Validation error`,
-                409: `User already exists`,
-            },
         });
     }
     /**
      * Authenticate user and get JWT token
      * @param requestBody
-     * @returns TokenResponse Login successful
+     * @returns LoginResponseDto Login successful
      * @throws ApiError
      */
     public static postAuthLogin(
-        requestBody?: Login,
-    ): CancelablePromise<TokenResponse> {
+        requestBody?: LoginDto,
+    ): CancelablePromise<LoginResponseDto> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/auth/login',
             body: requestBody,
             mediaType: 'application/json',
-            errors: {
-                401: `Invalid credentials`,
-            },
         });
     }
 }

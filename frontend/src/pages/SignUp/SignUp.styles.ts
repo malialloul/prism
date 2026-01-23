@@ -89,6 +89,11 @@ export const FeatureIcon = styled(Box)({
   alignItems: 'center',
   justifyContent: 'center',
   fontSize: '1rem',
+  '& svg': {
+    width: '100%',
+    height: '100%',
+    color: 'inherit',
+  },
 });
 
 export const RightPanel = styled(Box)(({ theme }) => ({
@@ -193,6 +198,12 @@ export const StyledTextField = styled(TextField)({
   },
   '& .MuiInputLabel-root': {
     display: 'none',
+  },
+  '& .MuiInputAdornment-root .MuiIconButton-root': {
+    color: colors.textSecondary,
+    '&:hover': {
+      color: colors.text,
+    },
   },
 });
 
