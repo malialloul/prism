@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createAppTheme } from "./styles/theme";
-import { ThemeProvider } from "@emotion/react";
+import { ThemeProvider } from "@mui/material/styles";
 import { CssBaseline } from "@mui/material";
 import {
   BrowserRouter as Router,
@@ -13,6 +13,7 @@ import SignIn from "./pages/SignIn/SignIn";
 import SignUp from "./pages/SignUp/SignUp";
 import ChangePassword from "./pages/ChangePassword/ChangePassword";
 import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
+import Dashboard from "./pages/Dashboard/Dashboard";
 import { ErrorBoundary, ToastProvider } from "./components";
 
 const queryClient = new QueryClient({
@@ -56,6 +57,7 @@ const App: React.FC = () => {
                   <Route path="/signup" element={<SignUp />} />
                   <Route path="/change-password" element={<ChangePassword />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
                 </Routes>
               </Router>
             </ToastProvider>

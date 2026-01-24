@@ -17,7 +17,7 @@ interface UseSignInReturn {
 }
 
 export function useSignIn(options: UseSignInOptions = {}): UseSignInReturn {
-  const { redirectTo = '/' } = options;
+  const { redirectTo = '/dashboard' } = options;
   const navigate = useNavigate();
 
   const mutation = useMutation<TokenResponseDto, ApiError, { credentials: LoginDto; rememberMe: boolean }>({
