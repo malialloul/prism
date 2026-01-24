@@ -13,6 +13,8 @@ import {
   verify2FAService,
   disable2FAService,
   login2FAService,
+  deactivateAccountService,
+  deleteAccountService,
 } from './auth.service';
 import { 
   SignupDto, 
@@ -26,6 +28,8 @@ import {
   Verify2FADto,
   Disable2FADto,
   Login2FADto,
+  DeactivateAccountDto,
+  DeleteAccountDto,
 } from './auth.types';
 import { asyncHandler } from '../../middleware/errorHandler';
 import type { 
@@ -41,6 +45,8 @@ import type {
   Verify2FAResponseDto,
   Disable2FAResponseDto,
   Login2FAResponseDto,
+  DeactivateAccountResponseDto,
+  DeleteAccountResponseDto,
 } from './auth.types';
 
 export const signupHandler = asyncHandler(async (
@@ -225,6 +231,34 @@ export const login2FAHandler = asyncHandler(async (
     status: 'success',
     message: 'Login successful',
     data,
+  };
+  res.json(result);
+});
+
+export const deactivateAccountHandler = asyncHandler(async (
+  req: Request<{}, {}, DeactivateAccountDto>,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const userId = req.user!.userId;
+  const data = await deactivateAccountService(userId, req.body);
+  const result: DeactivateAccountResponseDto = {
+    status: 'success',
+    message: data.message,
+  };
+  res.json(result);
+});
+
+export const deleteAccountHandler = asyncHandler(async (
+  req: Request<{}, {}, DeleteAccountDto>,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const userId = req.user!.userId;
+  const data = await deleteAccountService(userId, req.body);
+  const result: DeleteAccountResponseDto = {
+    status: 'success',
+    message: data.message,
   };
   res.json(result);
 });

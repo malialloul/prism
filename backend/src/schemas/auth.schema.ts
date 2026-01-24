@@ -10,6 +10,7 @@ export const UserSchema = registerTable(
     fullName: z.string().optional(),
     twoFactorSecret: z.string().optional(),
     twoFactorEnabled: z.boolean().default(false),
+    deactivatedAt: z.date().optional(),
   }),
   {
     withId: true,

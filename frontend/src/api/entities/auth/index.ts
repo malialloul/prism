@@ -10,3 +10,5 @@ export { useSetup2FA } from './useSetup2FA';
 export { useVerify2FA } from './useVerify2FA';
 export { useDisable2FA } from './useDisable2FA';
 export { useLogin2FA } from './useLogin2FA';
+export { useDeactivateAccount } from './useDeactivateAccount';
+export { useDeleteAccount } from './useDeleteAccount';

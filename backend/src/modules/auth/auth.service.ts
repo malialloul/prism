@@ -17,6 +17,8 @@ import type {
   Verify2FADto,
   Disable2FADto,
   Login2FADto,
+  DeactivateAccountDto,
+  DeleteAccountDto,
   TokenResponseDto,
   TwoFactorRequiredDto,
   VerifyCodeResultDto,
@@ -88,6 +90,15 @@ export const loginService = async (
 
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) throw new AuthenticationError('Invalid email or password');
+
+  // Check if account is deactivated and reactivate it
+  if (user.deactivated_at) {
+    await pool.query(
+      'UPDATE users SET deactivated_at = NULL, updated_at = NOW() WHERE id = $1',
+      [user.id],
+    );
+    console.log(`Account reactivated for user: ${user.email}`);
+  }
 
   // Check if 2FA is enabled
   if (user.two_factor_enabled && user.two_factor_secret) {
@@ -669,4 +680,99 @@ export const login2FAService = async (
   );
 
   return { token };
+};
+
+/**
+ * Deactivate account for authenticated user
+ */
+export const deactivateAccountService = async (
+  userId: string,
+  body: DeactivateAccountDto,
+): Promise<MessageResponseDto> => {
+  const { password } = body;
+
+  // Find user
+  const userResult = await pool.query<DbUserDto>(
+    'SELECT id, password_hash, deactivated_at FROM users WHERE id = $1',
+    [userId],
+  );
+
+  if (!userResult.rowCount) {
+    throw new NotFoundError('User not found');
+  }
+
+  const user = userResult.rows[0];
+
+  // Verify password
+  const validPassword = await bcrypt.compare(password, user.password_hash);
+  if (!validPassword) {
+    throw new ValidationError('Password is incorrect');
+  }
+
+  // Check if already deactivated
+  if (user.deactivated_at) {
+    throw new ValidationError('Account is already deactivated');
+  }
+
+  // Deactivate the account
+  await pool.query(
+    'UPDATE users SET deactivated_at = NOW(), updated_at = NOW() WHERE id = $1',
+    [userId],
+  );
+
+  return { message: 'Account deactivated successfully. You can reactivate by logging in again.' };
+};
+
+/**
+ * Reactivate a deactivated account during login
+ */
+export const reactivateAccountService = async (
+  userId: string,
+): Promise<void> => {
+  await pool.query(
+    'UPDATE users SET deactivated_at = NULL, updated_at = NOW() WHERE id = $1',
+    [userId],
+  );
+};
+
+/**
+ * Delete account permanently for authenticated user
+ */
+export const deleteAccountService = async (
+  userId: string,
+  body: DeleteAccountDto,
+): Promise<MessageResponseDto> => {
+  const { password, confirmation } = body;
+
+  // Verify confirmation text
+  if (confirmation !== 'DELETE') {
+    throw new ValidationError('Please type DELETE to confirm account deletion');
+  }
+
+  // Find user
+  const userResult = await pool.query<DbUserDto>(
+    'SELECT id, password_hash FROM users WHERE id = $1',
+    [userId],
+  );
+
+  if (!userResult.rowCount) {
+    throw new NotFoundError('User not found');
+  }
+
+  const user = userResult.rows[0];
+
+  // Verify password
+  const validPassword = await bcrypt.compare(password, user.password_hash);
+  if (!validPassword) {
+    throw new ValidationError('Password is incorrect');
+  }
+
+  // Delete related data first (foreign key constraints)
+  await pool.query('DELETE FROM backup_codes WHERE user_id = $1', [userId]);
+  await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [userId]);
+
+  // Delete the user
+  await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+
+  return { message: 'Account deleted permanently' };
 };

@@ -67,6 +67,15 @@ export interface Login2FADto {
   tempToken: string;
 }
 
+export interface DeactivateAccountDto {
+  password: string;
+}
+
+export interface DeleteAccountDto {
+  password: string;
+  confirmation: string; // must be "DELETE"
+}
+
 export interface TwoFactorRequiredDto {
   requires2FA: true;
   tempToken: string;
@@ -107,6 +116,7 @@ export interface DbUserDto {
   full_name: string | null;
   two_factor_secret: string | null;
   two_factor_enabled: boolean;
+  deactivated_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -153,3 +163,7 @@ export type TwoFactorStatusResponseDto = ApiResponseDto<TwoFactorStatusDto>;
 export type Login2FAResponseDto = ApiResponseDto<TokenResponseDto>;
 
 export type TwoFactorRequiredResponseDto = ApiResponseDto<TwoFactorRequiredDto>;
+
+export type DeactivateAccountResponseDto = ApiResponseDto<MessageResponseDto>;
+
+export type DeleteAccountResponseDto = ApiResponseDto<MessageResponseDto>;

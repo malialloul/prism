@@ -26,7 +26,7 @@ import {
 import { Box } from '@mui/material';
 import { getDashboardColors } from '../../styles/theme';
 import { useTheme as useMuiTheme } from '@mui/material/styles';
-import { getUserFromToken } from '../../api/httpClient';
+import { getUserFromToken, clearAuthToken } from '../../api/httpClient';
 
 type SettingsSection = 'account' | 'subscription' | 'security' | 'danger';
 
@@ -93,14 +93,16 @@ const Settings = () => {
     // Call API to logout all other sessions
   };
 
-  const handleDeactivate = () => {
-    console.log('Deactivate account clicked');
-    // Show confirmation modal
+  const handleDeactivateSuccess = () => {
+    // Clear token cookie and redirect to login
+    clearAuthToken();
+    navigate('/signin');
   };
 
-  const handleDelete = () => {
-    console.log('Delete account clicked');
-    // Show confirmation modal with extra verification
+  const handleDeleteSuccess = () => {
+    // Clear token cookie and redirect to home
+    clearAuthToken();
+    navigate('/');
   };
 
   const sectionConfig = {
@@ -141,7 +143,7 @@ const Settings = () => {
           />
         );
       case 'danger':
-        return <DangerZone onDeactivate={handleDeactivate} onDelete={handleDelete} />;
+        return <DangerZone onDeactivateSuccess={handleDeactivateSuccess} onDeleteSuccess={handleDeleteSuccess} />;
       default:
         return null;
     }

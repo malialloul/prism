@@ -13,6 +13,8 @@ import {
   verify2FAHandler,
   disable2FAHandler,
   login2FAHandler,
+  deactivateAccountHandler,
+  deleteAccountHandler,
 } from './auth.controller';
 import { authMiddleware } from '../../middleware/auth';
 
@@ -35,5 +37,9 @@ router.get('/2fa/status', authMiddleware, get2FAStatusHandler);
 router.post('/2fa/setup', authMiddleware, setup2FAHandler);
 router.post('/2fa/verify', authMiddleware, verify2FAHandler);
 router.post('/2fa/disable', authMiddleware, disable2FAHandler);
+
+// Account management routes (protected)
+router.post('/account/deactivate', authMiddleware, deactivateAccountHandler);
+router.post('/account/delete', authMiddleware, deleteAccountHandler);
 
 export default router;
