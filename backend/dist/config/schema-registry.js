@@ -1,0 +1,153 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.registerTable = registerTable;
+exports.getRegisteredTables = getRegisteredTables;
+exports.getTableDefinition = getTableDefinition;
+exports.clearRegistry = clearRegistry;
+const tableRegistry = new Map();
+/**
+ * Maps Zod types to PostgreSQL column types
+ */
+function zodTypeToPostgres(zodType, fieldName) {
+    const typeName = zodType._def.typeName;
+    // Handle optional/nullable wrappers
+    if (typeName === "ZodOptional" || typeName === "ZodNullable") {
+        return zodTypeToPostgres(zodType._def.innerType, fieldName);
+    }
+    // Handle default wrappers
+    if (typeName === "ZodDefault") {
+        return zodTypeToPostgres(zodType._def.innerType, fieldName);
+    }
+    switch (typeName) {
+        case "ZodString":
+            // Check for specific string formats
+            const checks = zodType._def.checks || [];
+            for (const check of checks) {
+                if (check.kind === "email")
+                    return "VARCHAR(255)";
+                if (check.kind === "uuid")
+                    return "UUID";
+                if (check.kind === "url")
+                    return "TEXT";
+                if (check.kind === "max" && check.value <= 255)
+                    return `VARCHAR(${check.value})`;
+            }
+            return "TEXT";
+        case "ZodNumber":
+            const numChecks = zodType._def.checks || [];
+            const isInt = numChecks.some((c) => c.kind === "int");
+            return isInt ? "INTEGER" : "DOUBLE PRECISION";
+        case "ZodBoolean":
+            return "BOOLEAN";
+        case "ZodDate":
+            return "TIMESTAMP WITH TIME ZONE";
+        case "ZodEnum":
+            const values = zodType._def.values;
+            return `VARCHAR(${Math.max(...values.map((v) => v.length), 50)})`;
+        case "ZodArray":
+            return "JSONB";
+        case "ZodObject":
+            return "JSONB";
+        case "ZodBigInt":
+            return "BIGINT";
+        default:
+            return "TEXT";
+    }
+}
+/**
+ * Checks if a Zod type is optional or nullable
+ */
+function isNullable(zodType) {
+    const typeName = zodType._def.typeName;
+    return typeName === "ZodOptional" || typeName === "ZodNullable";
+}
+/**
+ * Gets the default value for a Zod type if it has one
+ */
+function getDefaultValue(zodType) {
+    if (zodType._def.typeName === "ZodDefault") {
+        const defaultVal = zodType._def.defaultValue();
+        if (typeof defaultVal === "string")
+            return `'${defaultVal}'`;
+        if (typeof defaultVal === "number")
+            return String(defaultVal);
+        if (typeof defaultVal === "boolean")
+            return String(defaultVal);
+        if (defaultVal instanceof Date)
+            return `'${defaultVal.toISOString()}'`;
+    }
+    return undefined;
+}
+/**
+ * Registers a Zod schema as a database table
+ */
+function registerTable(name, schema, options = {}) {
+    const { tableName = name.toLowerCase().replace(/schema$/i, ""), withId = true, withTimestamps = true, columnOverrides = {}, excludeFields = [], } = options;
+    const columns = [];
+    // Add automatic ID column
+    if (withId) {
+        columns.push({
+            name: "id",
+            type: "UUID",
+            nullable: false,
+            primaryKey: true,
+            defaultValue: "gen_random_uuid()",
+        });
+    }
+    // Process schema fields
+    const shape = schema.shape;
+    for (const [fieldName, zodType] of Object.entries(shape)) {
+        if (excludeFields.includes(fieldName))
+            continue;
+        // Convert camelCase to snake_case for column names
+        const columnName = fieldName.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+        const override = columnOverrides[fieldName] || {};
+        columns.push({
+            name: columnName,
+            type: zodTypeToPostgres(zodType, fieldName),
+            nullable: isNullable(zodType),
+            defaultValue: getDefaultValue(zodType),
+            ...override,
+        });
+    }
+    // Add automatic timestamps
+    if (withTimestamps) {
+        columns.push({
+            name: "created_at",
+            type: "TIMESTAMP WITH TIME ZONE",
+            nullable: false,
+            defaultValue: "NOW()",
+        });
+        columns.push({
+            name: "updated_at",
+            type: "TIMESTAMP WITH TIME ZONE",
+            nullable: false,
+            defaultValue: "NOW()",
+        });
+    }
+    tableRegistry.set(tableName, {
+        tableName,
+        columns,
+        schema,
+    });
+    return schema;
+}
+/**
+ * Gets all registered table definitions
+ */
+function getRegisteredTables() {
+    return Array.from(tableRegistry.values());
+}
+/**
+ * Gets a specific table definition by name
+ */
+function getTableDefinition(tableName) {
+    return tableRegistry.get(tableName);
+}
+/**
+ * Clears all registered tables (useful for testing)
+ */
+function clearRegistry() {
+    tableRegistry.clear();
+}
+//# sourceMappingURL=schema-registry.js.map

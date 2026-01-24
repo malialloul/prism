@@ -14,6 +14,7 @@ import SignUp from "./pages/SignUp/SignUp";
 import ChangePassword from "./pages/ChangePassword/ChangePassword";
 import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
 import Dashboard from "./pages/Dashboard/Dashboard";
+import Settings from "./pages/Settings/Settings";
 import { ErrorBoundary, ToastProvider } from "./components";
 
 const queryClient = new QueryClient({
@@ -58,6 +59,7 @@ const App: React.FC = () => {
                   <Route path="/change-password" element={<ChangePassword />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/settings" element={<Settings />} />
                 </Routes>
               </Router>
             </ToastProvider>

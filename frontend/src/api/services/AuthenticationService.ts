@@ -3,8 +3,11 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { AuthResponseDto } from '../models/AuthResponseDto';
+import type { ChangeEmailDto } from '../models/ChangeEmailDto';
+import type { ChangeEmailResponseDto } from '../models/ChangeEmailResponseDto';
 import type { ChangePasswordDto } from '../models/ChangePasswordDto';
 import type { ForgotPasswordDto } from '../models/ForgotPasswordDto';
+import type { Login2FADto } from '../models/Login2FADto';
 import type { LoginDto } from '../models/LoginDto';
 import type { PasswordActionResponseDto } from '../models/PasswordActionResponseDto';
 import type { ResetPasswordDto } from '../models/ResetPasswordDto';
@@ -122,6 +125,46 @@ export class AuthenticationService {
             mediaType: 'application/json',
             errors: {
                 401: `Unauthorized or incorrect current password`,
+            },
+        });
+    }
+    /**
+     * Change email for authenticated user
+     * @param requestBody
+     * @returns ChangeEmailResponseDto Email changed successfully, returns new token
+     * @throws ApiError
+     */
+    public static postAuthChangeEmail(
+        requestBody?: ChangeEmailDto,
+    ): CancelablePromise<ChangeEmailResponseDto> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/auth/change-email',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                401: `Unauthorized or incorrect password`,
+                409: `Email already exists`,
+            },
+        });
+    }
+    /**
+     * Complete login with 2FA code
+     * @param requestBody
+     * @returns TokenResponseDto Login successful
+     * @throws ApiError
+     */
+    public static postAuthLogin2Fa(
+        requestBody?: Login2FADto,
+    ): CancelablePromise<TokenResponseDto> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/auth/login/2fa',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid verification code`,
+                401: `Invalid or expired session`,
             },
         });
     }

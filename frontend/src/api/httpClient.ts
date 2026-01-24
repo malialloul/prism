@@ -1,5 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 import { toastService } from '../services/toastService';
+import type { UserDto } from './models/UserDto';
 
 type ApiResponseStatus = 'success' | 'error' | 'fail';
 
@@ -30,6 +31,24 @@ export const getAuthToken = (): string | null => {
 
 export const clearAuthToken = (): void => {
   document.cookie = `${TOKEN_COOKIE_NAME}=; path=/; max-age=0`;
+};
+
+export const getUserFromToken = (): Pick<UserDto, 'id' | 'email' | 'fullName'> | null => {
+  const token = getAuthToken();
+  if (!token) return null;
+
+  try {
+    // JWT tokens have 3 parts separated by dots: header.payload.signature
+    const base64Payload = token.split('.')[1];
+    const payload = JSON.parse(atob(base64Payload));
+    return {
+      id: payload.userId,
+      email: payload.email,
+      fullName: payload.fullName,
+    };
+  } catch {
+    return null;
+  }
 };
 
 /**

@@ -121,6 +121,52 @@
         ],
         "description": "Schema for changing password (authenticated)"
       },
+      "ChangeEmailDto": {
+        "type": "object",
+        "properties": {
+          "newEmail": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "newEmail",
+          "password"
+        ],
+        "description": "Schema for changing email (authenticated)"
+      },
+      "UserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "createdAt",
+          "updatedAt"
+        ],
+        "description": "User data transfer object"
+      },
       "AuthResponseDto": {
         "type": "object",
         "properties": {
@@ -205,6 +251,242 @@
           "message"
         ],
         "description": "Password action response"
+      },
+      "ChangeEmailResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "error",
+              "fail"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "token": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "token"
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "message"
+        ],
+        "description": "Change email response with new token"
+      },
+      "Setup2FADto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "description": "Schema for setting up 2FA"
+      },
+      "Verify2FADto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "description": "Schema for verifying 2FA code"
+      },
+      "Disable2FADto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "code"
+        ],
+        "description": "Schema for disabling 2FA"
+      },
+      "Login2FADto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "code": {
+            "type": "string"
+          },
+          "tempToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "code",
+          "tempToken"
+        ],
+        "description": "Schema for 2FA login verification"
+      },
+      "TwoFactorStatusResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "error",
+              "fail"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "enabled"
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "message"
+        ],
+        "description": "2FA status response"
+      },
+      "Setup2FAResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "error",
+              "fail"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "qrCode": {
+                "type": "string"
+              },
+              "secret": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "qrCode",
+              "secret"
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "message"
+        ],
+        "description": "2FA setup response with QR code"
+      },
+      "Verify2FAResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "error",
+              "fail"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "backupCodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "backupCodes"
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "message"
+        ],
+        "description": "2FA verification response with backup codes"
+      },
+      "Login2FARequiredResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "error",
+              "fail"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "requires2FA": {
+                "type": "boolean"
+              },
+              "tempToken": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "requires2FA",
+              "tempToken",
+              "email"
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "message"
+        ],
+        "description": "Login response when 2FA is required"
       },
       "VerifyCodeResponseDto": {
         "type": "object",
@@ -427,6 +709,204 @@
           },
           "401": {
             "description": "Unauthorized or incorrect current password"
+          }
+        }
+      }
+    },
+    "/auth/change-email": {
+      "post": {
+        "summary": "Change email for authenticated user",
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email changed successfully, returns new token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeEmailResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized or incorrect password"
+          },
+          "409": {
+            "description": "Email already exists"
+          }
+        }
+      }
+    },
+    "/auth/2fa/status": {
+      "get": {
+        "summary": "Get 2FA status for authenticated user",
+        "tags": [
+          "Two-Factor Authentication"
+        ],
+        "responses": {
+          "200": {
+            "description": "2FA status retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwoFactorStatusResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/2fa/setup": {
+      "post": {
+        "summary": "Setup 2FA for authenticated user",
+        "tags": [
+          "Two-Factor Authentication"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Setup2FADto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "2FA setup initiated, returns QR code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Setup2FAResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "2FA already enabled or invalid password"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/2fa/verify": {
+      "post": {
+        "summary": "Verify 2FA code and enable 2FA",
+        "tags": [
+          "Two-Factor Authentication"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Verify2FADto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "2FA enabled successfully, returns backup codes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Verify2FAResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid verification code"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/2fa/disable": {
+      "post": {
+        "summary": "Disable 2FA for authenticated user",
+        "tags": [
+          "Two-Factor Authentication"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Disable2FADto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "2FA disabled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordActionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid password or code"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/login/2fa": {
+      "post": {
+        "summary": "Complete login with 2FA code",
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login2FADto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid verification code"
+          },
+          "401": {
+            "description": "Invalid or expired session"
           }
         }
       }

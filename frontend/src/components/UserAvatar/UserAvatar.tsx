@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, MenuItem, ListItemIcon, ListItemText, Divider } from '@mui/material';
+import { Menu, MenuItem, ListItemIcon, ListItemText, Divider, Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
-import { clearAuthToken } from '../../api/httpClient';
+import { clearAuthToken, getUserFromToken } from '../../api/httpClient';
 
 const AvatarButton = styled('button')<{ variant?: 'light' | 'dark' }>(({ variant = 'dark' }) => ({
   width: '2rem',
@@ -29,6 +28,20 @@ const AvatarButton = styled('button')<{ variant?: 'light' | 'dark' }>(({ variant
   },
 }));
 
+const ProfileAvatar = styled(Box)({
+  width: '48px',
+  height: '48px',
+  borderRadius: '50%',
+  background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: 'white',
+  fontSize: '1.125rem',
+  fontWeight: 600,
+  flexShrink: 0,
+});
+
 interface UserAvatarProps {
   variant?: 'light' | 'dark';
   initial?: string;
@@ -38,6 +51,19 @@ export default function UserAvatar({ variant = 'dark', initial = 'D' }: UserAvat
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const menuOpen = Boolean(anchorEl);
+  const user = getUserFromToken();
+
+  const getInitials = (name?: string) => {
+    if (!name) return initial;
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const userInitial = getInitials(user?.fullName);
 
   const handleAvatarClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -76,36 +102,61 @@ export default function UserAvatar({ variant = 'dark', initial = 'D' }: UserAvat
 
   const iconColor = variant === 'dark' ? '#94a3b8' : '#64748b';
   const dividerColor = variant === 'dark' ? '#1e293b' : '#e2e8f0';
+  const textColor = variant === 'dark' ? '#f1f5f9' : '#0f172a';
+  const textSecondaryColor = variant === 'dark' ? '#94a3b8' : '#64748b';
 
   return (
     <>
       <AvatarButton variant={variant} onClick={handleAvatarClick}>
-        {initial}
+        {userInitial}
       </AvatarButton>
       <Menu
         anchorEl={anchorEl}
         open={menuOpen}
         onClose={handleMenuClose}
-        onClick={handleMenuClose}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
         slotProps={{
           paper: {
             sx: {
               mt: 1,
-              minWidth: 180,
+              minWidth: 240,
               ...menuStyles,
             },
           },
         }}
       >
-        <MenuItem onClick={handleMenuClose}>
-          <ListItemIcon>
-            <PersonIcon fontSize="small" sx={{ color: iconColor }} />
-          </ListItemIcon>
-          <ListItemText>Profile</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
+        {/* Profile Header */}
+        <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <ProfileAvatar>{userInitial}</ProfileAvatar>
+          <Box sx={{ overflow: 'hidden' }}>
+            <Typography
+              sx={{
+                fontSize: '0.9375rem',
+                fontWeight: 600,
+                color: textColor,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {user?.fullName || 'User'}
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: '0.8125rem',
+                color: textSecondaryColor,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {user?.email || ''}
+            </Typography>
+          </Box>
+        </Box>
+        <Divider sx={{ borderColor: dividerColor }} />
+        <MenuItem onClick={() => { handleMenuClose(); navigate('/settings'); }}>
           <ListItemIcon>
             <SettingsIcon fontSize="small" sx={{ color: iconColor }} />
           </ListItemIcon>

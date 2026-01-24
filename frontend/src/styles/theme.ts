@@ -50,7 +50,8 @@ export const dashboardColorsDark = {
   text: '#f1f5f9',
   textPrimary: '#f1f5f9',
   textSecondary: '#94a3b8',
-  textMuted: '#64748b',
+  textTertiary: '#64748b',
+  textMuted: '#475569',
   textInverse: '#0f172a',
   
   // Status colors
@@ -111,6 +112,7 @@ export const dashboardColorsLight = {
   text: '#0f172a',
   textPrimary: '#0f172a',
   textSecondary: '#475569',
+  textTertiary: '#64748b',
   textMuted: '#94a3b8',
   textInverse: '#f1f5f9',
   

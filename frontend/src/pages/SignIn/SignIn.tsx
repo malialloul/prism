@@ -7,6 +7,7 @@ import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
 import { useSignIn } from '../../api/entities/auth';
 import { hashPassword } from '../../utils/crypto';
+import TwoFactorDialog from './TwoFactorDialog';
 import {
   AuthWrapper,
   LeftPanel,
@@ -52,7 +53,13 @@ const validationSchema = Yup.object().shape({
 export default function SignIn() {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { signIn, isLoading } = useSignIn();
+  const [twoFactorData, setTwoFactorData] = useState<{ email: string; tempToken: string } | null>(null);
+
+  const { signIn, isLoading } = useSignIn({
+    on2FARequired: (data) => {
+      setTwoFactorData(data);
+    },
+  });
 
   const handleSubmit = async (
     values: { email: string; password: string },
@@ -238,6 +245,17 @@ export default function SignIn() {
           </Formik>
         </CardWrapper>
       </RightPanel>
+
+      {/* 2FA Verification Dialog */}
+      {twoFactorData && (
+        <TwoFactorDialog
+          open={!!twoFactorData}
+          onClose={() => setTwoFactorData(null)}
+          email={twoFactorData.email}
+          tempToken={twoFactorData.tempToken}
+          rememberMe={rememberMe}
+        />
+      )}
     </AuthWrapper>
   );
 }

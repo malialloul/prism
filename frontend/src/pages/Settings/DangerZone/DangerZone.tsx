@@ -1,0 +1,62 @@
+import PauseIcon from '@mui/icons-material/Pause';
+import DeleteIcon from '@mui/icons-material/Delete';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import {
+  DangerContainer,
+  DangerItem,
+  DangerInfo,
+  DangerTitle,
+  DangerDescription,
+  DangerButton,
+  WarningBox,
+  WarningIcon,
+  WarningText,
+} from './DangerZone.styles';
+
+interface DangerZoneProps {
+  onDeactivate: () => void;
+  onDelete: () => void;
+}
+
+const DangerZone = ({ onDeactivate, onDelete }: DangerZoneProps) => {
+  return (
+    <DangerContainer>
+      <WarningBox>
+        <WarningIcon>
+          <WarningAmberIcon sx={{ fontSize: 18 }} />
+        </WarningIcon>
+        <WarningText>
+          Proceed with caution. These actions can have permanent consequences and may result in loss of data.
+        </WarningText>
+      </WarningBox>
+
+      <DangerItem>
+        <DangerInfo>
+          <DangerTitle>Deactivate Account</DangerTitle>
+          <DangerDescription>
+            Temporarily disable your account. You can reactivate it anytime by logging in.
+          </DangerDescription>
+        </DangerInfo>
+        <DangerButton severity="warning" onClick={onDeactivate}>
+          <PauseIcon sx={{ fontSize: 14 }} />
+          Deactivate
+        </DangerButton>
+      </DangerItem>
+
+      <DangerItem>
+        <DangerInfo>
+          <DangerTitle>Delete Account</DangerTitle>
+          <DangerDescription>
+            Permanently delete your account and all associated data. This cannot be undone.
+          </DangerDescription>
+        </DangerInfo>
+        <DangerButton severity="danger" onClick={onDelete}>
+          <DeleteIcon sx={{ fontSize: 14 }} />
+          Delete Account
+        </DangerButton>
+      </DangerItem>
+    </DangerContainer>
+  );
+};
+
+export default DangerZone;
