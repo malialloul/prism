@@ -9,7 +9,7 @@ import {
   StatValue,
   StatLabel,
 } from './OverviewStatsCards.styles';
-import type { Database } from '../Dashboard';
+import type { DatabaseDto } from '../../../api/models/DatabaseDto';
 
 // Icons
 import StorageIcon from '@mui/icons-material/Storage';
@@ -21,8 +21,17 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 
 interface OverviewStatsCardsProps {
-  databases: Database[];
+  databases: DatabaseDto[];
   selectedDatabaseId: string;
+}
+
+// Helper to format bytes to human readable
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 export default function OverviewStatsCards({ databases, selectedDatabaseId }: OverviewStatsCardsProps) {
@@ -34,36 +43,33 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
     const totalTables = filteredDatabases.reduce((sum, db) => sum + db.tables, 0);
     const totalApis = filteredDatabases.reduce((sum, db) => sum + db.apis, 0);
     
-    // Mock data for queries and storage
+    // Mock data for queries
     const queriesExecuted = selectedDb ? Math.floor(42580 / databases.length) : 42580;
-    const totalStorage = filteredDatabases.reduce((sum, db) => {
-      const match = db.storage.match(/(\d+\.?\d*)\s*(GB|MB)/);
-      if (match) {
-        const value = parseFloat(match[1]);
-        const unit = match[2];
-        return sum + (unit === 'GB' ? value : value / 1024);
-      }
-      return sum;
-    }, 0);
+    
+    // Calculate actual storage from database storageBytes
+    const totalStorageBytes = filteredDatabases.reduce((sum, db) => sum + (db.storageBytes || 0), 0);
 
     return {
       totalDatabases,
       totalTables,
       totalApis,
       queriesExecuted,
-      totalStorage: totalStorage.toFixed(1),
+      totalStorageBytes,
     };
   }, [databases, selectedDatabaseId]);
 
+  const selectedDb = databases.find(db => db.id === selectedDatabaseId);
+
   const statsConfig = [
-    {
+    // Only show Total Databases when no specific database is selected
+    ...(!selectedDb ? [{
       label: 'Total Databases',
-      value: stats.totalDatabases.toString(),
+      value: databases.length.toString(),
       icon: <StorageIcon />,
       variant: 'primary' as const,
       trend: { value: 12, positive: true },
       change: 'vs last month',
-    },
+    }] : []),
     {
       label: 'Tables Count',
       value: stats.totalTables.toString(),
@@ -92,7 +98,7 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
     },
     {
       label: 'Storage Used',
-      value: `${stats.totalStorage} GB`,
+      value: formatBytes(stats.totalStorageBytes),
       icon: <CloudIcon />,
       variant: 'info' as const,
       trend: { value: 3, positive: true },

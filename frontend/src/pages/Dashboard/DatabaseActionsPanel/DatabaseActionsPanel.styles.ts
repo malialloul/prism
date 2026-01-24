@@ -321,3 +321,61 @@ export const SSLDescription = styled('span')(({ theme }) => {
     color: colors.textMuted,
   };
 });
+
+export const TestConnectionButton = styled(Button)(({ theme }) => {
+  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  return {
+    padding: '0.625rem 1.25rem',
+    borderRadius: '0.5rem',
+    textTransform: 'none',
+    fontWeight: 500,
+    color: colors.textSecondary,
+    border: `1px solid ${colors.border}`,
+    '&:hover': {
+      backgroundColor: colors.backgroundHover,
+      borderColor: colors.borderLight,
+    },
+    '&.Mui-disabled': {
+      color: colors.textMuted,
+      borderColor: colors.border,
+    },
+  };
+});
+
+export const ConnectionStatus = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'status',
+})<{ status: 'success' | 'error' | 'testing' }>(({ theme, status }) => {
+  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  
+  const statusColors = {
+    success: {
+      bg: 'rgba(34, 197, 94, 0.1)',
+      border: 'rgba(34, 197, 94, 0.3)',
+      text: '#22c55e',
+    },
+    error: {
+      bg: 'rgba(239, 68, 68, 0.1)',
+      border: 'rgba(239, 68, 68, 0.3)',
+      text: '#ef4444',
+    },
+    testing: {
+      bg: colors.primaryLight,
+      border: `${colors.primary}40`,
+      text: colors.primary,
+    },
+  };
+
+  const style = statusColors[status];
+
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    padding: '0.75rem 1rem',
+    backgroundColor: style.bg,
+    border: `1px solid ${style.border}`,
+    borderRadius: '0.5rem',
+    fontSize: '0.875rem',
+    color: style.text,
+  };
+});

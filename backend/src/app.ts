@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import authRoutes from "./modules/auth/auth.routes";
 import logsRoutes from "./modules/logs/logs.routes";
+import databasesRoutes from "./modules/databases/databases.routes";
 import swaggerUi from "swagger-ui-express";
 import { openapiDoc } from "./openapi";
 import { errorHandler } from "./middleware/errorHandler";
@@ -18,6 +19,7 @@ app.use(express.json());
 
 app.use("/auth", authRoutes);
 app.use("/logs", logsRoutes);
+app.use("/databases", databasesRoutes);
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiDoc));
 app.get("/openapi.json", (_req, res) => {
   res.json(openapiDoc);

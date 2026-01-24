@@ -1,6 +1,7 @@
 import { styled } from '@mui/material/styles';
 import { Box, IconButton } from '@mui/material';
 import { getDashboardColors } from '../../../styles/theme';
+import { DatabaseDto } from '../../../api/models/DatabaseDto';
 
 export const SidebarWrapper = styled(Box)(({ theme }) => {
   const colors = getDashboardColors(theme.palette.mode === 'dark');
@@ -128,7 +129,7 @@ export const DatabaseMeta = styled('span')(({ theme }) => {
 
 export const StatusDot = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'status',
-})<{ status: 'connected' | 'disconnected' | 'provisioning' }>(({ theme, status }) => {
+})<{ status: DatabaseDto['status'] }>(({ theme, status }) => {
   const colors = getDashboardColors(theme.palette.mode === 'dark');
   return {
     width: '0.5rem',
@@ -136,8 +137,6 @@ export const StatusDot = styled(Box, {
     borderRadius: '50%',
     backgroundColor: status === 'connected' 
       ? colors.success 
-      : status === 'provisioning' 
-        ? colors.warning 
         : colors.textMuted,
   };
 });
@@ -157,6 +156,23 @@ export const ConnectionButton = styled(IconButton, {
     },
     '&:hover': {
       backgroundColor: isConnected ? colors.errorLight : colors.successLight,
+    },
+  };
+});
+
+export const DeleteButton = styled(IconButton)(({ theme }) => {
+  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  return {
+    padding: '0.375rem',
+    borderRadius: '0.375rem',
+    color: colors.error,
+    opacity: 0,
+    transition: 'opacity 0.15s ease',
+    '.MuiBox-root:hover &': {
+      opacity: 1,
+    },
+    '&:hover': {
+      backgroundColor: colors.errorLight,
     },
   };
 });

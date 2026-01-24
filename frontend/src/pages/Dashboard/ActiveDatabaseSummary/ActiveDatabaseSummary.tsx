@@ -17,17 +17,19 @@ import {
   ActionButtons,
   ActionButton,
 } from './ActiveDatabaseSummary.styles';
-import type { Database } from '../Dashboard';
 
 // Icons
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { DatabaseDto } from '../../../api/models/DatabaseDto';
 
 interface ActiveDatabaseSummaryProps {
-  database: Database;
+  database: DatabaseDto;
   onDisconnect?: () => void;
   onRefresh?: () => void;
+  onDelete?: () => void;
 }
 
 function formatTimeAgo(date: Date): string {
@@ -39,7 +41,7 @@ function formatTimeAgo(date: Date): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
-export default function ActiveDatabaseSummary({ database, onDisconnect, onRefresh }: ActiveDatabaseSummaryProps) {
+export default function ActiveDatabaseSummary({ database, onDisconnect, onRefresh, onDelete }: ActiveDatabaseSummaryProps) {
   return (
     <SummaryCard>
       <LeftContent>
@@ -74,7 +76,7 @@ export default function ActiveDatabaseSummary({ database, onDisconnect, onRefres
 
         <SyncInfo>
           <SyncLabel>Last Sync</SyncLabel>
-          <SyncTime>{formatTimeAgo(database.lastSync)}</SyncTime>
+          <SyncTime>{formatTimeAgo(new Date(database.lastConnectedAt))}</SyncTime>
         </SyncInfo>
 
         <ActionButtons>
@@ -88,6 +90,10 @@ export default function ActiveDatabaseSummary({ database, onDisconnect, onRefres
               Disconnect
             </ActionButton>
           )}
+          <ActionButton variant="danger" onClick={onDelete}>
+            <DeleteOutlineIcon sx={{ fontSize: '1rem' }} />
+            Delete
+          </ActionButton>
         </ActionButtons>
       </RightContent>
     </SummaryCard>

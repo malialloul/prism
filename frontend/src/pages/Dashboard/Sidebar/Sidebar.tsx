@@ -12,24 +12,27 @@ import {
   DatabaseMeta,
   StatusDot,
   ConnectionButton,
+  DeleteButton,
   SidebarFooter,
   FooterButton,
 } from './Sidebar.styles';
-import type { Database } from '../Dashboard';
 
 // Icons
 import AddIcon from '@mui/icons-material/Add';
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { DatabaseDto } from '../../../api/models/DatabaseDto';
 
 interface SidebarProps {
-  databases: Database[];
+  databases: DatabaseDto[];
   selectedId: string;
   onSelect: (id: string) => void;
   onConnect: (id: string) => void;
   onDisconnect: (id: string) => void;
+  onDelete: (id: string) => void;
   onAddDatabase: () => void;
 }
 
@@ -39,15 +42,21 @@ export default function Sidebar({
   onSelect,
   onConnect,
   onDisconnect,
+  onDelete,
   onAddDatabase,
 }: SidebarProps) {
-  const handleConnectionToggle = (e: React.MouseEvent, db: Database) => {
+  const handleConnectionToggle = (e: React.MouseEvent, db: DatabaseDto) => {
     e.stopPropagation();
     if (db.status === 'connected') {
       onDisconnect(db.id);
     } else {
       onConnect(db.id);
     }
+  };
+
+  const handleDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    onDelete(id);
   };
 
   return (
@@ -65,7 +74,7 @@ export default function Sidebar({
         {databases.map((db) => (
           <DatabaseItem
             key={db.id}
-            selected={selectedId === db.id}
+            selected={selectedId === db.id && db.status === 'connected'}
             onClick={() => onSelect(db.id)}
           >
             <DatabaseIconBox engine={db.engine}>
@@ -90,6 +99,14 @@ export default function Sidebar({
                   <LinkIcon sx={{ fontSize: '1rem' }} />
                 )}
               </ConnectionButton>
+            </Tooltip>
+            <Tooltip title="Delete">
+              <DeleteButton
+                size="small"
+                onClick={(e) => handleDelete(e, db.id)}
+              >
+                <DeleteOutlineIcon sx={{ fontSize: '1rem' }} />
+              </DeleteButton>
             </Tooltip>
           </DatabaseItem>
         ))}

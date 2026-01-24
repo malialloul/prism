@@ -1,5 +1,10 @@
-import { useState } from 'react';
-import { Switch } from '@mui/material';
+import { useEffect, useState } from 'react';
+import { Switch, CircularProgress } from '@mui/material';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+import { useConnectDatabase, useTestConnection } from '../../../api/entities/databases';
+import { toastService } from '../../../services';
+import { encryptForTransmission } from '../../../utils/crypto';
 import {
   StyledDialog,
   DialogHeader,
@@ -21,187 +26,381 @@ import {
   SSLLabel,
   SSLTitle,
   SSLDescription,
+  TestConnectionButton,
+  ConnectionStatus,
 } from './DatabaseActionsPanel.styles';
+
+// Validation schemas
+const createDatabaseSchema = Yup.object({
+  engine: Yup.string().oneOf(['postgres', 'mysql']).required(),
+  name: Yup.string().required('Database name is required'),
+});
+
+const connectDatabaseSchema = Yup.object({
+  engine: Yup.string().oneOf(['postgres', 'mysql']).required(),
+  name: Yup.string().required('Connection name is required'),
+  host: Yup.string().required('Host is required'),
+  port: Yup.string().required('Port is required'),
+  username: Yup.string().required('Username is required'),
+  password: Yup.string().required('Password is required'),
+  database: Yup.string().required('Database name is required'),
+  ssl: Yup.boolean(),
+});
+
+// Default values per engine
+const engineDefaults = {
+  postgres: { name: 'postgres', host: 'localhost', port: '5432', database: 'postgres' },
+  mysql: { name: 'mysql', host: 'localhost', port: '3306', database: 'mysql' },
+};
 
 interface DatabaseActionsPanelProps {
   isCreateDialogOpen: boolean;
   isConnectDialogOpen: boolean;
+  initialCreateEngine?: 'postgres' | 'mysql';
   onOpenCreateDialog: () => void;
   onCloseCreateDialog: () => void;
   onOpenConnectDialog: () => void;
   onCloseConnectDialog: () => void;
+  onDatabaseConnected?: (databaseId: string) => void;
 }
 
 export default function DatabaseActionsPanel({
   isCreateDialogOpen,
   isConnectDialogOpen,
+  initialCreateEngine,
   onCloseCreateDialog,
   onCloseConnectDialog,
+  onDatabaseConnected,
 }: DatabaseActionsPanelProps) {
-  // Create form state
-  const [createEngine, setCreateEngine] = useState<'postgres' | 'mysql'>('postgres');
-  const [createName, setCreateName] = useState('');
+  const [connectionTestStatus, setConnectionTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [connectionTestMessage, setConnectionTestMessage] = useState('');
 
-  // Connect form state
-  const [connectHost, setConnectHost] = useState('');
-  const [connectPort, setConnectPort] = useState('5432');
-  const [connectUsername, setConnectUsername] = useState('');
-  const [connectPassword, setConnectPassword] = useState('');
-  const [connectDatabase, setConnectDatabase] = useState('');
-  const [connectSSL, setConnectSSL] = useState(true);
+  // API hooks
+  const { mutate: submitConnectDatabase, isPending: isConnecting } = useConnectDatabase({
+    onSuccess: (database, message) => {
+      toastService.success(message);
+      onCloseConnectDialog();
+      connectFormik.resetForm();
+      setConnectionTestStatus('idle');
+      setConnectionTestMessage('');
+      onDatabaseConnected?.(database.id);
+    },
+    onError: (error) => {
+      toastService.error(error.message);
+    },
+  });
 
-  const handleCreateSubmit = () => {
-    console.log('Creating database:', { engine: createEngine, name: createName });
-    onCloseCreateDialog();
-    // Reset form
-    setCreateName('');
-    setCreateEngine('postgres');
-  };
+  const { mutate: testConnection, isPending: isTesting } = useTestConnection({
+    onSuccess: (result) => {
+      if (result.success) {
+        setConnectionTestStatus('success');
+        setConnectionTestMessage(`Connection successful! Found ${result.tables ?? 0} tables.`);
+      } else {
+        setConnectionTestStatus('error');
+        setConnectionTestMessage(result.message);
+      }
+    },
+    onError: (error) => {
+      setConnectionTestStatus('error');
+      setConnectionTestMessage(error.message || 'Connection test failed');
+    },
+  });
 
-  const handleConnectSubmit = () => {
-    console.log('Connecting database:', { 
-      host: connectHost, 
-      port: connectPort, 
-      username: connectUsername,
-      database: connectDatabase,
-      ssl: connectSSL,
+  // Create Database Form
+  const createFormik = useFormik({
+    initialValues: {
+      engine: initialCreateEngine || 'postgres' as 'postgres' | 'mysql',
+      name: '',
+    },
+    validationSchema: createDatabaseSchema,
+    onSubmit: (values, { resetForm }) => {
+      console.log('Creating database:', values);
+      onCloseCreateDialog();
+      resetForm();
+    },
+  });
+
+  // Sync createEngine when initialCreateEngine changes
+  useEffect(() => {
+    if (initialCreateEngine) {
+      createFormik.setFieldValue('engine', initialCreateEngine);
+    }
+  }, [initialCreateEngine]);
+
+  // Connect Database Form
+  const connectFormik = useFormik({
+    initialValues: {
+      engine: 'postgres' as 'postgres' | 'mysql',
+      name: 'postgres',
+      host: 'localhost',
+      port: '5432',
+      username: '',
+      password: '',
+      database: 'postgres',
+      ssl: true,
+    },
+    validationSchema: connectDatabaseSchema,
+    onSubmit: async (values) => {
+      const encryptedPassword = await encryptForTransmission(values.password);
+      submitConnectDatabase({
+        name: values.name,
+        engine: values.engine,
+        host: values.host,
+        port: parseInt(values.port, 10),
+        username: values.username,
+        password: encryptedPassword,
+        database: values.database,
+        ssl: values.ssl,
+      });
+    },
+  });
+
+  // Update defaults when engine changes
+  useEffect(() => {
+    const defaults = engineDefaults[connectFormik.values.engine];
+    connectFormik.setValues({
+      ...connectFormik.values,
+      name: defaults.name,
+      host: defaults.host,
+      port: defaults.port,
+      database: defaults.database,
     });
-    onCloseConnectDialog();
-    // Reset form
-    setConnectHost('');
-    setConnectPort('5432');
-    setConnectUsername('');
-    setConnectPassword('');
-    setConnectDatabase('');
-    setConnectSSL(true);
+    setConnectionTestStatus('idle');
+    setConnectionTestMessage('');
+  }, [connectFormik.values.engine]);
+
+  const handleTestConnection = async () => {
+    setConnectionTestStatus('testing');
+    const encryptedPassword = await encryptForTransmission(connectFormik.values.password);
+    testConnection({
+      engine: connectFormik.values.engine,
+      host: connectFormik.values.host,
+      port: parseInt(connectFormik.values.port, 10),
+      username: connectFormik.values.username,
+      password: encryptedPassword,
+      database: connectFormik.values.database,
+      ssl: connectFormik.values.ssl,
+    });
   };
+
+  const handleCloseConnectDialog = () => {
+    onCloseConnectDialog();
+    connectFormik.resetForm();
+    setConnectionTestStatus('idle');
+    setConnectionTestMessage('');
+  };
+
+  const handleCloseCreateDialog = () => {
+    onCloseCreateDialog();
+    createFormik.resetForm();
+  };
+
+  const isTestDisabled = !connectFormik.values.host || !connectFormik.values.username || 
+    !connectFormik.values.password || !connectFormik.values.database || isTesting;
 
   return (
     <>
       {/* Create Database Dialog */}
-      <StyledDialog open={isCreateDialogOpen} onClose={onCloseCreateDialog}>
-        <DialogHeader>
-          <DialogTitle>Create New Database</DialogTitle>
-          <DialogSubtitle>Provision a managed database instance</DialogSubtitle>
-        </DialogHeader>
-        <DialogContent>
-          <FormGroup>
-            <FormLabel>Database Engine</FormLabel>
-            <EngineToggleGroup
-              value={createEngine}
-              exclusive
-              onChange={(_, value) => value && setCreateEngine(value)}
-            >
-              <EngineToggleButton value="postgres">
-                <EngineIcon engine="postgres">P</EngineIcon>
-                <EngineName>PostgreSQL</EngineName>
-              </EngineToggleButton>
-              <EngineToggleButton value="mysql">
-                <EngineIcon engine="mysql">M</EngineIcon>
-                <EngineName>MySQL</EngineName>
-              </EngineToggleButton>
-            </EngineToggleGroup>
-          </FormGroup>
+      <StyledDialog open={isCreateDialogOpen} onClose={handleCloseCreateDialog}>
+        <form onSubmit={createFormik.handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Create New Database</DialogTitle>
+            <DialogSubtitle>Provision a managed database instance</DialogSubtitle>
+          </DialogHeader>
+          <DialogContent>
+            <FormGroup>
+              <FormLabel>Database Engine</FormLabel>
+              <EngineToggleGroup
+                value={createFormik.values.engine}
+                exclusive
+                onChange={(_, value) => value && createFormik.setFieldValue('engine', value)}
+              >
+                <EngineToggleButton value="postgres">
+                  <EngineIcon engine="postgres">P</EngineIcon>
+                  <EngineName>PostgreSQL</EngineName>
+                </EngineToggleButton>
+                <EngineToggleButton value="mysql">
+                  <EngineIcon engine="mysql">M</EngineIcon>
+                  <EngineName>MySQL</EngineName>
+                </EngineToggleButton>
+              </EngineToggleGroup>
+            </FormGroup>
 
-          <FormGroup>
-            <FormLabel>Database Name</FormLabel>
-            <StyledTextField
-              placeholder="my-production-db"
-              value={createName}
-              onChange={(e) => setCreateName(e.target.value)}
-              fullWidth
-            />
-          </FormGroup>
-        </DialogContent>
-        <DialogFooter>
-          <CancelButton onClick={onCloseCreateDialog}>Cancel</CancelButton>
-          <SubmitButton onClick={handleCreateSubmit} disabled={!createName}>
-            Create Database
-          </SubmitButton>
-        </DialogFooter>
+            <FormGroup>
+              <FormLabel>Database Name</FormLabel>
+              <StyledTextField
+                name="name"
+                placeholder="my-production-db"
+                value={createFormik.values.name}
+                onChange={createFormik.handleChange}
+                onBlur={createFormik.handleBlur}
+                error={createFormik.touched.name && Boolean(createFormik.errors.name)}
+                helperText={createFormik.touched.name && createFormik.errors.name}
+                fullWidth
+              />
+            </FormGroup>
+          </DialogContent>
+          <DialogFooter>
+            <CancelButton type="button" onClick={handleCloseCreateDialog}>Cancel</CancelButton>
+            <SubmitButton type="submit" disabled={!createFormik.isValid || !createFormik.dirty}>
+              Create Database
+            </SubmitButton>
+          </DialogFooter>
+        </form>
       </StyledDialog>
 
       {/* Connect Database Dialog */}
-      <StyledDialog open={isConnectDialogOpen} onClose={onCloseConnectDialog}>
-        <DialogHeader>
-          <DialogTitle>Connect Existing Database</DialogTitle>
-          <DialogSubtitle>Enter your database connection details</DialogSubtitle>
-        </DialogHeader>
-        <DialogContent>
-          <FormRow>
+      <StyledDialog open={isConnectDialogOpen} onClose={handleCloseConnectDialog}>
+        <form onSubmit={connectFormik.handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Connect Existing Database</DialogTitle>
+            <DialogSubtitle>Enter your database connection details</DialogSubtitle>
+          </DialogHeader>
+          <DialogContent>
             <FormGroup>
-              <FormLabel>Host</FormLabel>
-              <StyledTextField
-                placeholder="db.example.com"
-                value={connectHost}
-                onChange={(e) => setConnectHost(e.target.value)}
-                fullWidth
-              />
+              <FormLabel>Database Engine</FormLabel>
+              <EngineToggleGroup
+                value={connectFormik.values.engine}
+                exclusive
+                onChange={(_, value) => value && connectFormik.setFieldValue('engine', value)}
+              >
+                <EngineToggleButton value="postgres">
+                  <EngineIcon engine="postgres">P</EngineIcon>
+                  <EngineName>PostgreSQL</EngineName>
+                </EngineToggleButton>
+                <EngineToggleButton value="mysql">
+                  <EngineIcon engine="mysql">M</EngineIcon>
+                  <EngineName>MySQL</EngineName>
+                </EngineToggleButton>
+              </EngineToggleGroup>
             </FormGroup>
-            <FormGroup>
-              <FormLabel>Port</FormLabel>
-              <StyledTextField
-                placeholder="5432"
-                value={connectPort}
-                onChange={(e) => setConnectPort(e.target.value)}
-                fullWidth
-              />
-            </FormGroup>
-          </FormRow>
 
-          <FormRow>
             <FormGroup>
-              <FormLabel>Username</FormLabel>
+              <FormLabel>Connection Name</FormLabel>
               <StyledTextField
-                placeholder="postgres"
-                value={connectUsername}
-                onChange={(e) => setConnectUsername(e.target.value)}
+                name="name"
+                placeholder="My Production Database"
+                value={connectFormik.values.name}
+                onChange={connectFormik.handleChange}
+                onBlur={connectFormik.handleBlur}
+                error={connectFormik.touched.name && Boolean(connectFormik.errors.name)}
+                helperText={connectFormik.touched.name && connectFormik.errors.name}
                 fullWidth
               />
             </FormGroup>
+
+            <FormRow>
+              <FormGroup>
+                <FormLabel>Host</FormLabel>
+                <StyledTextField
+                  name="host"
+                  placeholder="db.example.com"
+                  value={connectFormik.values.host}
+                  onChange={connectFormik.handleChange}
+                  onBlur={connectFormik.handleBlur}
+                  error={connectFormik.touched.host && Boolean(connectFormik.errors.host)}
+                  helperText={connectFormik.touched.host && connectFormik.errors.host}
+                  fullWidth
+                />
+              </FormGroup>
+              <FormGroup>
+                <FormLabel>Port</FormLabel>
+                <StyledTextField
+                  name="port"
+                  placeholder={connectFormik.values.engine === 'postgres' ? '5432' : '3306'}
+                  value={connectFormik.values.port}
+                  onChange={connectFormik.handleChange}
+                  onBlur={connectFormik.handleBlur}
+                  error={connectFormik.touched.port && Boolean(connectFormik.errors.port)}
+                  helperText={connectFormik.touched.port && connectFormik.errors.port}
+                  fullWidth
+                />
+              </FormGroup>
+            </FormRow>
+
+            <FormRow>
+              <FormGroup>
+                <FormLabel>Username</FormLabel>
+                <StyledTextField
+                  name="username"
+                  placeholder={connectFormik.values.engine === 'postgres' ? 'postgres' : 'root'}
+                  value={connectFormik.values.username}
+                  onChange={connectFormik.handleChange}
+                  onBlur={connectFormik.handleBlur}
+                  error={connectFormik.touched.username && Boolean(connectFormik.errors.username)}
+                  helperText={connectFormik.touched.username && connectFormik.errors.username}
+                  fullWidth
+                />
+              </FormGroup>
+              <FormGroup>
+                <FormLabel>Password</FormLabel>
+                <StyledTextField
+                  name="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={connectFormik.values.password}
+                  onChange={connectFormik.handleChange}
+                  onBlur={connectFormik.handleBlur}
+                  error={connectFormik.touched.password && Boolean(connectFormik.errors.password)}
+                  helperText={connectFormik.touched.password && connectFormik.errors.password}
+                  fullWidth
+                />
+              </FormGroup>
+            </FormRow>
+
             <FormGroup>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Database Name</FormLabel>
               <StyledTextField
-                type="password"
-                placeholder="••••••••"
-                value={connectPassword}
-                onChange={(e) => setConnectPassword(e.target.value)}
+                name="database"
+                placeholder="my_database"
+                value={connectFormik.values.database}
+                onChange={connectFormik.handleChange}
+                onBlur={connectFormik.handleBlur}
+                error={connectFormik.touched.database && Boolean(connectFormik.errors.database)}
+                helperText={connectFormik.touched.database && connectFormik.errors.database}
                 fullWidth
               />
             </FormGroup>
-          </FormRow>
 
-          <FormGroup>
-            <FormLabel>Database Name</FormLabel>
-            <StyledTextField
-              placeholder="my_database"
-              value={connectDatabase}
-              onChange={(e) => setConnectDatabase(e.target.value)}
-              fullWidth
-            />
-          </FormGroup>
+            <SSLToggle>
+              <SSLLabel>
+                <SSLTitle>SSL Connection</SSLTitle>
+                <SSLDescription>Encrypt data in transit</SSLDescription>
+              </SSLLabel>
+              <Switch
+                name="ssl"
+                checked={connectFormik.values.ssl}
+                onChange={connectFormik.handleChange}
+                color="primary"
+              />
+            </SSLToggle>
 
-          <SSLToggle>
-            <SSLLabel>
-              <SSLTitle>SSL Connection</SSLTitle>
-              <SSLDescription>Encrypt data in transit</SSLDescription>
-            </SSLLabel>
-            <Switch
-              checked={connectSSL}
-              onChange={(e) => setConnectSSL(e.target.checked)}
-              color="primary"
-            />
-          </SSLToggle>
-        </DialogContent>
-        <DialogFooter>
-          <CancelButton onClick={onCloseConnectDialog}>Cancel</CancelButton>
-          <SubmitButton 
-            onClick={handleConnectSubmit} 
-            disabled={!connectHost || !connectUsername || !connectPassword || !connectDatabase}
-          >
-            Connect Database
-          </SubmitButton>
-        </DialogFooter>
+            {connectionTestStatus !== 'idle' && (
+              <ConnectionStatus status={connectionTestStatus === 'testing' ? 'testing' : connectionTestStatus}>
+                {connectionTestStatus === 'testing' && <CircularProgress size={16} color="inherit" />}
+                {connectionTestStatus === 'success' && '✓'}
+                {connectionTestStatus === 'error' && '✗'}
+                {connectionTestMessage || 'Testing connection...'}
+              </ConnectionStatus>
+            )}
+          </DialogContent>
+          <DialogFooter>
+            <TestConnectionButton
+              type="button"
+              onClick={handleTestConnection}
+              disabled={isTestDisabled}
+            >
+              {isTesting ? <CircularProgress size={16} /> : 'Test Connection'}
+            </TestConnectionButton>
+            <CancelButton type="button" onClick={handleCloseConnectDialog}>Cancel</CancelButton>
+            <SubmitButton 
+              type="submit"
+              disabled={!connectFormik.isValid || !connectFormik.dirty || isConnecting}
+            >
+              {isConnecting ? <CircularProgress size={16} color="inherit" /> : 'Connect Database'}
+            </SubmitButton>
+          </DialogFooter>
+        </form>
       </StyledDialog>
     </>
   );
