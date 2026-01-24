@@ -5,6 +5,7 @@ import type { TestConnectionResultDto } from '../models/TestConnectionResultDto'
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
+import { CreateDatabaseDto } from '../models/CreateDatabaseDto';
 
 export class DatabasesService {
   /**
@@ -21,6 +22,27 @@ export class DatabasesService {
       url: '/databases/test',
       body: requestBody,
       mediaType: 'application/json',
+    });
+  }
+
+  /**
+   * Create a new hosted database
+   * @param requestBody
+   * @returns DatabaseDto Database created successfully
+   * @throws ApiError
+   */
+  public static createDatabase(
+    requestBody: CreateDatabaseDto
+  ): CancelablePromise<{ database: DatabaseDto; message: string }> {
+    return __request(OpenAPI, {
+      method: 'POST',
+      url: '/databases/create',
+      body: requestBody,
+      mediaType: 'application/json',
+      errors: {
+        400: 'Creation failed',
+        401: 'Unauthorized',
+      },
     });
   }
 

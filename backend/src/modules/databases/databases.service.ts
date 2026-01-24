@@ -6,6 +6,7 @@ import { pool } from '../../config/db';
 import { config } from '../../config/env';
 import { NotFoundError, ValidationError } from '../../utils/errors';
 import type {
+  CreateDatabaseDto,
   ConnectDatabaseDto,
   UpdateDatabaseDto,
   DatabaseDto,
@@ -67,6 +68,13 @@ function decryptTransmission(encryptedBase64: string): string {
     // If decryption fails, assume password was sent in plain text (for backward compatibility)
     return encryptedBase64;
   }
+}
+
+// Hash password for hosted databases using bcrypt-like approach with scrypt
+function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
 }
 
 // Map database row to DTO
@@ -242,6 +250,155 @@ export const connectDatabaseService = async (
 };
 
 /**
+ * Create a new hosted database for a user
+ */
+export const createDatabaseService = async (
+  userId: string,
+  body: CreateDatabaseDto
+): Promise<DatabaseDto> => {
+  const { name, engine, password } = body;
+
+  // Check if user already has a database with this name
+  const existing = await pool.query(
+    'SELECT 1 FROM database_connections WHERE user_id = $1 AND name = $2',
+    [userId, name]
+  );
+  
+  if (existing.rowCount && existing.rowCount > 0) {
+    throw new ValidationError(`You already have a database named "${name}"`);
+  }
+
+  // Decrypt the password sent from frontend
+  const decryptedPassword = decryptTransmission(password);
+
+  // For hosted databases, we generate unique connection details using user ID
+  const userIdShort = userId.replace(/-/g, '').substring(0, 8); // First 8 chars of UUID without dashes
+  const sanitizedName = name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+  const host = 'localhost';
+  const port = engine === 'postgres' ? 5432 : 3306;
+  const username = `u_${userIdShort}_${sanitizedName}`.substring(0, 32); // Max 32 chars for username
+  const database = `db_${userIdShort}_${sanitizedName}`.substring(0, 63); // Max 63 chars for PG, 64 for MySQL
+
+  // Provision the database on the hosted infrastructure
+  if (engine === 'postgres') {
+    // Connect to PostgreSQL admin server
+    const adminPool = new Pool({
+      host: 'localhost',
+      port: 5432,
+      user: 'postgres',
+      password: 'postgres',
+      database: 'postgres',
+    });
+
+    try {
+      // Check if database already exists
+      const dbExists = await adminPool.query(
+        `SELECT 1 FROM pg_database WHERE datname = $1`,
+        [database]
+      );
+      
+      if (dbExists.rowCount === 0) {
+        // Create the database
+        await adminPool.query(`CREATE DATABASE "${database}"`);
+      }
+      
+      // Check if user already exists
+      const userExists = await adminPool.query(
+        `SELECT 1 FROM pg_roles WHERE rolname = $1`,
+        [username]
+      );
+      
+      if (userExists.rowCount === 0) {
+        // Create the user with the provided password
+        await adminPool.query(`CREATE USER "${username}" WITH PASSWORD '${decryptedPassword.replace(/'/g, "''")}'`);
+      } else {
+        // Update the password for existing user
+        await adminPool.query(`ALTER USER "${username}" WITH PASSWORD '${decryptedPassword.replace(/'/g, "''")}'`);
+      }
+      
+      // Grant all privileges on the database to the user
+      await adminPool.query(`GRANT ALL PRIVILEGES ON DATABASE "${database}" TO "${username}"`);
+      
+      // Connect to the new database to grant schema permissions
+      const dbPool = new Pool({
+        host: 'localhost',
+        port: 5432,
+        user: 'postgres',
+        password: 'postgres',
+        database: database,
+      });
+      
+      await dbPool.query(`GRANT ALL ON SCHEMA public TO "${username}"`);
+      await dbPool.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO "${username}"`);
+      await dbPool.end();
+      
+      await adminPool.end();
+    } catch (error) {
+      await adminPool.end();
+      const message = error instanceof Error ? error.message : 'Failed to create database';
+      throw new ValidationError(`Failed to provision PostgreSQL database: ${message}`);
+    }
+  } else {
+    // Connect to MySQL admin server
+    const adminConnection = await mysql.createConnection({
+      host: 'localhost',
+      port: 3306,
+      user: 'root',
+      password: 'mysql',
+    });
+
+    try {
+      // Create the database if it doesn't exist
+      await adminConnection.execute(`CREATE DATABASE IF NOT EXISTS \`${database}\``);
+      
+      // Check if user exists
+      const [users] = await adminConnection.execute(
+        `SELECT 1 FROM mysql.user WHERE user = ? AND host = '%'`,
+        [username]
+      );
+      
+      if ((users as Array<unknown>).length === 0) {
+        // Create the user with the provided password
+        await adminConnection.execute(
+          `CREATE USER '${username}'@'%' IDENTIFIED BY '${decryptedPassword.replace(/'/g, "''")}'`
+        );
+      } else {
+        // Update the password for existing user
+        await adminConnection.execute(
+          `ALTER USER '${username}'@'%' IDENTIFIED BY '${decryptedPassword.replace(/'/g, "''")}'`
+        );
+      }
+      
+      // Grant all privileges on the database to the user
+      await adminConnection.execute(
+        `GRANT ALL PRIVILEGES ON \`${database}\`.* TO '${username}'@'%'`
+      );
+      
+      await adminConnection.execute('FLUSH PRIVILEGES');
+      await adminConnection.end();
+    } catch (error) {
+      await adminConnection.end();
+      const message = error instanceof Error ? error.message : 'Failed to create database';
+      throw new ValidationError(`Failed to provision MySQL database: ${message}`);
+    }
+  }
+
+  // Encrypt the password for storage (so we can connect to it later)
+  const passwordEncrypted = encrypt(decryptedPassword);
+
+  // Insert into database
+  const result = await pool.query<DbDatabaseConnectionDto>(
+    `INSERT INTO database_connections 
+     (user_id, name, engine, host, port, username, password_encrypted, database, ssl, status, last_connected_at, tables, storage_bytes, is_hosted)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, 'connected', NOW(), 0, 0, true)
+     RETURNING *`,
+    [userId, name, engine, host, port, username, passwordEncrypted, database]
+  );
+
+  return mapToDto(result.rows[0]);
+};
+
+/**
  * Get all databases for a user
  */
 export const getDatabasesService = async (userId: string): Promise<DatabaseDto[]> => {
@@ -351,14 +508,80 @@ export const deleteDatabaseService = async (
   userId: string,
   databaseId: string
 ): Promise<void> => {
-  const result = await pool.query(
-    'DELETE FROM database_connections WHERE id = $1 AND user_id = $2',
+  // First get the database details
+  const existing = await pool.query<DbDatabaseConnectionDto>(
+    'SELECT * FROM database_connections WHERE id = $1 AND user_id = $2',
     [databaseId, userId]
   );
 
-  if (!result.rowCount) {
+  if (!existing.rowCount) {
     throw new NotFoundError('Database connection not found');
   }
+
+  const db = existing.rows[0];
+
+  // If it's a hosted database, drop the database and user from the server
+  if (db.is_hosted) {
+    if (db.engine === 'postgres') {
+      const adminPool = new Pool({
+        host: 'localhost',
+        port: 5432,
+        user: 'postgres',
+        password: 'postgres',
+        database: 'postgres',
+      });
+
+      try {
+        // Terminate all connections to the database
+        await adminPool.query(`
+          SELECT pg_terminate_backend(pg_stat_activity.pid)
+          FROM pg_stat_activity
+          WHERE pg_stat_activity.datname = $1
+          AND pid <> pg_backend_pid()
+        `, [db.database]);
+        
+        // Drop the database
+        await adminPool.query(`DROP DATABASE IF EXISTS "${db.database}"`);
+        
+        // Drop the user
+        await adminPool.query(`DROP USER IF EXISTS "${db.username}"`);
+        
+        await adminPool.end();
+      } catch (error) {
+        await adminPool.end();
+        // Log error but don't fail the delete - the connection record should still be removed
+        console.error('Failed to drop PostgreSQL database/user:', error);
+      }
+    } else {
+      // MySQL
+      const adminConnection = await mysql.createConnection({
+        host: 'localhost',
+        port: 3306,
+        user: 'root',
+        password: 'mysql',
+      });
+
+      try {
+        // Drop the database
+        await adminConnection.execute(`DROP DATABASE IF EXISTS \`${db.database}\``);
+        
+        // Drop the user
+        await adminConnection.execute(`DROP USER IF EXISTS '${db.username}'@'%'`);
+        
+        await adminConnection.end();
+      } catch (error) {
+        await adminConnection.end();
+        // Log error but don't fail the delete
+        console.error('Failed to drop MySQL database/user:', error);
+      }
+    }
+  }
+
+  // Delete the connection record
+  await pool.query(
+    'DELETE FROM database_connections WHERE id = $1 AND user_id = $2',
+    [databaseId, userId]
+  );
 };
 
 /**

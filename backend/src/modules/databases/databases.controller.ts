@@ -1,6 +1,7 @@
 // src/modules/databases/databases.controller.ts
 import { Request, Response, NextFunction } from 'express';
 import {
+  createDatabaseService,
   connectDatabaseService,
   getDatabasesService,
   getDatabaseService,
@@ -11,7 +12,7 @@ import {
   reconnectDatabaseService,
   testConnectionService,
 } from './databases.service';
-import { ConnectDatabaseSchema, UpdateDatabaseSchema, TestConnectionSchema } from '../../schemas/database.schema';
+import { CreateDatabaseSchema, ConnectDatabaseSchema, UpdateDatabaseSchema, TestConnectionSchema } from '../../schemas/database.schema';
 
 /**
  * POST /databases/test
@@ -27,6 +28,29 @@ export const testConnection = async (
     const result = await testConnectionService(body);
 
     res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /databases/create
+ * Create a new hosted database
+ */
+export const createDatabase = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const body = CreateDatabaseSchema.parse(req.body);
+    const database = await createDatabaseService(userId, body);
+
+    res.status(201).json({ 
+      message: `Successfully created database ${database.name}`,
+      database 
+    });
   } catch (error) {
     next(error);
   }

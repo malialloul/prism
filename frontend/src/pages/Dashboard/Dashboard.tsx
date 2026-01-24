@@ -131,7 +131,7 @@ export default function Dashboard() {
   };
 
   const handleCreateDatabase = (engine?: DatabaseDto['engine']) => {
-    setInitialCreateEngine(engine);
+    setInitialCreateEngine(engine || 'postgres');
     setIsCreateDialogOpen(true);
   };
 

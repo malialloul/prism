@@ -31,6 +31,12 @@ export const DatabaseConnectionSchema = registerTable(
 );
 
 // Request schemas
+export const CreateDatabaseSchema = z.object({
+  name: z.string().min(1, "Database name is required"),
+  engine: z.enum(["postgres", "mysql"]),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
 export const ConnectDatabaseSchema = z.object({
   name: z.string().min(1, "Database name is required"),
   engine: z.enum(["postgres", "mysql"]),

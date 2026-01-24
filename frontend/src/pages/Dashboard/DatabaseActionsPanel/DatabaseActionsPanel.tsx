@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Switch, CircularProgress } from '@mui/material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { useConnectDatabase, useTestConnection } from '../../../api/entities/databases';
+import { useCreateDatabase, useConnectDatabase, useTestConnection } from '../../../api/entities/databases';
 import { toastService } from '../../../services';
 import { encryptForTransmission } from '../../../utils/crypto';
 import {
@@ -29,11 +29,16 @@ import {
   TestConnectionButton,
   ConnectionStatus,
 } from './DatabaseActionsPanel.styles';
+import { DatabaseDto } from '../../../api/models/DatabaseDto';
 
 // Validation schemas
 const createDatabaseSchema = Yup.object({
   engine: Yup.string().oneOf(['postgres', 'mysql']).required(),
   name: Yup.string().required('Database name is required'),
+  password: Yup.string().required('Password is required').min(8, 'Password must be at least 8 characters'),
+  confirmPassword: Yup.string()
+    .required('Please confirm your password')
+    .oneOf([Yup.ref('password')], 'Passwords must match'),
 });
 
 const connectDatabaseSchema = Yup.object({
@@ -76,6 +81,16 @@ export default function DatabaseActionsPanel({
   const [connectionTestMessage, setConnectionTestMessage] = useState('');
 
   // API hooks
+  const { mutate: submitCreateDatabase, isPending: isCreating } = useCreateDatabase({
+    onSuccess: (database, message) => {
+      toastService.success(message);
+      onCloseCreateDialog();
+      createFormik.resetForm();
+      onDatabaseConnected?.(database.id);
+    },
+    // Error toast is handled by httpClient interceptor
+  });
+
   const { mutate: submitConnectDatabase, isPending: isConnecting } = useConnectDatabase({
     onSuccess: (database, message) => {
       toastService.success(message);
@@ -85,9 +100,7 @@ export default function DatabaseActionsPanel({
       setConnectionTestMessage('');
       onDatabaseConnected?.(database.id);
     },
-    onError: (error) => {
-      toastService.error(error.message);
-    },
+    // Error toast is handled by httpClient interceptor
   });
 
   const { mutate: testConnection, isPending: isTesting } = useTestConnection({
@@ -109,14 +122,19 @@ export default function DatabaseActionsPanel({
   // Create Database Form
   const createFormik = useFormik({
     initialValues: {
-      engine: initialCreateEngine || 'postgres' as 'postgres' | 'mysql',
+      engine: initialCreateEngine || 'postgres' as DatabaseDto['engine'],
       name: '',
+      password: '',
+      confirmPassword: '',
     },
     validationSchema: createDatabaseSchema,
-    onSubmit: (values, { resetForm }) => {
-      console.log('Creating database:', values);
-      onCloseCreateDialog();
-      resetForm();
+    onSubmit: async (values) => {
+      const encryptedPassword = await encryptForTransmission(values.password);
+      submitCreateDatabase({
+        name: values.name,
+        engine: values.engine,
+        password: encryptedPassword,
+      });
     },
   });
 
@@ -239,11 +257,42 @@ export default function DatabaseActionsPanel({
                 fullWidth
               />
             </FormGroup>
+
+            <FormRow>
+              <FormGroup>
+                <FormLabel>Password</FormLabel>
+                <StyledTextField
+                  name="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={createFormik.values.password}
+                  onChange={createFormik.handleChange}
+                  onBlur={createFormik.handleBlur}
+                  error={createFormik.touched.password && Boolean(createFormik.errors.password)}
+                  helperText={createFormik.touched.password && createFormik.errors.password}
+                  fullWidth
+                />
+              </FormGroup>
+              <FormGroup>
+                <FormLabel>Confirm Password</FormLabel>
+                <StyledTextField
+                  name="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={createFormik.values.confirmPassword}
+                  onChange={createFormik.handleChange}
+                  onBlur={createFormik.handleBlur}
+                  error={createFormik.touched.confirmPassword && Boolean(createFormik.errors.confirmPassword)}
+                  helperText={createFormik.touched.confirmPassword && createFormik.errors.confirmPassword}
+                  fullWidth
+                />
+              </FormGroup>
+            </FormRow>
           </DialogContent>
           <DialogFooter>
-            <CancelButton type="button" onClick={handleCloseCreateDialog}>Cancel</CancelButton>
-            <SubmitButton type="submit" disabled={!createFormik.isValid || !createFormik.dirty}>
-              Create Database
+            <CancelButton type="button" onClick={handleCloseCreateDialog} disabled={isCreating}>Cancel</CancelButton>
+            <SubmitButton type="submit" disabled={!createFormik.isValid || !createFormik.dirty || isCreating}>
+              {isCreating ? <CircularProgress size={16} color="inherit" /> : 'Create Database'}
             </SubmitButton>
           </DialogFooter>
         </form>

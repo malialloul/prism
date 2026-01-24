@@ -2,6 +2,12 @@
 
 import type { ApiResponseDto } from '../../utils/errors';
 
+export interface CreateDatabaseDto {
+  name: string;
+  engine: 'postgres' | 'mysql';
+  password: string;
+}
+
 export interface ConnectDatabaseDto {
   name: string;
   engine: 'postgres' | 'mysql';
@@ -81,6 +87,7 @@ export interface DbDatabaseConnectionDto {
 }
 
 export type ConnectDatabaseResponseDto = ApiResponseDto<DatabaseDto>;
+export type CreateDatabaseResponseDto = ApiResponseDto<DatabaseDto>;
 export type GetDatabasesResponseDto = ApiResponseDto<DatabaseDto[]>;
 export type GetDatabaseResponseDto = ApiResponseDto<DatabaseDto>;
 export type UpdateDatabaseResponseDto = ApiResponseDto<DatabaseDto>;

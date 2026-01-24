@@ -64,7 +64,7 @@ export default function Sidebar({
       <SidebarHeader>
         <HeaderTitle>Databases</HeaderTitle>
         <Tooltip title="Add Database">
-          <AddButton onClick={onAddDatabase} size="small">
+          <AddButton onClick={() => onAddDatabase()} size="small">
             <AddIcon sx={{ fontSize: '1rem' }} />
           </AddButton>
         </Tooltip>

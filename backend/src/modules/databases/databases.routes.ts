@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { authMiddleware } from '../../middleware/auth';
 import {
   testConnection,
+  createDatabase,
   connectDatabase,
   getDatabases,
   getDatabase,
@@ -20,6 +21,9 @@ router.use(authMiddleware);
 
 // Test connection (before saving)
 router.post('/test', testConnection);
+
+// Create new hosted database
+router.post('/create', createDatabase);
 
 // Connect new database
 router.post('/', connectDatabase);
