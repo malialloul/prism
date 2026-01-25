@@ -25,7 +25,7 @@ import DeleteDatabaseDialog from "./DeleteDatabaseDialog/DeleteDatabaseDialog";
 import SwitchDatabaseDialog from "./SwitchDatabaseDialog/SwitchDatabaseDialog";
 import { SchemaExplorer, ObjectDetailsPanel } from "./SchemaExplorer";
 import { QueryEditor } from "./QueryEditor";
-import { CreateTableDialog, AddColumnDialog, DeleteTableDialog, TableEditor } from "./TableManagement";
+import { CreateTableDialog, AddColumnDialog, DeleteTableDialog, TableEditor } from "./TableEditor";
 import { useDatabases, useRefreshDatabase, useDisconnectDatabase, useReconnectDatabase } from "../../api/entities/databases";
 
 // Icons

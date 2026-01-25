@@ -46,13 +46,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showError, showSuccess, showWarning, showInfo }}>
       {children}
-      {toasts.map((toast) => (
+      {toasts.map((toast, index) => (
         <Snackbar
           key={toast.id}
           open
           autoHideDuration={6000}
           onClose={() => hideToast(toast.id)}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          sx={{ 
+            bottom: `${24 + index * 60}px !important`,
+          }}
         >
           <Alert
             onClose={() => hideToast(toast.id)}

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { MenuItem, CircularProgress } from '@mui/material';
-import { useAddColumn } from '../../../api/entities/schema';
-import type { AddColumnDto } from '../../../api/models/SchemaDto';
-import { POSTGRES_DATA_TYPES, MYSQL_DATA_TYPES } from '../../../api/models/SchemaDto';
+import { useAddColumn } from '../../../../api/entities/schema';
+import type { AddColumnDto } from '../../../../api/models/SchemaDto';
+import { POSTGRES_DATA_TYPES, MYSQL_DATA_TYPES } from '../../../../api/models/SchemaDto';
 import {
   StyledDialog,
   DialogHeader,
@@ -18,7 +18,7 @@ import {
   CancelButton,
   SubmitButton,
   CheckboxLabel,
-} from './TableManagement.styles';
+} from '../shared.styles';
 
 interface AddColumnDialogProps {
   open: boolean;

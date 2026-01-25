@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { MenuItem, CircularProgress } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useCreateTable } from '../../../api/entities/schema';
-import type { CreateColumnDto } from '../../../api/models/SchemaDto';
-import { POSTGRES_DATA_TYPES, MYSQL_DATA_TYPES } from '../../../api/models/SchemaDto';
+import { useCreateTable } from '../../../../api/entities/schema';
+import type { CreateColumnDto } from '../../../../api/models/SchemaDto';
+import { POSTGRES_DATA_TYPES, MYSQL_DATA_TYPES } from '../../../../api/models/SchemaDto';
 import {
   StyledDialog,
   DialogHeader,
@@ -25,7 +25,7 @@ import {
   RemoveColumnButton,
   AddColumnButton,
   ColumnsHeader,
-} from './TableManagement.styles';
+} from '../shared.styles';
 
 interface CreateTableDialogProps {
   open: boolean;

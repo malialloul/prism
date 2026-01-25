@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CircularProgress } from '@mui/material';
 import WarningIcon from '@mui/icons-material/Warning';
-import { useDropTable } from '../../../api/entities/schema';
+import { useDropTable } from '../../../../api/entities/schema';
 import {
   StyledDialog,
   DialogHeader,
@@ -15,7 +15,7 @@ import {
   CancelButton,
   DeleteButton,
   WarningBox,
-} from './TableManagement.styles';
+} from '../shared.styles';
 
 interface DeleteTableDialogProps {
   open: boolean;

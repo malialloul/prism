@@ -1,14 +1,13 @@
-import { useState } from 'react';
-import { CircularProgress, Tooltip, Menu, MenuItem } from '@mui/material';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { CircularProgress, Tooltip } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import StorageIcon from '@mui/icons-material/Storage';
 import LinkIcon from '@mui/icons-material/Link';
-import { useTableDetails } from '../../../api/entities/schema';
-import type { SchemaObjectType, TableDetailsDto } from '../../../api/models/SchemaDto';
+import { useTableDetails } from '../../../../api/entities/schema';
+import type { SchemaObjectType, TableDetailsDto } from '../../../../api/models/SchemaDto';
+import { DatabaseDto } from '../../../../api/models/DatabaseDto';
 import {
   DetailsPanel,
   DetailsPanelHeader,
@@ -20,14 +19,14 @@ import {
   DetailsSectionTitle,
   ColumnsTable,
   ColumnBadge,
-  DataTable,
   ActionButton,
+  TableActionsBar,
+  TableActionButton,
   EmptyState,
   StatRow,
   StatItem,
   ForeignKeyLink,
-} from './SchemaExplorer.styles';
-import { DatabaseDto } from '../../../api/models/DatabaseDto';
+} from './ObjectDetailsPanel.styles';
 
 interface ObjectDetailsPanelProps {
   databaseId: string | undefined;
@@ -35,7 +34,6 @@ interface ObjectDetailsPanelProps {
   objectType: SchemaObjectType | undefined;
   engine?: DatabaseDto['engine'];
   onClose?: () => void;
-  onRunQuery?: (sql: string) => void;
   onEditTable?: (tableName: string) => void;
   onDeleteTable?: (tableName: string) => void;
   onAddColumn?: (tableName: string) => void;
@@ -48,28 +46,17 @@ export default function ObjectDetailsPanel({
   objectType,
   engine: _engine,
   onClose,
-  onRunQuery,
   onEditTable,
   onDeleteTable,
   onAddColumn,
   onNavigateToTable,
 }: ObjectDetailsPanelProps) {
-  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
-  
   const { data: tableData, isLoading: tableLoading } = useTableDetails(
     objectType === 'table' ? databaseId : undefined,
     objectType === 'table' ? objectName : undefined
   );
 
   const table = tableData?.table;
-
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setMenuAnchor(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setMenuAnchor(null);
-  };
 
   if (!databaseId || !objectName || !objectType) {
     return (
@@ -96,44 +83,38 @@ export default function ObjectDetailsPanel({
           <DetailsTitleText>{objectName}</DetailsTitleText>
           <TypeBadge type={objectType}>{objectType}</TypeBadge>
         </DetailsTitle>
-        <div style={{ display: 'flex', gap: '0.25rem' }}>
-          {objectType === 'table' && (
-            <>
-              <ActionButton onClick={handleMenuOpen} size="small">
-                <MoreVertIcon sx={{ fontSize: '1rem' }} />
-              </ActionButton>
-              <Menu
-                anchorEl={menuAnchor}
-                open={Boolean(menuAnchor)}
-                onClose={handleMenuClose}
-              >
-                <MenuItem onClick={() => { onAddColumn?.(objectName); handleMenuClose(); }}>
-                  <AddIcon sx={{ fontSize: '1rem', mr: 1 }} />
-                  Add Column
-                </MenuItem>
-                <MenuItem onClick={() => { onEditTable?.(objectName); handleMenuClose(); }}>
-                  <EditIcon sx={{ fontSize: '1rem', mr: 1 }} />
-                  Edit Table
-                </MenuItem>
-                <MenuItem 
-                  onClick={() => { onDeleteTable?.(objectName); handleMenuClose(); }}
-                  sx={{ color: 'error.main' }}
-                >
-                  <DeleteIcon sx={{ fontSize: '1rem', mr: 1 }} />
-                  Delete Table
-                </MenuItem>
-              </Menu>
-            </>
-          )}
-          {onClose && (
-            <Tooltip title="Close">
-              <ActionButton onClick={onClose} size="small">
-                <CloseIcon sx={{ fontSize: '1rem' }} />
-              </ActionButton>
-            </Tooltip>
-          )}
-        </div>
+        {onClose && (
+          <Tooltip title="Close">
+            <ActionButton onClick={onClose} size="small">
+              <CloseIcon sx={{ fontSize: '1rem' }} />
+            </ActionButton>
+          </Tooltip>
+        )}
       </DetailsPanelHeader>
+      
+      {objectType === 'table' && (
+        <TableActionsBar>
+          <Tooltip title="Add a new column to this table">
+            <TableActionButton onClick={() => onAddColumn?.(objectName)}>
+              <AddIcon />
+              Add Column
+            </TableActionButton>
+          </Tooltip>
+          <Tooltip title="Edit table data and structure">
+            <TableActionButton onClick={() => onEditTable?.(objectName)}>
+              <EditIcon />
+              Edit Table
+            </TableActionButton>
+          </Tooltip>
+          <Tooltip title="Permanently delete this table">
+            <TableActionButton variant="danger" onClick={() => onDeleteTable?.(objectName)}>
+              <DeleteIcon />
+              Delete Table
+            </TableActionButton>
+          </Tooltip>
+        </TableActionsBar>
+      )}
+      
       <DetailsPanelContent>
         {isLoading ? (
           <EmptyState>
@@ -252,46 +233,6 @@ function TableDetails({ table, onNavigateToTable }: { table: TableDetailsDto; on
           </ColumnsTable>
         </DetailsSection>
       )}
-
-      {table.sampleData.length > 0 && (
-        <DetailsSection>
-          <DetailsSectionTitle>
-            Sample Data (showing {Math.min(table.sampleData.length, 50)} of {table.rowCount} rows)
-          </DetailsSectionTitle>
-          <DataTable>
-            <table>
-              <thead>
-                <tr>
-                  {table.columns.map((col) => (
-                    <th key={col.name}>{col.name}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {table.sampleData.slice(0, 50).map((row, idx) => (
-                  <tr key={idx}>
-                    {table.columns.map((col) => (
-                      <td key={col.name}>
-                        {formatCellValue(row[col.name])}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </DataTable>
-        </DetailsSection>
-      )}
     </>
   );
-}
-
-function formatCellValue(value: unknown): string {
-  if (value === null) return 'NULL';
-  if (value === undefined) return '';
-  if (typeof value === 'object') {
-    if (value instanceof Date) return value.toISOString();
-    return JSON.stringify(value);
-  }
-  return String(value);
 }

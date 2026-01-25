@@ -10,6 +10,7 @@ export const StyledDialog = styled(Dialog)(({ theme }) => {
       borderRadius: '0.75rem',
       maxWidth: '600px',
       width: '100%',
+      overflowX: 'auto',
     },
   };
 });
@@ -41,12 +42,12 @@ export const DialogSubtitle = styled('p')(({ theme }) => {
   };
 });
 
-export const DialogContent = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+export const DialogContent = styled(Box)(() => {
   return {
     padding: '1.5rem',
     maxHeight: '60vh',
     overflowY: 'auto',
+    overflowX: 'auto',
   };
 });
 
