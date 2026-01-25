@@ -15,6 +15,8 @@ import {
   modifyColumnService,
   dropColumnService,
   dropTableService,
+  createViewService,
+  dropViewService,
 } from './schema.service';
 
 /**
@@ -338,6 +340,55 @@ export const dropTable = async (
     await dropTableService(userId, databaseId, tableName);
 
     res.status(200).json({ message: `Table "${tableName}" dropped successfully` });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /databases/:id/views
+ * Create a new view
+ */
+export const createView = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const databaseId = req.params.id as string;
+    const { name, definition } = req.body;
+
+    if (!name || !definition) {
+      res.status(400).json({ message: 'View name and definition are required' });
+      return;
+    }
+
+    await createViewService(userId, databaseId, { name, definition });
+
+    res.status(201).json({ message: `View "${name}" created successfully` });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /databases/:id/views/:viewName
+ * Drop a view
+ */
+export const dropView = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const databaseId = req.params.id as string;
+    const viewName = req.params.viewName as string;
+
+    await dropViewService(userId, databaseId, viewName);
+
+    res.status(200).json({ message: `View "${viewName}" dropped successfully` });
   } catch (error) {
     next(error);
   }

@@ -113,6 +113,13 @@ export const SectionCount = styled('span')(({ theme }) => {
   };
 });
 
+export const SectionActions = styled(Box)({
+  marginLeft: 'auto',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.25rem',
+});
+
 export const TreeItemList = styled(Collapse)({
   paddingLeft: '1rem',
 });

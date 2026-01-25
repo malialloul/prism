@@ -3,6 +3,7 @@ import { CircularProgress, Tooltip } from '@mui/material';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import StorageIcon from '@mui/icons-material/Storage';
+import AddIcon from '@mui/icons-material/Add';
 import { useSchemaObjects } from '../../../api/entities/schema';
 import type { SchemaObjectDto, SchemaObjectType } from '../../../api/models/SchemaDto';
 import {
@@ -21,6 +22,7 @@ import {
   ExpandIcon,
   ActionButton,
   EmptyState,
+  SectionActions,
 } from './SchemaExplorer.styles';
 
 interface SchemaExplorerProps {
@@ -28,6 +30,7 @@ interface SchemaExplorerProps {
   selectedObject?: { name: string; type: SchemaObjectType } | null;
   onSelectObject: (name: string, type: SchemaObjectType) => void;
   onCreateTable?: () => void;
+  onCreateView?: () => void;
 }
 
 const sectionConfig: {
@@ -46,7 +49,8 @@ export default function SchemaExplorer({
   databaseId,
   selectedObject,
   onSelectObject,
-  onCreateTable: _onCreateTable,
+  onCreateTable,
+  onCreateView,
 }: SchemaExplorerProps) {
   const { data, isLoading, refetch } = useSchemaObjects(databaseId);
   const [expandedSections, setExpandedSections] = useState<Record<SchemaObjectType, boolean>>({
@@ -117,6 +121,8 @@ export default function SchemaExplorer({
             {sectionConfig.map(({ type, label, icon }) => {
               const items = groupedObjects[type];
               const isExpanded = expandedSections[type];
+              const canCreate = type === 'table' || type === 'view';
+              const handleCreate = type === 'table' ? onCreateTable : type === 'view' ? onCreateView : undefined;
 
               return (
                 <TreeSection key={type}>
@@ -130,6 +136,21 @@ export default function SchemaExplorer({
                     <SectionIcon type={type}>{icon}</SectionIcon>
                     <SectionName>{label}</SectionName>
                     <SectionCount>{items.length}</SectionCount>
+                    {canCreate && handleCreate && (
+                      <SectionActions>
+                        <Tooltip title={`Create ${type === 'table' ? 'Table' : 'View'}`}>
+                          <ActionButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCreate();
+                            }}
+                          >
+                            <AddIcon sx={{ fontSize: '0.875rem' }} />
+                          </ActionButton>
+                        </Tooltip>
+                      </SectionActions>
+                    )}
                   </TreeSectionHeader>
                   <TreeItemList in={isExpanded}>
                     <div>

@@ -19,6 +19,7 @@ import type {
   CreateTableDto,
   AddColumnDto,
   ModifyColumnDto,
+  CreateViewDto,
 } from './schema.types';
 
 // Encryption helpers - same as in databases.service.ts
@@ -1227,6 +1228,87 @@ export const dropTableService = async (
     } catch (error) {
       await mysqlConn.end();
       const message = error instanceof Error ? error.message : 'Failed to drop table';
+      throw new ValidationError(message);
+    }
+  }
+};
+
+/**
+ * Create a new view
+ */
+export const createViewService = async (
+  userId: string,
+  databaseId: string,
+  viewData: CreateViewDto
+): Promise<void> => {
+  const conn = await getDatabaseConnection(userId, databaseId);
+  const { name, definition } = viewData;
+
+  // Validate that the definition is a SELECT statement
+  const normalizedDef = definition.trim().toUpperCase();
+  if (!normalizedDef.startsWith('SELECT')) {
+    throw new ValidationError('View definition must be a SELECT statement');
+  }
+
+  const sql = conn.engine === 'postgres'
+    ? `CREATE VIEW "${name}" AS ${definition}`
+    : `CREATE VIEW \`${name}\` AS ${definition}`;
+
+  if (conn.engine === 'postgres') {
+    const pgPool = createPgPool(conn);
+    try {
+      await pgPool.query(sql);
+      await pgPool.end();
+    } catch (error) {
+      await pgPool.end();
+      const message = error instanceof Error ? error.message : 'Failed to create view';
+      throw new ValidationError(message);
+    }
+  } else {
+    const mysqlConn = await createMysqlConnection(conn);
+    try {
+      await mysqlConn.execute(sql);
+      await mysqlConn.end();
+    } catch (error) {
+      await mysqlConn.end();
+      const message = error instanceof Error ? error.message : 'Failed to create view';
+      throw new ValidationError(message);
+    }
+  }
+};
+
+/**
+ * Drop a view
+ */
+export const dropViewService = async (
+  userId: string,
+  databaseId: string,
+  viewName: string
+): Promise<void> => {
+  const conn = await getDatabaseConnection(userId, databaseId);
+
+  const sql = conn.engine === 'postgres'
+    ? `DROP VIEW "${viewName}"`
+    : `DROP VIEW \`${viewName}\``;
+
+  if (conn.engine === 'postgres') {
+    const pgPool = createPgPool(conn);
+    try {
+      await pgPool.query(sql);
+      await pgPool.end();
+    } catch (error) {
+      await pgPool.end();
+      const message = error instanceof Error ? error.message : 'Failed to drop view';
+      throw new ValidationError(message);
+    }
+  } else {
+    const mysqlConn = await createMysqlConnection(conn);
+    try {
+      await mysqlConn.execute(sql);
+      await mysqlConn.end();
+    } catch (error) {
+      await mysqlConn.end();
+      const message = error instanceof Error ? error.message : 'Failed to drop view';
       throw new ValidationError(message);
     }
   }

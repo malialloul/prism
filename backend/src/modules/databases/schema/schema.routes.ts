@@ -16,6 +16,8 @@ import {
   modifyColumn,
   dropColumn,
   dropTable,
+  createView,
+  dropView,
 } from './schema.controller';
 
 const router = Router();
@@ -41,6 +43,10 @@ router.delete('/:id/queries/:queryId', deleteSavedQuery);
 // Table management
 router.post('/:id/tables', createTable);
 router.delete('/:id/tables/:tableName', dropTable);
+
+// View management
+router.post('/:id/views', createView);
+router.delete('/:id/views/:viewName', dropView);
 
 // Column management
 router.post('/:id/tables/:tableName/columns', addColumn);

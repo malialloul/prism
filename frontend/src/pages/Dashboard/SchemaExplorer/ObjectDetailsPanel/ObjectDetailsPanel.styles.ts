@@ -276,3 +276,45 @@ export const ForeignKeyLink = styled('button')(({ theme }) => {
     },
   };
 });
+
+export const SqlCodeBlock = styled(Box)(({ theme }) => {
+  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  return {
+    padding: '1rem',
+    backgroundColor: colors.backgroundTertiary,
+    borderRadius: '0.5rem',
+    border: `1px solid ${colors.border}`,
+    fontFamily: '"JetBrains Mono", "Fira Code", Consolas, monospace',
+    fontSize: '0.8125rem',
+    lineHeight: 1.6,
+    color: colors.text,
+    overflowX: 'auto',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    '& .keyword': {
+      color: colors.primary,
+      fontWeight: 600,
+    },
+    '& .function': {
+      color: colors.info,
+    },
+    '& .string': {
+      color: colors.success,
+    },
+    '& .comment': {
+      color: colors.textMuted,
+      fontStyle: 'italic',
+    },
+  };
+});
+
+export const ViewActionsBar = styled(Box)(({ theme }) => {
+  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  return {
+    display: 'flex',
+    gap: '0.5rem',
+    padding: '0.75rem 1.25rem',
+    borderBottom: `1px solid ${colors.border}`,
+    backgroundColor: colors.backgroundSecondary,
+  };
+});

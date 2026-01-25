@@ -140,6 +140,12 @@ export interface DropColumnDto {
   name: string;
 }
 
+// View management types
+export interface CreateViewDto {
+  name: string;
+  definition: string;
+}
+
 // Response types
 export type GetSchemaObjectsResponseDto = ApiResponseDto<{ objects: SchemaObjectDto[] }>;
 export type GetTableDetailsResponseDto = ApiResponseDto<{ table: TableDetailsDto }>;
@@ -152,6 +158,8 @@ export type SaveQueryResponseDto = ApiResponseDto<{ query: SavedQueryDto }>;
 export type CreateTableResponseDto = ApiResponseDto<{ message: string }>;
 export type ModifyTableResponseDto = ApiResponseDto<{ message: string }>;
 export type DropTableResponseDto = ApiResponseDto<{ message: string }>;
+export type CreateViewResponseDto = ApiResponseDto<{ message: string }>;
+export type DropViewResponseDto = ApiResponseDto<{ message: string }>;
 
 // Data type constants
 export const POSTGRES_DATA_TYPES = [

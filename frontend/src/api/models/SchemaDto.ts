@@ -126,6 +126,11 @@ export interface ModifyColumnDto {
   defaultValue?: string;
 }
 
+export interface CreateViewDto {
+  name: string;
+  definition: string;
+}
+
 // Data type constants
 export const POSTGRES_DATA_TYPES = [
   'INTEGER',

@@ -25,8 +25,9 @@ import DeleteDatabaseDialog from "./DeleteDatabaseDialog/DeleteDatabaseDialog";
 import SwitchDatabaseDialog from "./SwitchDatabaseDialog/SwitchDatabaseDialog";
 import { SchemaExplorer, ObjectDetailsPanel } from "./SchemaExplorer";
 import { QueryEditor } from "./QueryEditor";
-import { CreateTableDialog, AddColumnDialog, DeleteTableDialog, TableEditor } from "./TableEditor";
+import { CreateTableDialog, CreateViewDialog, AddColumnDialog, DeleteTableDialog, TableEditor } from "./TableEditor";
 import { useDatabases, useRefreshDatabase, useDisconnectDatabase, useReconnectDatabase } from "../../api/entities/databases";
+import { toastService } from "../../services";
 
 // Icons
 import AddIcon from "@mui/icons-material/Add";
@@ -74,6 +75,7 @@ export default function Dashboard() {
   
   // Table Management state
   const [isCreateTableDialogOpen, setIsCreateTableDialogOpen] = useState(false);
+  const [isCreateViewDialogOpen, setIsCreateViewDialogOpen] = useState(false);
   const [isAddColumnDialogOpen, setIsAddColumnDialogOpen] = useState(false);
   const [isDeleteTableDialogOpen, setIsDeleteTableDialogOpen] = useState(false);
   const [isTableEditorOpen, setIsTableEditorOpen] = useState(false);
@@ -81,6 +83,9 @@ export default function Dashboard() {
 
   // Schema version to trigger query result refresh when schema changes
   const [schemaVersion, setSchemaVersion] = useState(0);
+
+  // Initial query to populate in QueryEditor (e.g., from "Query View" action)
+  const [initialQuery, setInitialQuery] = useState<string>('');
 
   // Track if we've already auto-refreshed on mount
   const hasAutoRefreshed = useRef(false);
@@ -272,6 +277,28 @@ export default function Dashboard() {
     setSchemaVersion(v => v + 1); // Invalidate query results
   };
 
+  const handleQueryView = (viewName: string, query: string) => {
+    // Set the query to be populated in QueryEditor
+    const selectQuery = query || `SELECT * FROM ${viewName}`;
+    setInitialQuery(selectQuery);
+    // Switch to Query Editor tab
+    setActiveTab(2);
+  };
+
+  const handleDeleteView = (viewName: string) => {
+    setTableToModify(viewName);
+    setIsDeleteTableDialogOpen(true); // Reuse delete dialog for views
+  };
+
+  const handleCreateView = () => {
+    setIsCreateViewDialogOpen(true);
+  };
+
+  const handleViewCreated = () => {
+    setSchemaVersion(v => v + 1); // Refresh schema to show new view
+    toastService.success('View created successfully');
+  };
+
   const hasNoDatabases = databases.length === 0;
 
   if (hasNoDatabases) {
@@ -406,6 +433,7 @@ export default function Dashboard() {
                 databaseId={connectedDatabase.id}
                 onSelectObject={handleSelectObject}
                 onCreateTable={handleCreateTable}
+                onCreateView={handleCreateView}
               />
               {selectedObjectName && (
                 <ObjectDetailsPanel
@@ -418,6 +446,8 @@ export default function Dashboard() {
                   onEditTable={handleEditTable}
                   onDeleteTable={handleDeleteTable}
                   onNavigateToTable={(tableName) => handleSelectObject(tableName, 'table')}
+                  onQueryView={handleQueryView}
+                  onDeleteView={handleDeleteView}
                 />
               )}
             </TabPanel>
@@ -430,6 +460,7 @@ export default function Dashboard() {
                 key={`query-editor-${connectedDatabase.id}-${schemaVersion}`}
                 databaseId={connectedDatabase.id}
                 engine={connectedDatabase.engine}
+                initialQuery={initialQuery}
               />
             </TabPanel>
           )}
@@ -477,6 +508,13 @@ export default function Dashboard() {
             databaseId={connectedDatabase.id}
             engine={connectedDatabase.engine}
             onSuccess={handleTableCreated}
+          />
+          <CreateViewDialog
+            open={isCreateViewDialogOpen}
+            onClose={() => setIsCreateViewDialogOpen(false)}
+            databaseId={connectedDatabase.id}
+            engine={connectedDatabase.engine}
+            onSuccess={handleViewCreated}
           />
           {tableToModify && (
             <>

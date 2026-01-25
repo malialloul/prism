@@ -14,13 +14,9 @@ import WarningIcon from '@mui/icons-material/Warning';
 import SearchIcon from '@mui/icons-material/Search';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import FirstPageIcon from '@mui/icons-material/FirstPage';
-import LastPageIcon from '@mui/icons-material/LastPage';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import type { RowData, EditingCell } from '../TableEditor.types';
-import { PAGE_SIZES } from '../TableEditor.types';
 import { formatDisplayValue } from '../TableEditor.utils';
+import { Pagination } from '../../../../components';
 import {
   DataTabContent,
   DataToolbar,
@@ -39,11 +35,6 @@ import {
   EditInput,
   NewRowIndicator,
   ModifiedRowIndicator,
-  PaginationControls,
-  PaginationInfo,
-  PaginationButtons,
-  PageSizeSelect,
-  PageInfo,
 } from './DataTab.styles';
 
 interface DataTabProps {
@@ -381,80 +372,17 @@ export default function DataTab({
       </TableContainer>
 
       {/* Pagination */}
-      <PaginationControls>
-        <PaginationInfo>
-          {totalRows > 0 ? (
-            <>
-              Showing <strong>{startRow.toLocaleString()}-{endRow.toLocaleString()}</strong> <span>of</span> <strong>{totalRows.toLocaleString()}</strong> <span>rows</span>
-            </>
-          ) : (
-            <span>No rows</span>
-          )}
-        </PaginationInfo>
-        <PaginationButtons>
-          <Tooltip title="First Page">
-            <span>
-              <IconButton
-                size="small"
-                onClick={() => onPageChange(0)}
-                disabled={page === 0 || isLoading}
-              >
-                <FirstPageIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
-          <Tooltip title="Previous Page">
-            <span>
-              <IconButton
-                size="small"
-                onClick={() => onPageChange(Math.max(0, page - 1))}
-                disabled={page === 0 || isLoading}
-              >
-                <ChevronLeftIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
-          <PageInfo>
-            <span>Page</span> {page + 1} / {Math.max(1, totalPages)}
-          </PageInfo>
-          <Tooltip title="Next Page">
-            <span>
-              <IconButton
-                size="small"
-                onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
-                disabled={page >= totalPages - 1 || isLoading}
-              >
-                <ChevronRightIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
-          <Tooltip title="Last Page">
-            <span>
-              <IconButton
-                size="small"
-                onClick={() => onPageChange(totalPages - 1)}
-                disabled={page >= totalPages - 1 || isLoading}
-              >
-                <LastPageIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
-        </PaginationButtons>
-        <SortContainer>
-          <span>Rows per page:</span>
-          <PageSizeSelect
-            value={pageSize}
-            onChange={(e) => onPageSizeChange(e.target.value as number)}
-            size="small"
-          >
-            {PAGE_SIZES.map((size) => (
-              <MenuItem key={size} value={size}>
-                {size}
-              </MenuItem>
-            ))}
-          </PageSizeSelect>
-        </SortContainer>
-      </PaginationControls>
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        totalRows={totalRows}
+        totalPages={totalPages}
+        startRow={startRow}
+        endRow={endRow}
+        isLoading={isLoading}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+      />
     </DataTabContent>
   );
 }

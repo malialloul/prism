@@ -9,6 +9,7 @@ import type {
   CreateTableDto,
   AddColumnDto,
   ModifyColumnDto,
+  CreateViewDto,
 } from '../models/SchemaDto';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -323,6 +324,51 @@ export class SchemaService {
     return __request(OpenAPI, {
       method: 'DELETE',
       url: `/databases/${databaseId}/tables/${tableName}/columns/${columnName}`,
+      errors: {
+        401: 'Unauthorized',
+        404: 'Not found',
+      },
+    });
+  }
+
+  /**
+   * Create a new view
+   * @param databaseId Database ID
+   * @param viewData View definition
+   * @returns void
+   * @throws ApiError
+   */
+  public static createView(
+    databaseId: string,
+    viewData: CreateViewDto
+  ): CancelablePromise<{ message: string }> {
+    return __request(OpenAPI, {
+      method: 'POST',
+      url: `/databases/${databaseId}/views`,
+      body: viewData,
+      mediaType: 'application/json',
+      errors: {
+        400: 'Invalid view definition',
+        401: 'Unauthorized',
+        404: 'Database not found',
+      },
+    });
+  }
+
+  /**
+   * Drop a view
+   * @param databaseId Database ID
+   * @param viewName View name
+   * @returns void
+   * @throws ApiError
+   */
+  public static dropView(
+    databaseId: string,
+    viewName: string
+  ): CancelablePromise<{ message: string }> {
+    return __request(OpenAPI, {
+      method: 'DELETE',
+      url: `/databases/${databaseId}/views/${viewName}`,
       errors: {
         401: 'Unauthorized',
         404: 'Not found',

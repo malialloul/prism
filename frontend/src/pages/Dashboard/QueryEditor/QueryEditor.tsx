@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   CircularProgress,
   Tooltip,
@@ -18,6 +18,7 @@ import CodeIcon from '@mui/icons-material/Code';
 import { useExecuteQuery, useSavedQueries, useSaveQuery, useDeleteSavedQuery } from '../../../api/entities/schema';
 import type { QueryResultDto, SavedQueryDto } from '../../../api/models/SchemaDto';
 import { toastService } from '../../../services';
+import { Pagination } from '../../../components';
 import {
   EditorWrapper,
   EditorHeader,
@@ -63,6 +64,24 @@ export default function QueryEditor({
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [queryName, setQueryName] = useState('');
   const [showSavedQueries, setShowSavedQueries] = useState(false);
+  
+  // Pagination state
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(50);
+
+  // Calculate pagination values
+  const paginationData = useMemo(() => {
+    const rows = result?.rows || [];
+    const totalRows = rows.length;
+    const totalPages = Math.ceil(totalRows / pageSize);
+    const startIndex = page * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalRows);
+    const visibleRows = rows.slice(startIndex, endIndex);
+    const startRow = totalRows > 0 ? startIndex + 1 : 0;
+    const endRow = endIndex;
+    
+    return { totalRows, totalPages, visibleRows, startRow, endRow };
+  }, [result?.rows, page, pageSize]);
 
   const { data: savedQueriesData, refetch: refetchSavedQueries } = useSavedQueries(databaseId);
   const savedQueries = savedQueriesData?.queries || [];
@@ -70,6 +89,13 @@ export default function QueryEditor({
   const { mutate: executeQuery, isPending: isExecuting } = useExecuteQuery(databaseId || '', {
     onSuccess: (queryResult) => {
       setResult(queryResult);
+      setPage(0); // Reset to first page on new query
+    },
+    onError: (error) => {
+      setResult({
+        success: false,
+        message: error.message || 'Query execution failed',
+      });
     },
   });
 
@@ -266,7 +292,7 @@ export default function QueryEditor({
                     </tr>
                   </thead>
                   <tbody>
-                    {result.rows.map((row, idx) => (
+                    {paginationData.visibleRows.map((row, idx) => (
                       <tr key={idx}>
                         {result.columns!.map((col, colIdx) => (
                           <td key={colIdx}>

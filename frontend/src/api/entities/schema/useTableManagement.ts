@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { SchemaService } from '../../services/SchemaService';
 import { ApiError } from '../../core/ApiError';
-import type { CreateTableDto, AddColumnDto, ModifyColumnDto } from '../../models/SchemaDto';
+import type { CreateTableDto, AddColumnDto, ModifyColumnDto, CreateViewDto } from '../../models/SchemaDto';
 import { SCHEMA_OBJECTS_QUERY_KEY } from './useSchemaObjects';
 import { OBJECT_DETAILS_QUERY_KEY } from './useObjectDetails';
 
@@ -77,6 +77,36 @@ export function useDropColumn(databaseId: string, tableName: string, options: Us
     mutationFn: (columnName) => SchemaService.dropColumn(databaseId, tableName, columnName),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: [...OBJECT_DETAILS_QUERY_KEY, 'table', databaseId, tableName] });
+      options.onSuccess?.(response.message);
+    },
+    onError: (error) => {
+      options.onError?.(error);
+    },
+  });
+}
+
+export function useCreateView(databaseId: string, options: UseTableMutationOptions = {}) {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ message: string }, ApiError, CreateViewDto>({
+    mutationFn: (viewData) => SchemaService.createView(databaseId, viewData),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: [...SCHEMA_OBJECTS_QUERY_KEY, databaseId] });
+      options.onSuccess?.(response.message);
+    },
+    onError: (error) => {
+      options.onError?.(error);
+    },
+  });
+}
+
+export function useDropView(databaseId: string, options: UseTableMutationOptions = {}) {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ message: string }, ApiError, string>({
+    mutationFn: (viewName) => SchemaService.dropView(databaseId, viewName),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: [...SCHEMA_OBJECTS_QUERY_KEY, databaseId] });
       options.onSuccess?.(response.message);
     },
     onError: (error) => {
