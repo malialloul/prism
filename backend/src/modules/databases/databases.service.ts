@@ -577,6 +577,12 @@ export const deleteDatabaseService = async (
     }
   }
 
+  // Delete saved queries for this database first (foreign key constraint)
+  await pool.query(
+    'DELETE FROM saved_queries WHERE database_id = $1 AND user_id = $2',
+    [databaseId, userId]
+  );
+
   // Delete the connection record
   await pool.query(
     'DELETE FROM database_connections WHERE id = $1 AND user_id = $2',
@@ -658,6 +664,7 @@ export const disconnectDatabaseService = async (
 
 /**
  * Reconnect database (test connection and update status)
+ * Automatically disconnects all other databases for the user
  */
 export const reconnectDatabaseService = async (
   userId: string,
@@ -689,6 +696,14 @@ export const reconnectDatabaseService = async (
   if (!testResult.success) {
     throw new ValidationError(testResult.message);
   }
+
+  // Disconnect all other databases for this user first
+  await pool.query(
+    `UPDATE database_connections 
+     SET status = 'disconnected', updated_at = NOW()
+     WHERE user_id = $1 AND id != $2 AND status = 'connected'`,
+    [userId, databaseId]
+  );
 
   const result = await pool.query<DbDatabaseConnectionDto>(
     `UPDATE database_connections 

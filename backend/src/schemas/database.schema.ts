@@ -30,6 +30,26 @@ export const DatabaseConnectionSchema = registerTable(
   }
 );
 
+// Saved queries table - stores user's saved SQL queries
+export const SavedQuerySchema = registerTable(
+  "saved_queries",
+  z.object({
+    userId: z.string().uuid(),
+    databaseId: z.string().uuid(),
+    name: z.string(),
+    sql: z.string(),
+  }),
+  {
+    withId: true,
+    withTimestamps: true,
+    columnOverrides: {
+      userId: { references: { table: "users", column: "id" } },
+      databaseId: { references: { table: "database_connections", column: "id" } },
+      sql: { type: "TEXT" },
+    },
+  }
+);
+
 // Request schemas
 export const CreateDatabaseSchema = z.object({
   name: z.string().min(1, "Database name is required"),

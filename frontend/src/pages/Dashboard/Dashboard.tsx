@@ -9,6 +9,10 @@ import {
   DashboardGrid,
   QuickActionsBar,
   QuickActionButton,
+  StyledTabs,
+  StyledTab,
+  TabPanel,
+  TabsContainer,
 } from "./Dashboard.styles";
 import Navbar from "./Navbar/Navbar";
 import Sidebar from "./Sidebar/Sidebar";
@@ -19,11 +23,15 @@ import UsageCharts from "./UsageCharts/UsageCharts";
 import EmptyState from "./EmptyState/EmptyState";
 import DeleteDatabaseDialog from "./DeleteDatabaseDialog/DeleteDatabaseDialog";
 import SwitchDatabaseDialog from "./SwitchDatabaseDialog/SwitchDatabaseDialog";
+import { SchemaExplorer, ObjectDetailsPanel } from "./SchemaExplorer";
+import { QueryEditor } from "./QueryEditor";
+import { CreateTableDialog, AddColumnDialog, DeleteTableDialog, TableEditor } from "./TableManagement";
 import { useDatabases, useRefreshDatabase, useDisconnectDatabase, useReconnectDatabase } from "../../api/entities/databases";
 
 // Icons
 import AddIcon from "@mui/icons-material/Add";
 import LinkIcon from "@mui/icons-material/Link";
+import TableViewIcon from "@mui/icons-material/TableView";
 import { DatabaseDto } from "../../api/models/DatabaseDto";
 
 export default function Dashboard() {
@@ -56,6 +64,23 @@ export default function Dashboard() {
   const [initialCreateEngine, setInitialCreateEngine] = useState<
     DatabaseDto['engine'] | undefined
   >(undefined);
+  
+  // Dashboard tab state
+  const [activeTab, setActiveTab] = useState(0);
+  
+  // Schema Explorer state
+  const [selectedObjectName, setSelectedObjectName] = useState<string | null>(null);
+  const [selectedObjectType, setSelectedObjectType] = useState<'table' | 'view' | 'index' | 'procedure' | 'function'>('table');
+  
+  // Table Management state
+  const [isCreateTableDialogOpen, setIsCreateTableDialogOpen] = useState(false);
+  const [isAddColumnDialogOpen, setIsAddColumnDialogOpen] = useState(false);
+  const [isDeleteTableDialogOpen, setIsDeleteTableDialogOpen] = useState(false);
+  const [isTableEditorOpen, setIsTableEditorOpen] = useState(false);
+  const [tableToModify, setTableToModify] = useState<string | null>(null);
+
+  // Schema version to trigger query result refresh when schema changes
+  const [schemaVersion, setSchemaVersion] = useState(0);
 
   // Track if we've already auto-refreshed on mount
   const hasAutoRefreshed = useRef(false);
@@ -93,22 +118,34 @@ export default function Dashboard() {
     const targetDb = databases.find((db) => db.id === id);
     if (!targetDb) return;
 
-    // If selecting a different database and one is already connected, show switch dialog
-    if (connectedDatabase && connectedDatabase.id !== id && targetDb.status !== 'connected') {
-      setDatabaseToSwitchTo(targetDb);
-      setIsSwitchDialogOpen(true);
-    } else if (targetDb.status !== 'connected') {
-      // No database connected, just connect to the selected one
-      reconnectDatabase(id);
-      setSelectedDatabaseId(id);
+    // Clear selected schema object when switching databases
+    setSelectedObjectName(null);
+
+    // If selecting a different database that's not connected
+    if (targetDb.status !== 'connected') {
+      // If another database is already connected, show switch dialog
+      if (connectedDatabase && connectedDatabase.id !== id) {
+        setDatabaseToSwitchTo(targetDb);
+        setIsSwitchDialogOpen(true);
+      } else {
+        // No database connected, just connect directly
+        setSelectedDatabaseId(id);
+        reconnectDatabase(id, {
+          onSuccess: () => {
+            refreshDatabase(id);
+          }
+        });
+      }
     } else {
-      // Already connected to this database, just select it
+      // Already connected, just select it
       setSelectedDatabaseId(id);
     }
   };
 
   const handleDisconnect = (id: string) => {
     disconnectDatabase(id);
+    setActiveTab(0); // Go back to Overview tab
+    setSelectedObjectName(null); // Clear any selected object
   };
 
   const handleConnect = (id: string) => {
@@ -166,6 +203,10 @@ export default function Dashboard() {
       setSelectedDatabaseId("");
     }
     setDatabaseToDelete(null);
+    
+    // Reset schema states and go to Overview tab
+    setSelectedObjectName(null);
+    setActiveTab(0);
   };
 
   const handleRefresh = (databaseId?: string) => {
@@ -175,6 +216,60 @@ export default function Dashboard() {
     } else {
       refetchDatabases();
     }
+  };
+
+  // Schema Explorer handlers
+  const handleSelectObject = (name: string, type: 'table' | 'view' | 'index' | 'procedure' | 'function') => {
+    setSelectedObjectName(name);
+    setSelectedObjectType(type);
+  };
+
+  const handleCloseObjectDetails = () => {
+    setSelectedObjectName(null);
+  };
+
+  // Table Management handlers
+  const handleCreateTable = () => {
+    setIsCreateTableDialogOpen(true);
+  };
+
+  const handleAddColumn = (tableName: string) => {
+    setTableToModify(tableName);
+    setIsAddColumnDialogOpen(true);
+  };
+
+  const handleDeleteTable = (tableName: string) => {
+    setTableToModify(tableName);
+    setIsDeleteTableDialogOpen(true);
+  };
+
+  const handleEditTable = (tableName: string) => {
+    setTableToModify(tableName);
+    setIsTableEditorOpen(true);
+  };
+
+  const handleTableDataChanged = () => {
+    setSchemaVersion(v => v + 1); // Invalidate query results
+  };
+
+  const handleTableCreated = () => {
+    // Refresh schema and show success
+    setSelectedObjectName(null);
+    setSchemaVersion(v => v + 1); // Invalidate query results
+  };
+
+  const handleColumnAdded = () => {
+    // Refresh to update object details
+    if (selectedObjectName) {
+      handleSelectObject(selectedObjectName, selectedObjectType);
+    }
+    setSchemaVersion(v => v + 1); // Invalidate query results
+  };
+
+  const handleTableDeleted = () => {
+    setSelectedObjectName(null);
+    setTableToModify(null);
+    setSchemaVersion(v => v + 1); // Invalidate query results
   };
 
   const hasNoDatabases = databases.length === 0;
@@ -237,39 +332,107 @@ export default function Dashboard() {
         />
         <DashboardContent>
           <ContentHeader>
-            <ContentTitle>Dashboard Overview</ContentTitle>
+            <ContentTitle>
+              {activeTab === 0 && 'Dashboard Overview'}
+              {activeTab === 1 && 'Schema Explorer'}
+              {activeTab === 2 && 'Query Editor'}
+            </ContentTitle>
             <QuickActionsBar>
-              <QuickActionButton
-                variant="primary"
-                onClick={() => handleCreateDatabase()}
-              >
-                <AddIcon sx={{ fontSize: "1rem" }} />
-                Create Database
-              </QuickActionButton>
-              <QuickActionButton onClick={handleConnectDatabase}>
-                <LinkIcon sx={{ fontSize: "1rem" }} />
-                Connect Existing
-              </QuickActionButton>
+              {activeTab === 0 && (
+                <>
+                  <QuickActionButton
+                    variant="primary"
+                    onClick={() => handleCreateDatabase()}
+                  >
+                    <AddIcon sx={{ fontSize: "1rem" }} />
+                    Create Database
+                  </QuickActionButton>
+                  <QuickActionButton onClick={handleConnectDatabase}>
+                    <LinkIcon sx={{ fontSize: "1rem" }} />
+                    Connect Existing
+                  </QuickActionButton>
+                </>
+              )}
+              {activeTab === 1 && connectedDatabase && (
+                <QuickActionButton
+                  variant="primary"
+                  onClick={handleCreateTable}
+                >
+                  <TableViewIcon sx={{ fontSize: "1rem" }} />
+                  Create Table
+                </QuickActionButton>
+              )}
             </QuickActionsBar>
           </ContentHeader>
 
-          {selectedDatabase && selectedDatabase.status === 'connected' && (
-            <ActiveDatabaseSummary
-              database={selectedDatabase}
-              onDisconnect={() => handleDisconnect(selectedDatabase.id)}
-              onRefresh={() => handleRefresh(selectedDatabase.id)}
-              onDelete={() => handleDeleteDatabase(selectedDatabase.id)}
-            />
+          <TabsContainer>
+            <StyledTabs
+              value={activeTab}
+              onChange={(_e, newValue) => setActiveTab(newValue)}
+            >
+              <StyledTab label="Overview" />
+              <StyledTab label="Schema" disabled={!connectedDatabase} />
+              <StyledTab label="Query" disabled={!connectedDatabase} />
+            </StyledTabs>
+          </TabsContainer>
+
+          {/* Overview Tab */}
+          {activeTab === 0 && (
+            <TabPanel>
+              {selectedDatabase && selectedDatabase.status === 'connected' && (
+                <ActiveDatabaseSummary
+                  database={selectedDatabase}
+                  onDisconnect={() => handleDisconnect(selectedDatabase.id)}
+                  onRefresh={() => handleRefresh(selectedDatabase.id)}
+                  onDelete={() => handleDeleteDatabase(selectedDatabase.id)}
+                />
+              )}
+
+              <OverviewStatsCards
+                databases={databases}
+                selectedDatabaseId={selectedDatabase?.status === 'connected' ? selectedDatabaseId : ''}
+              />
+
+              <DashboardGrid>
+                <UsageCharts selectedDatabaseId={selectedDatabaseId} />
+              </DashboardGrid>
+            </TabPanel>
           )}
 
-          <OverviewStatsCards
-            databases={databases}
-            selectedDatabaseId={selectedDatabase?.status === 'connected' ? selectedDatabaseId : ''}
-          />
+          {/* Schema Explorer Tab */}
+          {activeTab === 1 && connectedDatabase && (
+            <TabPanel sx={{ display: 'flex', gap: '1.5rem', flexDirection: 'row', flex: 1 }}>
+              <SchemaExplorer
+                databaseId={connectedDatabase.id}
+                onSelectObject={handleSelectObject}
+                onCreateTable={handleCreateTable}
+              />
+              {selectedObjectName && (
+                <ObjectDetailsPanel
+                  databaseId={connectedDatabase.id}
+                  objectName={selectedObjectName}
+                  objectType={selectedObjectType}
+                  engine={connectedDatabase.engine}
+                  onClose={handleCloseObjectDetails}
+                  onAddColumn={handleAddColumn}
+                  onEditTable={handleEditTable}
+                  onDeleteTable={handleDeleteTable}
+                  onNavigateToTable={(tableName) => handleSelectObject(tableName, 'table')}
+                />
+              )}
+            </TabPanel>
+          )}
 
-          <DashboardGrid>
-            <UsageCharts selectedDatabaseId={selectedDatabaseId} />
-          </DashboardGrid>
+          {/* Query Editor Tab */}
+          {activeTab === 2 && connectedDatabase && (
+            <TabPanel>
+              <QueryEditor
+                key={`query-editor-${connectedDatabase.id}-${schemaVersion}`}
+                databaseId={connectedDatabase.id}
+                engine={connectedDatabase.engine}
+              />
+            </TabPanel>
+          )}
         </DashboardContent>
       </DashboardBody>
       <DatabaseActionsPanel
@@ -304,6 +467,55 @@ export default function Dashboard() {
         }}
         onSwitched={handleSwitched}
       />
+      
+      {/* Table Management Dialogs */}
+      {connectedDatabase && (
+        <>
+          <CreateTableDialog
+            open={isCreateTableDialogOpen}
+            onClose={() => setIsCreateTableDialogOpen(false)}
+            databaseId={connectedDatabase.id}
+            engine={connectedDatabase.engine}
+            onSuccess={handleTableCreated}
+          />
+          {tableToModify && (
+            <>
+              <AddColumnDialog
+                open={isAddColumnDialogOpen}
+                onClose={() => {
+                  setIsAddColumnDialogOpen(false);
+                  setTableToModify(null);
+                }}
+                databaseId={connectedDatabase.id}
+                tableName={tableToModify}
+                engine={connectedDatabase.engine}
+                onSuccess={handleColumnAdded}
+              />
+              <DeleteTableDialog
+                open={isDeleteTableDialogOpen}
+                onClose={() => {
+                  setIsDeleteTableDialogOpen(false);
+                  setTableToModify(null);
+                }}
+                databaseId={connectedDatabase.id}
+                tableName={tableToModify}
+                onSuccess={handleTableDeleted}
+              />
+              <TableEditor
+                open={isTableEditorOpen}
+                onClose={() => {
+                  setIsTableEditorOpen(false);
+                  setTableToModify(null);
+                }}
+                databaseId={connectedDatabase.id}
+                tableName={tableToModify || ''}
+                engine={connectedDatabase.engine}
+                onDataChanged={handleTableDataChanged}
+              />
+            </>
+          )}
+        </>
+      )}
     </DashboardWrapper>
   );
 }

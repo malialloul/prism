@@ -134,3 +134,22 @@ export const QuickActionButton = styled(Box, {
     }),
   };
 });
+
+export const TabPanel = styled(Box)({
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: 0,
+  gap: '1.5rem',
+});
+
+export const TabsContainer = styled(Box)(({ theme }) => {
+  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottom: `1px solid ${colors.border}`,
+    marginBottom: '1rem',
+  };
+});
