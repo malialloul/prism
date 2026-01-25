@@ -31,6 +31,8 @@ interface SchemaExplorerProps {
   onSelectObject: (name: string, type: SchemaObjectType) => void;
   onCreateTable?: () => void;
   onCreateView?: () => void;
+  onCreateFunction?: () => void;
+  onCreateProcedure?: () => void;
 }
 
 const sectionConfig: {
@@ -51,6 +53,8 @@ export default function SchemaExplorer({
   onSelectObject,
   onCreateTable,
   onCreateView,
+  onCreateFunction,
+  onCreateProcedure,
 }: SchemaExplorerProps) {
   const { data, isLoading, refetch } = useSchemaObjects(databaseId);
   const [expandedSections, setExpandedSections] = useState<Record<SchemaObjectType, boolean>>({
@@ -121,8 +125,19 @@ export default function SchemaExplorer({
             {sectionConfig.map(({ type, label, icon }) => {
               const items = groupedObjects[type];
               const isExpanded = expandedSections[type];
-              const canCreate = type === 'table' || type === 'view';
-              const handleCreate = type === 'table' ? onCreateTable : type === 'view' ? onCreateView : undefined;
+              const canCreate = type === 'table' || type === 'view' || type === 'function' || type === 'procedure';
+              const handleCreate = 
+                type === 'table' ? onCreateTable : 
+                type === 'view' ? onCreateView : 
+                type === 'function' ? onCreateFunction :
+                type === 'procedure' ? onCreateProcedure :
+                undefined;
+              const createLabel = 
+                type === 'table' ? 'Table' : 
+                type === 'view' ? 'View' : 
+                type === 'function' ? 'Function' :
+                type === 'procedure' ? 'Procedure' :
+                '';
 
               return (
                 <TreeSection key={type}>
@@ -138,7 +153,7 @@ export default function SchemaExplorer({
                     <SectionCount>{items.length}</SectionCount>
                     {canCreate && handleCreate && (
                       <SectionActions>
-                        <Tooltip title={`Create ${type === 'table' ? 'Table' : 'View'}`}>
+                        <Tooltip title={`Create ${createLabel}`}>
                           <ActionButton
                             size="small"
                             onClick={(e) => {

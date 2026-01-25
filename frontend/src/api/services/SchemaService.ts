@@ -10,6 +10,8 @@ import type {
   AddColumnDto,
   ModifyColumnDto,
   CreateViewDto,
+  CreateFunctionDto,
+  CreateProcedureDto,
 } from '../models/SchemaDto';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -369,6 +371,96 @@ export class SchemaService {
     return __request(OpenAPI, {
       method: 'DELETE',
       url: `/databases/${databaseId}/views/${viewName}`,
+      errors: {
+        401: 'Unauthorized',
+        404: 'Not found',
+      },
+    });
+  }
+
+  /**
+   * Create a new function
+   * @param databaseId Database ID
+   * @param functionData Function definition
+   * @returns void
+   * @throws ApiError
+   */
+  public static createFunction(
+    databaseId: string,
+    functionData: CreateFunctionDto
+  ): CancelablePromise<{ message: string }> {
+    return __request(OpenAPI, {
+      method: 'POST',
+      url: `/databases/${databaseId}/functions`,
+      body: functionData,
+      mediaType: 'application/json',
+      errors: {
+        400: 'Invalid function definition',
+        401: 'Unauthorized',
+        404: 'Database not found',
+      },
+    });
+  }
+
+  /**
+   * Drop a function
+   * @param databaseId Database ID
+   * @param functionName Function name
+   * @returns void
+   * @throws ApiError
+   */
+  public static dropFunction(
+    databaseId: string,
+    functionName: string
+  ): CancelablePromise<{ message: string }> {
+    return __request(OpenAPI, {
+      method: 'DELETE',
+      url: `/databases/${databaseId}/functions/${functionName}`,
+      errors: {
+        401: 'Unauthorized',
+        404: 'Not found',
+      },
+    });
+  }
+
+  /**
+   * Create a new procedure
+   * @param databaseId Database ID
+   * @param procedureData Procedure definition
+   * @returns void
+   * @throws ApiError
+   */
+  public static createProcedure(
+    databaseId: string,
+    procedureData: CreateProcedureDto
+  ): CancelablePromise<{ message: string }> {
+    return __request(OpenAPI, {
+      method: 'POST',
+      url: `/databases/${databaseId}/procedures`,
+      body: procedureData,
+      mediaType: 'application/json',
+      errors: {
+        400: 'Invalid procedure definition',
+        401: 'Unauthorized',
+        404: 'Database not found',
+      },
+    });
+  }
+
+  /**
+   * Drop a procedure
+   * @param databaseId Database ID
+   * @param procedureName Procedure name
+   * @returns void
+   * @throws ApiError
+   */
+  public static dropProcedure(
+    databaseId: string,
+    procedureName: string
+  ): CancelablePromise<{ message: string }> {
+    return __request(OpenAPI, {
+      method: 'DELETE',
+      url: `/databases/${databaseId}/procedures/${procedureName}`,
       errors: {
         401: 'Unauthorized',
         404: 'Not found',

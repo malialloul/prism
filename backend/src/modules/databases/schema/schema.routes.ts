@@ -18,6 +18,10 @@ import {
   dropTable,
   createView,
   dropView,
+  createFunction,
+  dropFunction,
+  createProcedure,
+  dropProcedure,
 } from './schema.controller';
 
 const router = Router();
@@ -47,6 +51,14 @@ router.delete('/:id/tables/:tableName', dropTable);
 // View management
 router.post('/:id/views', createView);
 router.delete('/:id/views/:viewName', dropView);
+
+// Function management
+router.post('/:id/functions', createFunction);
+router.delete('/:id/functions/:functionName', dropFunction);
+
+// Procedure management
+router.post('/:id/procedures', createProcedure);
+router.delete('/:id/procedures/:procedureName', dropProcedure);
 
 // Column management
 router.post('/:id/tables/:tableName/columns', addColumn);

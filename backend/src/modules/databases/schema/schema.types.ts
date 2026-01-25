@@ -146,6 +146,34 @@ export interface CreateViewDto {
   definition: string;
 }
 
+// Function management types
+export interface FunctionParameterDto {
+  name: string;
+  type: string;
+}
+
+export interface CreateFunctionDto {
+  name: string;
+  parameters: FunctionParameterDto[];
+  returnType: string;
+  body: string;
+  language?: 'sql' | 'plpgsql';
+}
+
+// Procedure management types
+export interface ProcedureParameterDto {
+  name: string;
+  type: string;
+  mode: 'IN' | 'OUT' | 'INOUT';
+}
+
+export interface CreateProcedureDto {
+  name: string;
+  parameters: ProcedureParameterDto[];
+  body: string;
+  language?: 'sql' | 'plpgsql';
+}
+
 // Response types
 export type GetSchemaObjectsResponseDto = ApiResponseDto<{ objects: SchemaObjectDto[] }>;
 export type GetTableDetailsResponseDto = ApiResponseDto<{ table: TableDetailsDto }>;
@@ -160,6 +188,10 @@ export type ModifyTableResponseDto = ApiResponseDto<{ message: string }>;
 export type DropTableResponseDto = ApiResponseDto<{ message: string }>;
 export type CreateViewResponseDto = ApiResponseDto<{ message: string }>;
 export type DropViewResponseDto = ApiResponseDto<{ message: string }>;
+export type CreateFunctionResponseDto = ApiResponseDto<{ message: string }>;
+export type DropFunctionResponseDto = ApiResponseDto<{ message: string }>;
+export type CreateProcedureResponseDto = ApiResponseDto<{ message: string }>;
+export type DropProcedureResponseDto = ApiResponseDto<{ message: string }>;
 
 // Data type constants
 export const POSTGRES_DATA_TYPES = [

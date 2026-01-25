@@ -17,6 +17,10 @@ import {
   dropTableService,
   createViewService,
   dropViewService,
+  createFunctionService,
+  dropFunctionService,
+  createProcedureService,
+  dropProcedureService,
 } from './schema.service';
 
 /**
@@ -389,6 +393,115 @@ export const dropView = async (
     await dropViewService(userId, databaseId, viewName);
 
     res.status(200).json({ message: `View "${viewName}" dropped successfully` });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /databases/:id/functions
+ * Create a new function
+ */
+export const createFunction = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const databaseId = req.params.id as string;
+    const { name, parameters, returnType, body, language } = req.body;
+
+    if (!name || !returnType || !body) {
+      res.status(400).json({ message: 'Function name, return type, and body are required' });
+      return;
+    }
+
+    await createFunctionService(userId, databaseId, {
+      name,
+      parameters: parameters || [],
+      returnType,
+      body,
+      language,
+    });
+
+    res.status(201).json({ message: `Function "${name}" created successfully` });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /databases/:id/functions/:functionName
+ * Drop a function
+ */
+export const dropFunction = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const databaseId = req.params.id as string;
+    const functionName = req.params.functionName as string;
+
+    await dropFunctionService(userId, databaseId, functionName);
+
+    res.status(200).json({ message: `Function "${functionName}" dropped successfully` });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /databases/:id/procedures
+ * Create a new procedure
+ */
+export const createProcedure = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const databaseId = req.params.id as string;
+    const { name, parameters, body, language } = req.body;
+
+    if (!name || !body) {
+      res.status(400).json({ message: 'Procedure name and body are required' });
+      return;
+    }
+
+    await createProcedureService(userId, databaseId, {
+      name,
+      parameters: parameters || [],
+      body,
+      language,
+    });
+
+    res.status(201).json({ message: `Procedure "${name}" created successfully` });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /databases/:id/procedures/:procedureName
+ * Drop a procedure
+ */
+export const dropProcedure = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const databaseId = req.params.id as string;
+    const procedureName = req.params.procedureName as string;
+
+    await dropProcedureService(userId, databaseId, procedureName);
+
+    res.status(200).json({ message: `Procedure "${procedureName}" dropped successfully` });
   } catch (error) {
     next(error);
   }

@@ -20,6 +20,8 @@ import type {
   AddColumnDto,
   ModifyColumnDto,
   CreateViewDto,
+  CreateFunctionDto,
+  CreateProcedureDto,
 } from './schema.types';
 
 // Encryption helpers - same as in databases.service.ts
@@ -1309,6 +1311,218 @@ export const dropViewService = async (
     } catch (error) {
       await mysqlConn.end();
       const message = error instanceof Error ? error.message : 'Failed to drop view';
+      throw new ValidationError(message);
+    }
+  }
+};
+
+/**
+ * Create a new function
+ */
+export const createFunctionService = async (
+  userId: string,
+  databaseId: string,
+  functionData: CreateFunctionDto
+): Promise<void> => {
+  const conn = await getDatabaseConnection(userId, databaseId);
+  const { name, parameters, returnType, body, language } = functionData;
+
+  if (conn.engine === 'postgres') {
+    // Build parameters list
+    const paramsList = parameters.map(p => `${p.name} ${p.type}`).join(', ');
+    const lang = language || 'plpgsql';
+    
+    const sql = `
+      CREATE OR REPLACE FUNCTION "${name}"(${paramsList})
+      RETURNS ${returnType}
+      LANGUAGE ${lang}
+      AS $$
+      ${body}
+      $$;
+    `;
+
+    const pgPool = createPgPool(conn);
+    try {
+      await pgPool.query(sql);
+      await pgPool.end();
+    } catch (error) {
+      await pgPool.end();
+      const message = error instanceof Error ? error.message : 'Failed to create function';
+      throw new ValidationError(message);
+    }
+  } else {
+    // MySQL
+    const paramsList = parameters.map(p => `${p.name} ${p.type}`).join(', ');
+    
+    const sql = `
+      CREATE FUNCTION \`${name}\`(${paramsList})
+      RETURNS ${returnType}
+      DETERMINISTIC
+      BEGIN
+      ${body}
+      END
+    `;
+
+    const mysqlConn = await createMysqlConnection(conn);
+    try {
+      await mysqlConn.execute(sql);
+      await mysqlConn.end();
+    } catch (error) {
+      await mysqlConn.end();
+      const message = error instanceof Error ? error.message : 'Failed to create function';
+      throw new ValidationError(message);
+    }
+  }
+};
+
+/**
+ * Drop a function
+ */
+export const dropFunctionService = async (
+  userId: string,
+  databaseId: string,
+  functionName: string
+): Promise<void> => {
+  const conn = await getDatabaseConnection(userId, databaseId);
+
+  if (conn.engine === 'postgres') {
+    // In PostgreSQL, we need to find the function signature to drop it
+    const pgPool = createPgPool(conn);
+    try {
+      // Get function argument types to construct proper DROP statement
+      const sigResult = await pgPool.query(`
+        SELECT pg_get_function_identity_arguments(p.oid) as args
+        FROM pg_proc p
+        JOIN pg_namespace n ON p.pronamespace = n.oid
+        WHERE p.proname = $1 AND n.nspname = 'public' AND p.prokind = 'f'
+        LIMIT 1
+      `, [functionName]);
+
+      if (sigResult.rowCount === 0) {
+        throw new NotFoundError('Function not found');
+      }
+
+      const args = sigResult.rows[0].args || '';
+      await pgPool.query(`DROP FUNCTION "${functionName}"(${args})`);
+      await pgPool.end();
+    } catch (error) {
+      await pgPool.end();
+      const message = error instanceof Error ? error.message : 'Failed to drop function';
+      throw new ValidationError(message);
+    }
+  } else {
+    const sql = `DROP FUNCTION \`${functionName}\``;
+    const mysqlConn = await createMysqlConnection(conn);
+    try {
+      await mysqlConn.execute(sql);
+      await mysqlConn.end();
+    } catch (error) {
+      await mysqlConn.end();
+      const message = error instanceof Error ? error.message : 'Failed to drop function';
+      throw new ValidationError(message);
+    }
+  }
+};
+
+/**
+ * Create a new procedure
+ */
+export const createProcedureService = async (
+  userId: string,
+  databaseId: string,
+  procedureData: CreateProcedureDto
+): Promise<void> => {
+  const conn = await getDatabaseConnection(userId, databaseId);
+  const { name, parameters, body, language } = procedureData;
+
+  if (conn.engine === 'postgres') {
+    // Build parameters list with mode
+    const paramsList = parameters.map(p => `${p.mode} ${p.name} ${p.type}`).join(', ');
+    const lang = language || 'plpgsql';
+    
+    const sql = `
+      CREATE OR REPLACE PROCEDURE "${name}"(${paramsList})
+      LANGUAGE ${lang}
+      AS $$
+      ${body}
+      $$;
+    `;
+
+    const pgPool = createPgPool(conn);
+    try {
+      await pgPool.query(sql);
+      await pgPool.end();
+    } catch (error) {
+      await pgPool.end();
+      const message = error instanceof Error ? error.message : 'Failed to create procedure';
+      throw new ValidationError(message);
+    }
+  } else {
+    // MySQL
+    const paramsList = parameters.map(p => `${p.mode} ${p.name} ${p.type}`).join(', ');
+    
+    const sql = `
+      CREATE PROCEDURE \`${name}\`(${paramsList})
+      BEGIN
+      ${body}
+      END
+    `;
+
+    const mysqlConn = await createMysqlConnection(conn);
+    try {
+      await mysqlConn.execute(sql);
+      await mysqlConn.end();
+    } catch (error) {
+      await mysqlConn.end();
+      const message = error instanceof Error ? error.message : 'Failed to create procedure';
+      throw new ValidationError(message);
+    }
+  }
+};
+
+/**
+ * Drop a procedure
+ */
+export const dropProcedureService = async (
+  userId: string,
+  databaseId: string,
+  procedureName: string
+): Promise<void> => {
+  const conn = await getDatabaseConnection(userId, databaseId);
+
+  if (conn.engine === 'postgres') {
+    const pgPool = createPgPool(conn);
+    try {
+      // Get procedure argument types to construct proper DROP statement
+      const sigResult = await pgPool.query(`
+        SELECT pg_get_function_identity_arguments(p.oid) as args
+        FROM pg_proc p
+        JOIN pg_namespace n ON p.pronamespace = n.oid
+        WHERE p.proname = $1 AND n.nspname = 'public' AND p.prokind = 'p'
+        LIMIT 1
+      `, [procedureName]);
+
+      if (sigResult.rowCount === 0) {
+        throw new NotFoundError('Procedure not found');
+      }
+
+      const args = sigResult.rows[0].args || '';
+      await pgPool.query(`DROP PROCEDURE "${procedureName}"(${args})`);
+      await pgPool.end();
+    } catch (error) {
+      await pgPool.end();
+      const message = error instanceof Error ? error.message : 'Failed to drop procedure';
+      throw new ValidationError(message);
+    }
+  } else {
+    const sql = `DROP PROCEDURE \`${procedureName}\``;
+    const mysqlConn = await createMysqlConnection(conn);
+    try {
+      await mysqlConn.execute(sql);
+      await mysqlConn.end();
+    } catch (error) {
+      await mysqlConn.end();
+      const message = error instanceof Error ? error.message : 'Failed to drop procedure';
       throw new ValidationError(message);
     }
   }

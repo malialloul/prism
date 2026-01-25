@@ -25,7 +25,7 @@ import DeleteDatabaseDialog from "./DeleteDatabaseDialog/DeleteDatabaseDialog";
 import SwitchDatabaseDialog from "./SwitchDatabaseDialog/SwitchDatabaseDialog";
 import { SchemaExplorer, ObjectDetailsPanel } from "./SchemaExplorer";
 import { QueryEditor } from "./QueryEditor";
-import { CreateTableDialog, CreateViewDialog, AddColumnDialog, DeleteTableDialog, TableEditor } from "./TableEditor";
+import { CreateTableDialog, CreateViewDialog, CreateFunctionDialog, CreateProcedureDialog, AddColumnDialog, DeleteTableDialog, TableEditor } from "./TableEditor";
 import { useDatabases, useRefreshDatabase, useDisconnectDatabase, useReconnectDatabase } from "../../api/entities/databases";
 import { toastService } from "../../services";
 
@@ -76,6 +76,8 @@ export default function Dashboard() {
   // Table Management state
   const [isCreateTableDialogOpen, setIsCreateTableDialogOpen] = useState(false);
   const [isCreateViewDialogOpen, setIsCreateViewDialogOpen] = useState(false);
+  const [isCreateFunctionDialogOpen, setIsCreateFunctionDialogOpen] = useState(false);
+  const [isCreateProcedureDialogOpen, setIsCreateProcedureDialogOpen] = useState(false);
   const [isAddColumnDialogOpen, setIsAddColumnDialogOpen] = useState(false);
   const [isDeleteTableDialogOpen, setIsDeleteTableDialogOpen] = useState(false);
   const [isTableEditorOpen, setIsTableEditorOpen] = useState(false);
@@ -299,6 +301,10 @@ export default function Dashboard() {
     toastService.success('View created successfully');
   };
 
+  const handleSchemaChanged = () => {
+    setSchemaVersion(v => v + 1); // Refresh schema
+  };
+
   const hasNoDatabases = databases.length === 0;
 
   if (hasNoDatabases) {
@@ -434,6 +440,8 @@ export default function Dashboard() {
                 onSelectObject={handleSelectObject}
                 onCreateTable={handleCreateTable}
                 onCreateView={handleCreateView}
+                onCreateFunction={() => setIsCreateFunctionDialogOpen(true)}
+                onCreateProcedure={() => setIsCreateProcedureDialogOpen(true)}
               />
               {selectedObjectName && (
                 <ObjectDetailsPanel
@@ -515,6 +523,20 @@ export default function Dashboard() {
             databaseId={connectedDatabase.id}
             engine={connectedDatabase.engine}
             onSuccess={handleViewCreated}
+          />
+          <CreateFunctionDialog
+            open={isCreateFunctionDialogOpen}
+            onClose={() => setIsCreateFunctionDialogOpen(false)}
+            databaseId={connectedDatabase.id}
+            engine={connectedDatabase.engine}
+            onSuccess={handleSchemaChanged}
+          />
+          <CreateProcedureDialog
+            open={isCreateProcedureDialogOpen}
+            onClose={() => setIsCreateProcedureDialogOpen(false)}
+            databaseId={connectedDatabase.id}
+            engine={connectedDatabase.engine}
+            onSuccess={handleSchemaChanged}
           />
           {tableToModify && (
             <>

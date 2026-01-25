@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { SchemaService } from '../../services/SchemaService';
 import { ApiError } from '../../core/ApiError';
-import type { CreateTableDto, AddColumnDto, ModifyColumnDto, CreateViewDto } from '../../models/SchemaDto';
+import type { CreateTableDto, AddColumnDto, ModifyColumnDto, CreateViewDto, CreateFunctionDto, CreateProcedureDto } from '../../models/SchemaDto';
 import { SCHEMA_OBJECTS_QUERY_KEY } from './useSchemaObjects';
 import { OBJECT_DETAILS_QUERY_KEY } from './useObjectDetails';
 
@@ -105,6 +105,66 @@ export function useDropView(databaseId: string, options: UseTableMutationOptions
 
   return useMutation<{ message: string }, ApiError, string>({
     mutationFn: (viewName) => SchemaService.dropView(databaseId, viewName),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: [...SCHEMA_OBJECTS_QUERY_KEY, databaseId] });
+      options.onSuccess?.(response.message);
+    },
+    onError: (error) => {
+      options.onError?.(error);
+    },
+  });
+}
+
+export function useCreateFunction(databaseId: string, options: UseTableMutationOptions = {}) {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ message: string }, ApiError, CreateFunctionDto>({
+    mutationFn: (functionData) => SchemaService.createFunction(databaseId, functionData),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: [...SCHEMA_OBJECTS_QUERY_KEY, databaseId] });
+      options.onSuccess?.(response.message);
+    },
+    onError: (error) => {
+      options.onError?.(error);
+    },
+  });
+}
+
+export function useDropFunction(databaseId: string, options: UseTableMutationOptions = {}) {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ message: string }, ApiError, string>({
+    mutationFn: (functionName) => SchemaService.dropFunction(databaseId, functionName),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: [...SCHEMA_OBJECTS_QUERY_KEY, databaseId] });
+      options.onSuccess?.(response.message);
+    },
+    onError: (error) => {
+      options.onError?.(error);
+    },
+  });
+}
+
+export function useCreateProcedure(databaseId: string, options: UseTableMutationOptions = {}) {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ message: string }, ApiError, CreateProcedureDto>({
+    mutationFn: (procedureData) => SchemaService.createProcedure(databaseId, procedureData),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: [...SCHEMA_OBJECTS_QUERY_KEY, databaseId] });
+      options.onSuccess?.(response.message);
+    },
+    onError: (error) => {
+      options.onError?.(error);
+    },
+  });
+}
+
+export function useDropProcedure(databaseId: string, options: UseTableMutationOptions = {}) {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ message: string }, ApiError, string>({
+    mutationFn: (procedureName) => SchemaService.dropProcedure(databaseId, procedureName),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: [...SCHEMA_OBJECTS_QUERY_KEY, databaseId] });
       options.onSuccess?.(response.message);

@@ -131,6 +131,34 @@ export interface CreateViewDto {
   definition: string;
 }
 
+// Function management types
+export interface FunctionParameterDto {
+  name: string;
+  type: string;
+}
+
+export interface CreateFunctionDto {
+  name: string;
+  parameters: FunctionParameterDto[];
+  returnType: string;
+  body: string;
+  language?: 'sql' | 'plpgsql';
+}
+
+// Procedure management types
+export interface ProcedureParameterDto {
+  name: string;
+  type: string;
+  mode: 'IN' | 'OUT' | 'INOUT';
+}
+
+export interface CreateProcedureDto {
+  name: string;
+  parameters: ProcedureParameterDto[];
+  body: string;
+  language?: 'sql' | 'plpgsql';
+}
+
 // Data type constants
 export const POSTGRES_DATA_TYPES = [
   'INTEGER',
