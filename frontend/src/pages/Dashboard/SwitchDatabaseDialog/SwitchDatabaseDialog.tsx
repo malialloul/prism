@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CircularProgress } from '@mui/material';
+import { ButtonLoadingSkeleton } from '../../../components';
 import { useDisconnectDatabase, useReconnectDatabase } from '../../../api/entities/databases';
 import {
   StyledDialog,
@@ -120,7 +120,7 @@ export default function SwitchDatabaseDialog({
           Cancel
         </CancelButton>
         <SwitchButton onClick={handleSwitch} disabled={isSwitching}>
-          {isSwitching ? <CircularProgress size={16} color="inherit" /> : 'Switch Connection'}
+          {isSwitching ? <ButtonLoadingSkeleton size="small" /> : 'Switch Connection'}
         </SwitchButton>
       </DialogFooter>
     </StyledDialog>

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { CircularProgress } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import WarningIcon from '@mui/icons-material/Warning';
 import CloseIcon from '@mui/icons-material/Close';
@@ -43,6 +42,8 @@ import ConfirmDeleteRowsDialog from './ConfirmDeleteRowsDialog';
 import EditColumnDialog from './EditColumnDialog';
 import DeleteColumnDialog from './DeleteColumnDialog';
 import ConfirmCloseDialog from './ConfirmCloseDialog';
+import { ButtonLoadingSkeleton } from '../../../components';
+import EditRowDialog from './EditRowDialog/EditRowDialog';
 
 export default function TableEditor({
   open,
@@ -62,6 +63,9 @@ export default function TableEditor({
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [editValue, setEditValue] = useState<string>('');
+  const [editRowOpen, setEditRowOpen] = useState(false);
+  const [editingRow, setEditingRow] = useState<RowData | null>(null);
+  const [isSavingRow, setIsSavingRow] = useState(false);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalRows, setTotalRows] = useState(0);
@@ -342,6 +346,37 @@ export default function TableEditor({
     );
 
     setEditingCell(null);
+  };
+
+  const handleRowEdit = (row: RowData) => {
+    setEditingRow(row);
+    setEditRowOpen(true);
+  };
+
+  const handleRowSave = (updatedRow: RowData) => {
+    setIsSavingRow(true);
+
+    setRows((prevRows) =>
+      prevRows.map((row) => {
+        if (row._rowId !== updatedRow._rowId) return row;
+
+        const originalData = row._originalData || row;
+        const isModified = columns.some(
+          (col) => String(updatedRow[col] ?? '') !== String(originalData[col] ?? '')
+        );
+
+        return {
+          ...updatedRow,
+          _isModified: !row._isNew && isModified,
+          _originalData: row._originalData || originalData,
+        };
+      })
+    );
+
+    setEditRowOpen(false);
+    setEditingRow(null);
+    setIsSavingRow(false);
+    toastService.success('Row updated');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -672,6 +707,7 @@ export default function TableEditor({
           onCellChange={handleCellChange}
           onCellBlur={handleCellBlur}
           onKeyDown={handleKeyDown}
+          onRowEdit={handleRowEdit}
           onSelectRow={handleSelectRow}
           onSelectAll={handleSelectAll}
           onAddRow={handleAddRow}
@@ -700,7 +736,7 @@ export default function TableEditor({
             onClick={handleSave}
             disabled={pendingChanges === 0}
             startIcon={
-              isLoading ? <CircularProgress size={14} color="inherit" /> : <SaveIcon />
+              isLoading ? <ButtonLoadingSkeleton size="small" /> : <SaveIcon />
             }
           >
             Save {pendingChanges > 0 ? `(${pendingChanges})` : ''}
@@ -744,6 +780,17 @@ export default function TableEditor({
         onClose={() => setConfirmCloseOpen(false)}
         pendingChanges={pendingChanges}
         onDiscard={doClose}
+      />
+
+      {/* Edit Row Dialog */}
+      <EditRowDialog
+        open={editRowOpen}
+        row={editingRow}
+        columns={columns}
+        primaryKeyColumns={primaryKeyColumns}
+        onClose={() => setEditRowOpen(false)}
+        onSave={handleRowSave}
+        isSaving={isSavingRow}
       />
     </TableEditorDialog>
   );

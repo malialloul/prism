@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
-import { Box, Typography, CircularProgress, InputAdornment, IconButton } from '@mui/material';
+import { Box, Typography, InputAdornment, IconButton } from '@mui/material';
+import { ButtonLoadingSkeleton } from '../../components';
 import { Api, ArrowBack, CheckCircle } from '../../assets/icons';
 import { Visibility, VisibilityOff, Check, Close } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
@@ -115,7 +116,7 @@ export default function ChangePassword() {
             Keep Your Account Secure
           </LeftPanelTitle>
           <LeftPanelText>
-            A strong password is your first line of defense. Follow these 
+            A strong password is your first line of defense. Follow these
             best practices to protect your Cloud API Builder account.
           </LeftPanelText>
           <FeatureList>
@@ -322,7 +323,7 @@ export default function ChangePassword() {
                       disabled={isSubmitting || isLoading}
                     >
                       {isSubmitting || isLoading ? (
-                        <CircularProgress size={20} sx={{ color: 'white' }} />
+                        <ButtonLoadingSkeleton size="medium" />
                       ) : (
                         'Change Password'
                       )}

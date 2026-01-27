@@ -1,31 +1,27 @@
 import {
-  CircularProgress,
   IconButton,
   Tooltip,
   Checkbox,
   MenuItem,
   InputAdornment,
+  Box,
+  Skeleton,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import UndoIcon from '@mui/icons-material/Undo';
 import WarningIcon from '@mui/icons-material/Warning';
-import SearchIcon from '@mui/icons-material/Search';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import EditIcon from '@mui/icons-material/Edit';
 import type { RowData, EditingCell } from '../TableEditor.types';
 import { formatDisplayValue } from '../TableEditor.utils';
 import { Pagination } from '../../../../components';
+import SearchSortToolbar from '../../_shared/SearchSortToolbar';
 import {
   DataTabContent,
   DataToolbar,
   ToolbarLeft,
   ToolbarRight,
-  SearchContainer,
-  SearchInput,
-  SortContainer,
-  SortSelect,
   ActionBar,
   ActionBarInfo,
   TableContainer,
@@ -44,7 +40,7 @@ interface DataTabProps {
   primaryKeyColumns: string[];
   selectedRows: Set<string>;
   visibleRows: RowData[];
-  
+
   // Pagination
   page: number;
   pageSize: number;
@@ -52,18 +48,18 @@ interface DataTabProps {
   totalPages: number;
   startRow: number;
   endRow: number;
-  
+
   // Search & Sort
   searchValue: string;
   sortColumn: string;
   sortDirection: 'ASC' | 'DESC';
-  
+
   // Editing
   editingCell: EditingCell | null;
   editValue: string;
   pendingChanges: number;
   isLoading: boolean;
-  
+
   // Handlers
   onSearchValueChange: (value: string) => void;
   onSortColumnChange: (value: string) => void;
@@ -75,6 +71,7 @@ interface DataTabProps {
   onCellChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onCellBlur: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
+  onRowEdit: (row: RowData) => void;
   onSelectRow: (rowId: string) => void;
   onSelectAll: () => void;
   onAddRow: () => void;
@@ -112,6 +109,7 @@ export default function DataTab({
   onCellChange,
   onCellBlur,
   onKeyDown,
+  onRowEdit,
   onSelectRow,
   onSelectAll,
   onAddRow,
@@ -124,48 +122,15 @@ export default function DataTab({
       {/* Search and Sort Toolbar */}
       <DataToolbar>
         <ToolbarLeft>
-          <SearchContainer>
-            <SearchInput
-              placeholder="Search all columns..."
-              value={searchValue}
-              onChange={(e) => onSearchValueChange(e.target.value)}
-              size="small"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ fontSize: '1rem', color: 'text.secondary' }} />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </SearchContainer>
-          <SortContainer>
-            <span>Sort:</span>
-            <SortSelect
-              value={sortColumn}
-              onChange={(e) => onSortColumnChange(e.target.value as string)}
-              displayEmpty
-              size="small"
-            >
-              <MenuItem value="">None</MenuItem>
-              {columns.map((col) => (
-                <MenuItem key={col} value={col}>
-                  {col}
-                </MenuItem>
-              ))}
-            </SortSelect>
-            {sortColumn && (
-              <Tooltip title={sortDirection === 'ASC' ? 'Ascending' : 'Descending'}>
-                <IconButton size="small" onClick={onSortDirectionToggle}>
-                  {sortDirection === 'ASC' ? (
-                    <ArrowUpwardIcon sx={{ fontSize: '1rem' }} />
-                  ) : (
-                    <ArrowDownwardIcon sx={{ fontSize: '1rem' }} />
-                  )}
-                </IconButton>
-              </Tooltip>
-            )}
-          </SortContainer>
+          <SearchSortToolbar
+            searchValue={searchValue}
+            onSearchChange={onSearchValueChange}
+            sortColumn={sortColumn}
+            onSortColumnChange={onSortColumnChange}
+            sortDirection={sortDirection}
+            onSortDirectionToggle={onSortDirectionToggle}
+            columns={columns}
+          />
         </ToolbarLeft>
         <ToolbarRight>
           <Tooltip title="Add Row">
@@ -231,9 +196,13 @@ export default function DataTab({
               justifyContent: 'center',
               alignItems: 'center',
               height: '200px',
+              gap: '1rem',
             }}
           >
-            <CircularProgress size={32} />
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <Skeleton variant="circular" width={32} height={32} sx={{ animation: 'pulse 1.5s ease-in-out infinite' }} />
+              <Skeleton variant="text" width={100} height={20} sx={{ animation: 'pulse 1.5s ease-in-out infinite' }} />
+            </Box>
           </div>
         ) : columns.length > 0 ? (
           <EditableTable>
@@ -276,6 +245,7 @@ export default function DataTab({
                     </SortableHeader>
                   </th>
                 ))}
+                <th style={{ width: '60px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -311,33 +281,32 @@ export default function DataTab({
                   {columns.map((col) => (
                     <EditableCell
                       key={col}
-                      onClick={() =>
-                        !row._isDeleted && onCellClick(row._rowId, col, row[col])
-                      }
                       style={{
-                        cursor: row._isDeleted ? 'not-allowed' : 'pointer',
+                        cursor: row._isDeleted ? 'not-allowed' : 'default',
                         opacity: row._isDeleted ? 0.5 : 1,
+                        pointerEvents: row._isDeleted ? 'none' : 'auto',
                       }}
                     >
-                      {editingCell?.rowId === row._rowId && editingCell?.column === col ? (
-                        <EditInput
-                          value={editValue}
-                          onChange={onCellChange}
-                          onBlur={onCellBlur}
-                          onKeyDown={onKeyDown}
-                          autoFocus
-                        />
-                      ) : (
-                        <span
-                          style={{
-                            color: row[col] === null ? '#6b7280' : undefined,
-                          }}
-                        >
-                          {row[col] === null ? 'NULL' : formatDisplayValue(row[col])}
-                        </span>
-                      )}
+                      <span
+                        style={{
+                          color: row[col] === null ? '#6b7280' : undefined,
+                        }}
+                      >
+                        {row[col] === null ? 'NULL' : formatDisplayValue(row[col])}
+                      </span>
                     </EditableCell>
                   ))}
+                  <td style={{ textAlign: 'center' }}>
+                    <Tooltip title="Edit Row">
+                      <IconButton
+                        size="small"
+                        onClick={() => !row._isDeleted && onRowEdit(row)}
+                        disabled={row._isDeleted}
+                      >
+                        <EditIcon sx={{ fontSize: '1rem' }} />
+                      </IconButton>
+                    </Tooltip>
+                  </td>
                 </tr>
               ))}
               {visibleRows.length === 0 && (

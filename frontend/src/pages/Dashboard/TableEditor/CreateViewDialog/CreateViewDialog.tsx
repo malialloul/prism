@@ -1,5 +1,5 @@
 import { useState, ChangeEvent } from 'react';
-import { CircularProgress } from '@mui/material';
+import { ButtonLoadingSkeleton } from '../../../../components';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { useCreateView, useExecuteQuery } from '../../../../api/entities/schema';
@@ -166,7 +166,7 @@ export default function CreateViewDialog({
               disabled={isPreviewing || !selectQuery.trim()}
             >
               {isPreviewing ? (
-                <CircularProgress size={14} color="inherit" />
+                <ButtonLoadingSkeleton size="small" />
               ) : (
                 <PlayArrowIcon sx={{ fontSize: '1rem' }} />
               )}
@@ -201,7 +201,7 @@ export default function CreateViewDialog({
           disabled={isPending || !isValid}
           startIcon={
             isPending ? (
-              <CircularProgress size={14} color="inherit" />
+              <ButtonLoadingSkeleton size="small" />
             ) : (
               <VisibilityIcon />
             )

@@ -1,4 +1,4 @@
-import { Dialog, DialogActions, MenuItem, Checkbox, CircularProgress } from '@mui/material';
+import { Dialog, DialogActions, MenuItem, Checkbox } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import type { ColumnDetailsDto, ModifyColumnDto } from '../../../../api/models/SchemaDto';
 import {
@@ -12,6 +12,7 @@ import {
   CheckboxLabel,
 } from '../shared.styles';
 import { DialogTitle, DialogContent } from './EditColumnDialog.styles';
+import { ButtonLoadingSkeleton } from '../../../../components';
 
 interface EditColumnDialogProps {
   open: boolean;
@@ -112,7 +113,7 @@ export default function EditColumnDialog({
           onClick={onSave}
           disabled={isModifying}
           startIcon={
-            isModifying ? <CircularProgress size={14} color="inherit" /> : <SaveIcon />
+            isModifying ? <ButtonLoadingSkeleton size="small" /> : <SaveIcon />
           }
         >
           Save Changes

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import ShieldIcon from '@mui/icons-material/Shield';
-import CircularProgress from '@mui/material/CircularProgress';
+import { ButtonLoadingSkeleton } from '../../../../components';
 import { use2FAStatus } from '../../../../api/entities/auth';
 import Setup2FAModal from '../Setup2FAModal';
 import Disable2FAModal from '../Disable2FAModal';
@@ -50,7 +50,7 @@ const TwoFactorSection = () => {
         </TwoFactorInfo>
         <EnableButton onClick={handleToggleTwoFactor} disabled={isLoading}>
           {isLoading ? (
-            <CircularProgress size={16} color="inherit" />
+            <ButtonLoadingSkeleton size="small" />
           ) : twoFactorEnabled ? (
             'Disable'
           ) : (

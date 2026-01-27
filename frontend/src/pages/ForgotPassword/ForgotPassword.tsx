@@ -1,7 +1,8 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
-import { Box, Typography, CircularProgress, InputAdornment, IconButton } from '@mui/material';
+import { Box, Typography, InputAdornment, IconButton } from '@mui/material';
+import { ButtonLoadingSkeleton } from '../../components';
 import { Api, ArrowBack, CheckCircle, Email } from '../../assets/icons';
 import { Visibility, VisibilityOff, Check, Close } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
@@ -340,7 +341,7 @@ export default function ForgotPassword() {
                         disabled={isSubmitting || isEmailStepLoading}
                       >
                         {isSubmitting || isEmailStepLoading ? (
-                          <CircularProgress size={20} sx={{ color: 'white' }} />
+                          <ButtonLoadingSkeleton size="medium" />
                         ) : (
                           'Send Reset Code'
                         )}
@@ -394,7 +395,7 @@ export default function ForgotPassword() {
                     disabled={otp.join('').length !== 6 || isVerifying}
                   >
                     {isVerifying ? (
-                      <CircularProgress size={20} sx={{ color: 'white' }} />
+                      <ButtonLoadingSkeleton size="medium" />
                     ) : (
                       'Verify Code'
                     )}
@@ -539,7 +540,7 @@ export default function ForgotPassword() {
                           disabled={isSubmitting || isResetting}
                         >
                           {isSubmitting || isResetting ? (
-                            <CircularProgress size={20} sx={{ color: 'white' }} />
+                            <ButtonLoadingSkeleton size="medium" />
                           ) : (
                             'Reset Password'
                           )}

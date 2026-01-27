@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CircularProgress } from '@mui/material';
+import { ButtonLoadingSkeleton } from '../../../components';
 import { useDeleteDatabase } from '../../../api/entities/databases';
 import { toastService } from '../../../services';
 import {
@@ -97,7 +97,7 @@ export default function DeleteDatabaseDialog({
           Cancel
         </CancelButton>
         <DeleteButton onClick={handleDelete} disabled={isDeleting}>
-          {isDeleting ? <CircularProgress size={16} color="inherit" /> : 'Delete Connection'}
+          {isDeleting ? <ButtonLoadingSkeleton size="small" /> : 'Delete Connection'}
         </DeleteButton>
       </DialogFooter>
     </StyledDialog>

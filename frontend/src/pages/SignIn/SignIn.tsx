@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
-import { Box, Typography, CircularProgress, InputAdornment, IconButton } from '@mui/material';
+import { Box, Typography, InputAdornment, IconButton } from '@mui/material';
+import { ButtonLoadingSkeleton } from '../../components';
 import { Google, Microsoft, Api, ArrowBack, DatabaseIcon, SparklesIcon, RocketIcon, SecurityIcon } from '../../assets/icons';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
@@ -205,7 +206,7 @@ export default function SignIn() {
                   disabled={isLoading}
                 >
                   {isLoading ? (
-                    <CircularProgress size={20} sx={{ color: 'white' }} />
+                    <ButtonLoadingSkeleton size="medium" />
                   ) : (
                     'Sign In'
                   )}

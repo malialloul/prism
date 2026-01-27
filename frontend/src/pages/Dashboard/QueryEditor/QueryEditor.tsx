@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
+import { ButtonLoadingSkeleton } from '../../../components';
 import {
-  CircularProgress,
   Tooltip,
   IconButton,
   Dialog,
@@ -19,6 +19,7 @@ import { useExecuteQuery, useSavedQueries, useSaveQuery, useDeleteSavedQuery } f
 import type { QueryResultDto, SavedQueryDto } from '../../../api/models/SchemaDto';
 import { toastService } from '../../../services';
 import { Pagination } from '../../../components';
+import SearchSortToolbar from '../_shared/SearchSortToolbar';
 import {
   EditorWrapper,
   EditorHeader,
@@ -46,6 +47,7 @@ import {
   SavedQueryName,
   SaveQueryInput,
   ExportButton,
+  ResultsToolbar,
 } from './QueryEditor.styles';
 
 interface QueryEditorProps {
@@ -64,14 +66,52 @@ export default function QueryEditor({
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [queryName, setQueryName] = useState('');
   const [showSavedQueries, setShowSavedQueries] = useState(false);
-  
+
+  // Search and sort state
+  const [searchValue, setSearchValue] = useState('');
+  const [sortColumn, setSortColumn] = useState('');
+  const [sortDirection, setSortDirection] = useState<'ASC' | 'DESC'>('ASC');
+
   // Pagination state
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
 
-  // Calculate pagination values
+  // Calculate pagination values with search and sort
   const paginationData = useMemo(() => {
-    const rows = result?.rows || [];
+    let rows = result?.rows || [];
+    const columns = result?.columns || [];
+
+    // Apply search filter
+    if (searchValue && columns.length > 0) {
+      const searchLower = searchValue.toLowerCase();
+      rows = rows.filter((row) =>
+        columns.some((col) => {
+          const value = row[col];
+          return value !== null && String(value).toLowerCase().includes(searchLower);
+        })
+      );
+    }
+
+    // Apply sorting
+    if (sortColumn && columns.includes(sortColumn)) {
+      rows = [...rows].sort((a, b) => {
+        const aVal = a[sortColumn];
+        const bVal = b[sortColumn];
+
+        if (aVal === null && bVal === null) return 0;
+        if (aVal === null) return sortDirection === 'ASC' ? 1 : -1;
+        if (bVal === null) return sortDirection === 'ASC' ? -1 : 1;
+
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return sortDirection === 'ASC' ? aVal - bVal : bVal - aVal;
+        }
+
+        const aStr = String(aVal).toLowerCase();
+        const bStr = String(bVal).toLowerCase();
+        return sortDirection === 'ASC' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+      });
+    }
+
     const totalRows = rows.length;
     const totalPages = Math.ceil(totalRows / pageSize);
     const startIndex = page * pageSize;
@@ -79,9 +119,9 @@ export default function QueryEditor({
     const visibleRows = rows.slice(startIndex, endIndex);
     const startRow = totalRows > 0 ? startIndex + 1 : 0;
     const endRow = endIndex;
-    
+
     return { totalRows, totalPages, visibleRows, startRow, endRow };
-  }, [result?.rows, page, pageSize]);
+  }, [result?.rows, result?.columns, page, pageSize, searchValue, sortColumn, sortDirection]);
 
   const { data: savedQueriesData, refetch: refetchSavedQueries } = useSavedQueries(databaseId);
   const savedQueries = savedQueriesData?.queries || [];
@@ -198,7 +238,7 @@ export default function QueryEditor({
           <RunButton
             onClick={handleRunQuery}
             disabled={!sql.trim() || !databaseId || isExecuting}
-            startIcon={isExecuting ? <CircularProgress size={14} color="inherit" /> : <PlayArrowIcon sx={{ fontSize: '1rem' }} />}
+            startIcon={isExecuting ? <ButtonLoadingSkeleton size="small" /> : <PlayArrowIcon sx={{ fontSize: '1rem' }} />}
           >
             {isExecuting ? 'Running...' : 'Run Query'}
           </RunButton>
@@ -253,7 +293,7 @@ export default function QueryEditor({
               <ResultsTitle>Results</ResultsTitle>
               {result && result.success && result.rows && (
                 <ResultsMeta>
-                  <span>{result.rowCount} rows</span>
+                  <span>{paginationData.totalRows} rows</span>
                   <span>{result.executionTimeMs}ms</span>
                   <ExportButton onClick={handleExportCSV} startIcon={<DownloadIcon sx={{ fontSize: '0.875rem' }} />}>
                     Export CSV
@@ -261,6 +301,22 @@ export default function QueryEditor({
                 </ResultsMeta>
               )}
             </ResultsHeader>
+            {result && result.success && result.rows && result.columns && (
+              <ResultsToolbar>
+                <SearchSortToolbar
+                  searchValue={searchValue}
+                  onSearchChange={setSearchValue}
+                  sortColumn={sortColumn}
+                  onSortColumnChange={setSortColumn}
+                  sortDirection={sortDirection}
+                  onSortDirectionToggle={() =>
+                    setSortDirection(sortDirection === 'ASC' ? 'DESC' : 'ASC')
+                  }
+                  columns={result.columns}
+                  searchPlaceholder="Search results..."
+                />
+              </ResultsToolbar>
+            )}
             <ResultsContent>
               {!result && (
                 <EmptyResults>
@@ -309,6 +365,22 @@ export default function QueryEditor({
                 </ResultsTable>
               )}
             </ResultsContent>
+            {result && result.success && result.rows && result.columns && (
+              <Pagination
+                page={page}
+                pageSize={pageSize}
+                totalRows={paginationData.totalRows}
+                totalPages={paginationData.totalPages}
+                startRow={paginationData.startRow}
+                endRow={paginationData.endRow}
+                isLoading={isExecuting}
+                onPageChange={setPage}
+                onPageSizeChange={(newSize) => {
+                  setPageSize(newSize);
+                  setPage(0);
+                }}
+              />
+            )}
           </ResultsArea>
         </EditorContent>
       </div>

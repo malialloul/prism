@@ -136,6 +136,47 @@ export interface MigrationResult {
 /**
  * Automatically creates/updates database tables based on registered schemas
  */
+/**
+ * Sorts tables by their foreign key dependencies
+ * Tables with no dependencies come first, then tables that depend on them
+ */
+function sortTablesByDependencies(tables: TableDefinition[]): TableDefinition[] {
+  const tableMap = new Map(tables.map((t) => [t.tableName, t]));
+  const sorted: TableDefinition[] = [];
+  const visited = new Set<string>();
+
+  function visit(tableName: string, visiting = new Set<string>()): void {
+    if (visited.has(tableName)) return;
+    if (visiting.has(tableName)) {
+      console.warn(`[AutoMigrate] Circular dependency detected for table: ${tableName}`);
+      return;
+    }
+
+    const table = tableMap.get(tableName);
+    if (!table) return;
+
+    visiting.add(tableName);
+
+    // Visit all tables that this table depends on
+    for (const col of table.columns) {
+      if (col.references) {
+        visit(col.references.table, visiting);
+      }
+    }
+
+    visiting.delete(tableName);
+    visited.add(tableName);
+    sorted.push(table);
+  }
+
+  // Visit all tables to build dependency order
+  for (const table of tables) {
+    visit(table.tableName);
+  }
+
+  return sorted;
+}
+
 export async function autoMigrate(
   options: MigrationOptions = {}
 ): Promise<MigrationResult> {
@@ -149,15 +190,19 @@ export async function autoMigrate(
     sqlStatements: [],
   };
 
-  const tables = getRegisteredTables();
+  let tables = getRegisteredTables();
 
   if (tables.length === 0) {
     if (verbose) console.log("[AutoMigrate] No tables registered");
     return result;
   }
 
+  // Sort tables by dependencies (so foreign keys reference existing tables)
+  tables = sortTablesByDependencies(tables);
+
   if (verbose) {
     console.log(`[AutoMigrate] Processing ${tables.length} registered table(s)`);
+    console.log(`[AutoMigrate] Table order: ${tables.map((t) => t.tableName).join(" → ")}`);
   }
 
   for (const table of tables) {

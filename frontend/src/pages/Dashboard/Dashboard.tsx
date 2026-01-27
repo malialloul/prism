@@ -21,12 +21,14 @@ import ActiveDatabaseSummary from "./ActiveDatabaseSummary/ActiveDatabaseSummary
 import OverviewStatsCards from "./OverviewStatsCards/OverviewStatsCards";
 import UsageCharts from "./UsageCharts/UsageCharts";
 import EmptyState from "./EmptyState/EmptyState";
+import PageSkeleton from "../../components/PageSkeleton/PageSkeleton";
 import DeleteDatabaseDialog from "./DeleteDatabaseDialog/DeleteDatabaseDialog";
 import SwitchDatabaseDialog from "./SwitchDatabaseDialog/SwitchDatabaseDialog";
 import { SchemaExplorer, ObjectDetailsPanel } from "./SchemaExplorer";
 import { QueryEditor } from "./QueryEditor";
 import { CreateTableDialog, CreateViewDialog, CreateFunctionDialog, CreateProcedureDialog, AddColumnDialog, DeleteTableDialog, TableEditor } from "./TableEditor";
 import { useDatabases, useRefreshDatabase, useDisconnectDatabase, useReconnectDatabase } from "../../api/entities/databases";
+import { useDropProcedure, useDropFunction } from "../../api/entities/schema";
 import { toastService } from "../../services";
 
 // Icons
@@ -35,9 +37,11 @@ import LinkIcon from "@mui/icons-material/Link";
 import TableViewIcon from "@mui/icons-material/TableView";
 import { DatabaseDto } from "../../api/models/DatabaseDto";
 
+type SelectedObjectType = 'table' | 'view' | 'index' | 'procedure' | 'function';
+
 export default function Dashboard() {
   // Fetch databases from API
-  const { data: databasesData, refetch: refetchDatabases } = useDatabases();
+  const { data: databasesData, isLoading, refetch: refetchDatabases } = useDatabases();
 
   // Refresh database mutation
   const { mutate: refreshDatabase } = useRefreshDatabase();
@@ -71,7 +75,7 @@ export default function Dashboard() {
   
   // Schema Explorer state
   const [selectedObjectName, setSelectedObjectName] = useState<string | null>(null);
-  const [selectedObjectType, setSelectedObjectType] = useState<'table' | 'view' | 'index' | 'procedure' | 'function'>('table');
+  const [selectedObjectType, setSelectedObjectType] = useState<SelectedObjectType>('table');
   
   // Table Management state
   const [isCreateTableDialogOpen, setIsCreateTableDialogOpen] = useState(false);
@@ -121,8 +125,31 @@ export default function Dashboard() {
   const selectedDatabase =
     databases.find((db) => db.id === selectedDatabaseId) || null;
 
+  // Delete procedure/function mutations
+  const { mutate: dropProcedure } = useDropProcedure(selectedDatabaseId || '', {
+    onSuccess: () => {
+      toastService.success('Procedure deleted successfully');
+      setSchemaVersion(v => v + 1);
+      setSelectedObjectName(null);
+    },
+    onError: (error) => {
+      toastService.error(error.message || 'Failed to delete procedure');
+    },
+  });
+
+  const { mutate: dropFunction } = useDropFunction(selectedDatabaseId || '', {
+    onSuccess: () => {
+      toastService.success('Function deleted successfully');
+      setSchemaVersion(v => v + 1);
+      setSelectedObjectName(null);
+    },
+    onError: (error) => {
+      toastService.error(error.message || 'Failed to delete function');
+    },
+  });
+
   const handleSelectDatabase = (id: string) => {
-    const targetDb = databases.find((db) => db.id === id);
+    const targetDb: DatabaseDto | undefined = databases.find((db) => db.id === id);
     if (!targetDb) return;
 
     // Clear selected schema object when switching databases
@@ -226,7 +253,7 @@ export default function Dashboard() {
   };
 
   // Schema Explorer handlers
-  const handleSelectObject = (name: string, type: 'table' | 'view' | 'index' | 'procedure' | 'function') => {
+  const handleSelectObject = (name: string, type: SelectedObjectType) => {
     setSelectedObjectName(name);
     setSelectedObjectType(type);
   };
@@ -287,9 +314,47 @@ export default function Dashboard() {
     setActiveTab(2);
   };
 
+  const handleTestProcedure = (procedureName: string, query?: string) => {
+    // Use provided query or create a basic CALL statement
+    const callQuery = query || `CALL ${procedureName}();`;
+    setInitialQuery(callQuery);
+    // Switch to Query Editor tab
+    setActiveTab(2);
+  };
+
+  const handleTestFunction = (functionName: string, query?: string) => {
+    // Use provided query or create a basic SELECT statement
+    const selectQuery = query || `SELECT ${functionName}();`;
+    setInitialQuery(selectQuery);
+    // Switch to Query Editor tab
+    setActiveTab(2);
+  };
+
   const handleDeleteView = (viewName: string) => {
     setTableToModify(viewName);
     setIsDeleteTableDialogOpen(true); // Reuse delete dialog for views
+  };
+
+  const handleEditProcedure = (procedureName: string) => {
+    setTableToModify(procedureName);
+    setIsCreateProcedureDialogOpen(true);
+  };
+
+  const handleDeleteProcedure = (procedureName: string) => {
+    if (window.confirm(`Delete procedure "${procedureName}"? This action cannot be undone.`)) {
+      dropProcedure(procedureName);
+    }
+  };
+
+  const handleEditFunction = (functionName: string) => {
+    setTableToModify(functionName);
+    setIsCreateFunctionDialogOpen(true);
+  };
+
+  const handleDeleteFunction = (functionName: string) => {
+    if (window.confirm(`Delete function "${functionName}"? This action cannot be undone.`)) {
+      dropFunction(functionName);
+    }
   };
 
   const handleCreateView = () => {
@@ -307,6 +372,12 @@ export default function Dashboard() {
 
   const hasNoDatabases = databases.length === 0;
 
+  // Show skeleton while loading
+  if (isLoading) {
+    return <PageSkeleton variant="dashboard" count={3} />;
+  }
+
+  // Show empty state when no databases exist
   if (hasNoDatabases) {
     return (
       <DashboardWrapper>
@@ -456,6 +527,12 @@ export default function Dashboard() {
                   onNavigateToTable={(tableName) => handleSelectObject(tableName, 'table')}
                   onQueryView={handleQueryView}
                   onDeleteView={handleDeleteView}
+                  onTestProcedure={handleTestProcedure}
+                  onTestFunction={handleTestFunction}
+                  onEditProcedure={handleEditProcedure}
+                  onDeleteProcedure={handleDeleteProcedure}
+                  onEditFunction={handleEditFunction}
+                  onDeleteFunction={handleDeleteFunction}
                 />
               )}
             </TabPanel>

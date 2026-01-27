@@ -1,5 +1,6 @@
 import { useState, ChangeEvent } from 'react';
-import { CircularProgress, ToggleButton, ToggleButtonGroup, Autocomplete } from '@mui/material';
+import { ToggleButton, ToggleButtonGroup, Autocomplete } from '@mui/material';
+import { ButtonLoadingSkeleton } from '../../../../components';
 import FunctionsIcon from '@mui/icons-material/Functions';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
@@ -129,7 +130,7 @@ export default function CreateFunctionDialog({
 
   const getPlaceholder = () => {
     if (engine === 'postgres') {
-      return language === 'plpgsql' 
+      return language === 'plpgsql'
         ? 'BEGIN\n  RETURN param1 + param2;\nEND;'
         : 'SELECT param1 + param2';
     }
@@ -256,7 +257,7 @@ export default function CreateFunctionDialog({
         >
           {isPending ? (
             <>
-              <CircularProgress size={16} color="inherit" />
+              <ButtonLoadingSkeleton size="small" />
               Creating...
             </>
           ) : (

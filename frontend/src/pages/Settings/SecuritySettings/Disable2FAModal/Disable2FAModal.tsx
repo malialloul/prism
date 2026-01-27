@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { IconButton, InputAdornment, CircularProgress, Box } from '@mui/material';
+import { IconButton, InputAdornment, Box } from '@mui/material';
+import { ButtonLoadingSkeleton } from '../../../../components';
 import { Close, Visibility, VisibilityOff, Check, Warning } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -174,7 +175,7 @@ const Disable2FAModal = ({ open, onClose, onSuccess }: Disable2FAModalProps) => 
               variant="contained"
               disabled={isLoading || !formik.isValid || !formik.dirty}
             >
-              {isLoading ? <CircularProgress size={20} color="inherit" /> : 'Disable 2FA'}
+              {isLoading ? <ButtonLoadingSkeleton size="small" /> : 'Disable 2FA'}
             </DisableButton>
           </StyledDialogActions>
         </form>

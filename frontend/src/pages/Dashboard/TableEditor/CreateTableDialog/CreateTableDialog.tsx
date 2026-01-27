@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { MenuItem, CircularProgress } from '@mui/material';
+import { MenuItem } from '@mui/material';
+import { ButtonLoadingSkeleton } from '../../../../components';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useCreateTable } from '../../../../api/entities/schema';
@@ -192,7 +193,7 @@ export default function CreateTableDialog({
       <DialogFooter>
         <CancelButton onClick={onClose}>Cancel</CancelButton>
         <SubmitButton onClick={handleSubmit} disabled={!isValid || isPending}>
-          {isPending ? <CircularProgress size={20} color="inherit" /> : 'Create Table'}
+          {isPending ? <ButtonLoadingSkeleton size="small" /> : 'Create Table'}
         </SubmitButton>
       </DialogFooter>
     </StyledDialog>

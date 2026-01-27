@@ -1,5 +1,6 @@
 import { useState, ChangeEvent } from 'react';
-import { CircularProgress, ToggleButton, ToggleButtonGroup, MenuItem, Autocomplete } from '@mui/material';
+import { ToggleButton, ToggleButtonGroup, MenuItem, Autocomplete } from '@mui/material';
+import { ButtonLoadingSkeleton } from '../../../../components';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
@@ -121,7 +122,7 @@ export default function CreateProcedureDialog({
 
   const getPlaceholder = () => {
     if (engine === 'postgres') {
-      return language === 'plpgsql' 
+      return language === 'plpgsql'
         ? 'BEGIN\n  -- Your procedure logic here\n  INSERT INTO logs (message) VALUES (param1);\nEND;'
         : 'INSERT INTO logs (message) VALUES (param1);';
     }
@@ -237,7 +238,7 @@ export default function CreateProcedureDialog({
         >
           {isPending ? (
             <>
-              <CircularProgress size={16} color="inherit" />
+              <ButtonLoadingSkeleton size="small" />
               Creating...
             </>
           ) : (

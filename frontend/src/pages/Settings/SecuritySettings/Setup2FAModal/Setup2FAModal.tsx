@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { IconButton, InputAdornment, CircularProgress } from '@mui/material';
+import { IconButton, InputAdornment } from '@mui/material';
+import { ButtonLoadingSkeleton } from '../../../../components';
 import { Close, Visibility, VisibilityOff, Check, ContentCopy, Download } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -228,7 +229,7 @@ const Setup2FAModal = ({ open, onClose, onSuccess }: Setup2FAModalProps) => {
                 variant="contained"
                 disabled={isSetupLoading || !passwordFormik.isValid || !passwordFormik.dirty}
               >
-                {isSetupLoading ? <CircularProgress size={20} color="inherit" /> : 'Continue'}
+                {isSetupLoading ? <ButtonLoadingSkeleton size="small" /> : 'Continue'}
               </SubmitButton>
             </StyledDialogActions>
           </form>
@@ -287,7 +288,7 @@ const Setup2FAModal = ({ open, onClose, onSuccess }: Setup2FAModalProps) => {
                 variant="contained"
                 disabled={isVerifyLoading || !verificationFormik.isValid || !verificationFormik.dirty}
               >
-                {isVerifyLoading ? <CircularProgress size={20} color="inherit" /> : 'Verify & Enable'}
+                {isVerifyLoading ? <ButtonLoadingSkeleton size="small" /> : 'Verify & Enable'}
               </SubmitButton>
             </StyledDialogActions>
           </form>

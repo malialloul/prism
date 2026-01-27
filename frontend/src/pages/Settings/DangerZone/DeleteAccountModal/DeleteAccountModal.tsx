@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { IconButton, InputAdornment, CircularProgress, Box } from '@mui/material';
+import { IconButton, InputAdornment, Box } from '@mui/material';
+import { ButtonLoadingSkeleton } from '../../../../components';
 import { Close, Visibility, VisibilityOff, DeleteForever, Warning } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -178,7 +179,7 @@ const DeleteAccountModal = ({ open, onClose, onSuccess }: DeleteAccountModalProp
               disabled={isLoading || !formik.isValid || !formik.dirty}
             >
               {isLoading ? (
-                <CircularProgress size={16} color="inherit" />
+                <ButtonLoadingSkeleton size="small" />
               ) : (
                 'Delete Account'
               )}

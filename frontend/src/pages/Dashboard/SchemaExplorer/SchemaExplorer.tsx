@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { CircularProgress, Tooltip } from '@mui/material';
+import { Tooltip, Box, Skeleton } from '@mui/material';
+import { ButtonLoadingSkeleton } from '../../../components';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import StorageIcon from '@mui/icons-material/Storage';
@@ -118,7 +119,10 @@ export default function SchemaExplorer({
       <ExplorerContent>
         {isLoading ? (
           <EmptyState>
-            <CircularProgress size={32} />
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <Skeleton variant="circular" width={32} height={32} sx={{ animation: 'pulse 1.5s ease-in-out infinite' }} />
+              <Skeleton variant="text" width={100} height={20} sx={{ animation: 'pulse 1.5s ease-in-out infinite' }} />
+            </Box>
           </EmptyState>
         ) : (
           <>

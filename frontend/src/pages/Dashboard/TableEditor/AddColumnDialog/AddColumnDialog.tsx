@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { MenuItem, CircularProgress } from '@mui/material';
+import { MenuItem } from '@mui/material';
+import { ButtonLoadingSkeleton } from '../../../../components';
 import { useAddColumn } from '../../../../api/entities/schema';
 import type { AddColumnDto } from '../../../../api/models/SchemaDto';
 import { POSTGRES_DATA_TYPES, MYSQL_DATA_TYPES } from '../../../../api/models/SchemaDto';
@@ -132,7 +133,7 @@ export default function AddColumnDialog({
       <DialogFooter>
         <CancelButton onClick={handleClose}>Cancel</CancelButton>
         <SubmitButton onClick={handleSubmit} disabled={!isValid || isPending}>
-          {isPending ? <CircularProgress size={20} color="inherit" /> : 'Add Column'}
+          {isPending ? <ButtonLoadingSkeleton size="small" /> : 'Add Column'}
         </SubmitButton>
       </DialogFooter>
     </StyledDialog>

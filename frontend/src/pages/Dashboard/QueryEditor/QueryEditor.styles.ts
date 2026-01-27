@@ -367,3 +367,16 @@ export const ExportButton = styled(Button)(({ theme }) => {
     },
   };
 });
+
+export const ResultsToolbar = styled(Box)(({ theme }) => {
+  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  return {
+    padding: '0.75rem 1rem',
+    borderBottom: `1px solid ${colors.border}`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.backgroundSecondary,
+    gap: '1rem',
+  };
+});

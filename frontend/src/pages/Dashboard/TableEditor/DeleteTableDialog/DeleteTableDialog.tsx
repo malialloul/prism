@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CircularProgress } from '@mui/material';
+import { ButtonLoadingSkeleton } from '../../../../components';
 import WarningIcon from '@mui/icons-material/Warning';
 import { useDropTable } from '../../../../api/entities/schema';
 import {
@@ -89,7 +89,7 @@ export default function DeleteTableDialog({
       <DialogFooter>
         <CancelButton onClick={handleClose}>Cancel</CancelButton>
         <DeleteButton onClick={handleSubmit} disabled={!isValid || isPending}>
-          {isPending ? <CircularProgress size={20} color="inherit" /> : 'Delete Table'}
+          {isPending ? <ButtonLoadingSkeleton size="small" /> : 'Delete Table'}
         </DeleteButton>
       </DialogFooter>
     </StyledDialog>

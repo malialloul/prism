@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Switch, CircularProgress } from '@mui/material';
+import { Switch } from '@mui/material';
+import { ButtonLoadingSkeleton } from '../../../components';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useCreateDatabase, useConnectDatabase, useTestConnection } from '../../../api/entities/databases';
@@ -292,7 +293,7 @@ export default function DatabaseActionsPanel({
           <DialogFooter>
             <CancelButton type="button" onClick={handleCloseCreateDialog} disabled={isCreating}>Cancel</CancelButton>
             <SubmitButton type="submit" disabled={!createFormik.isValid || !createFormik.dirty || isCreating}>
-              {isCreating ? <CircularProgress size={16} color="inherit" /> : 'Create Database'}
+              {isCreating ? <ButtonLoadingSkeleton size="small" /> : 'Create Database'}
             </SubmitButton>
           </DialogFooter>
         </form>
@@ -426,7 +427,7 @@ export default function DatabaseActionsPanel({
 
             {connectionTestStatus !== 'idle' && (
               <ConnectionStatus status={connectionTestStatus === 'testing' ? 'testing' : connectionTestStatus}>
-                {connectionTestStatus === 'testing' && <CircularProgress size={16} color="inherit" />}
+                {connectionTestStatus === 'testing' && <ButtonLoadingSkeleton size="small" />}
                 {connectionTestStatus === 'success' && '✓'}
                 {connectionTestStatus === 'error' && '✗'}
                 {connectionTestMessage || 'Testing connection...'}
@@ -439,14 +440,14 @@ export default function DatabaseActionsPanel({
               onClick={handleTestConnection}
               disabled={isTestDisabled}
             >
-              {isTesting ? <CircularProgress size={16} /> : 'Test Connection'}
+              {isTesting ? <ButtonLoadingSkeleton size="small" /> : 'Test Connection'}
             </TestConnectionButton>
             <CancelButton type="button" onClick={handleCloseConnectDialog}>Cancel</CancelButton>
             <SubmitButton 
               type="submit"
               disabled={!connectFormik.isValid || !connectFormik.dirty || isConnecting}
             >
-              {isConnecting ? <CircularProgress size={16} color="inherit" /> : 'Connect Database'}
+              {isConnecting ? <ButtonLoadingSkeleton size="small" /> : 'Connect Database'}
             </SubmitButton>
           </DialogFooter>
         </form>

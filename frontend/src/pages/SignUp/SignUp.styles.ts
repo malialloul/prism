@@ -4,10 +4,10 @@ import { motion } from 'motion/react';
 import { authColors as colors } from '../../styles/theme';
 
 export const AuthWrapper = styled(Box)({
-  height: '100vh',
+  minHeight: '100vh',
   display: 'flex',
   background: colors.backgroundAlt,
-  overflow: 'hidden',
+  overflow: 'auto',
 });
 
 export const LeftPanel = styled(Box)(({ theme }) => ({
@@ -104,7 +104,7 @@ export const RightPanel = styled(Box)(({ theme }) => ({
   padding: '2rem',
   background: colors.background,
   position: 'relative',
-  overflow: 'hidden',
+  overflow: 'auto',
   [theme.breakpoints.up('md')]: {
     padding: '3rem',
   },

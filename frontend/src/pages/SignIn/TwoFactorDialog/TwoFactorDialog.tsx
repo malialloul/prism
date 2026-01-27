@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { CircularProgress } from '@mui/material';
 import { Close, Shield } from '@mui/icons-material';
+import { ButtonLoadingSkeleton } from '../../../components';
 import { useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -133,7 +133,7 @@ const TwoFactorDialog = ({ open, onClose, email, tempToken, rememberMe }: TwoFac
             variant="contained"
             disabled={isLoading || formik.values.code.length !== 6}
           >
-            {isLoading ? <CircularProgress size={20} color="inherit" /> : 'Verify'}
+            {isLoading ? <ButtonLoadingSkeleton size="small" /> : 'Verify'}
           </SubmitButton>
         </StyledDialogActions>
       </form>

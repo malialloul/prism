@@ -1,4 +1,5 @@
-import { CircularProgress, Tooltip } from '@mui/material';
+import { useState } from 'react';
+import { Tooltip, Box, Skeleton } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -7,8 +8,10 @@ import StorageIcon from '@mui/icons-material/Storage';
 import LinkIcon from '@mui/icons-material/Link';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import { useTableDetails, useViewDetails } from '../../../../api/entities/schema';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import { useTableDetails, useViewDetails, useProcedureDetails, useFunctionDetails } from '../../../../api/entities/schema';
 import type { SchemaObjectType, TableDetailsDto, ViewDetailsDto } from '../../../../api/models/SchemaDto';
+import { TestProcedureFunctionDialog } from './TestProcedureFunctionDialog';
 import { DatabaseDto } from '../../../../api/models/DatabaseDto';
 import { toastService } from '../../../../services';
 import {
@@ -45,6 +48,12 @@ interface ObjectDetailsPanelProps {
   onNavigateToTable?: (tableName: string) => void;
   onQueryView?: (viewName: string, definition: string) => void;
   onDeleteView?: (viewName: string) => void;
+  onTestProcedure?: (procedureName: string, query?: string) => void;
+  onTestFunction?: (functionName: string, query?: string) => void;
+  onEditProcedure?: (procedureName: string) => void;
+  onDeleteProcedure?: (procedureName: string) => void;
+  onEditFunction?: (functionName: string) => void;
+  onDeleteFunction?: (functionName: string) => void;
 }
 
 export default function ObjectDetailsPanel({
@@ -59,7 +68,15 @@ export default function ObjectDetailsPanel({
   onNavigateToTable,
   onQueryView,
   onDeleteView,
+  onTestProcedure,
+  onTestFunction,
+  onEditProcedure,
+  onDeleteProcedure,
+  onEditFunction,
+  onDeleteFunction,
 }: ObjectDetailsPanelProps) {
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+
   const { data: tableData, isLoading: tableLoading } = useTableDetails(
     objectType === 'table' ? databaseId : undefined,
     objectType === 'table' ? objectName : undefined
@@ -70,8 +87,20 @@ export default function ObjectDetailsPanel({
     objectType === 'view' ? objectName : undefined
   );
 
+  const { data: procedureData, isLoading: procedureLoading } = useProcedureDetails(
+    objectType === 'procedure' ? databaseId : undefined,
+    objectType === 'procedure' ? objectName : undefined
+  );
+
+  const { data: functionData, isLoading: functionLoading } = useFunctionDetails(
+    objectType === 'function' ? databaseId : undefined,
+    objectType === 'function' ? objectName : undefined
+  );
+
   const table = tableData?.table;
   const view = viewData?.view;
+  const procedure = procedureData?.procedure;
+  const func = functionData?.function;
 
   if (!databaseId || !objectName || !objectType) {
     return (
@@ -89,7 +118,7 @@ export default function ObjectDetailsPanel({
     );
   }
 
-  const isLoading = (objectType === 'table' && tableLoading) || (objectType === 'view' && viewLoading);
+  const isLoading = (objectType === 'table' && tableLoading) || (objectType === 'view' && viewLoading) || (objectType === 'procedure' && procedureLoading) || (objectType === 'function' && functionLoading);
 
   return (
     <DetailsPanel>
@@ -159,12 +188,95 @@ export default function ObjectDetailsPanel({
       <DetailsPanelContent>
         {isLoading ? (
           <EmptyState>
-            <CircularProgress size={32} />
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <Skeleton variant="circular" width={32} height={32} sx={{ animation: 'pulse 1.5s ease-in-out infinite' }} />
+              <Skeleton variant="text" width={100} height={20} sx={{ animation: 'pulse 1.5s ease-in-out infinite' }} />
+            </Box>
           </EmptyState>
         ) : objectType === 'table' && table ? (
           <TableDetails table={table} onNavigateToTable={onNavigateToTable} />
         ) : objectType === 'view' && view ? (
           <ViewDetails view={view} />
+        ) : objectType === 'procedure' ? (
+          <>
+            <EmptyState>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                <span>Procedure: {objectName}</span>
+                <Box sx={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                  <Tooltip title="Edit this procedure definition">
+                    <TableActionButton onClick={() => onEditProcedure?.(objectName)}>
+                      <EditIcon />
+                      Edit
+                    </TableActionButton>
+                  </Tooltip>
+                  <Tooltip title="Test this procedure in the Query Editor">
+                    <TableActionButton onClick={() => setTestDialogOpen(true)}>
+                      <PlayArrowIcon />
+                      Test
+                    </TableActionButton>
+                  </Tooltip>
+                  <Tooltip title="Permanently delete this procedure">
+                    <TableActionButton variant="danger" onClick={() => onDeleteProcedure?.(objectName)}>
+                      <DeleteIcon />
+                      Delete
+                    </TableActionButton>
+                  </Tooltip>
+                </Box>
+              </Box>
+            </EmptyState>
+            <TestProcedureFunctionDialog
+              open={testDialogOpen}
+              objectName={objectName}
+              objectType="procedure"
+              details={(procedure as any) || null}
+              onClose={() => setTestDialogOpen(false)}
+              onTest={(query) => {
+                setTestDialogOpen(false);
+                onTestProcedure?.(objectName, query);
+              }}
+              isLoading={procedureLoading}
+            />
+          </>
+        ) : objectType === 'function' ? (
+          <>
+            <EmptyState>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                <span>Function: {objectName}</span>
+                <Box sx={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                  <Tooltip title="Edit this function definition">
+                    <TableActionButton onClick={() => onEditFunction?.(objectName)}>
+                      <EditIcon />
+                      Edit
+                    </TableActionButton>
+                  </Tooltip>
+                  <Tooltip title="Test this function in the Query Editor">
+                    <TableActionButton onClick={() => setTestDialogOpen(true)}>
+                      <PlayArrowIcon />
+                      Test
+                    </TableActionButton>
+                  </Tooltip>
+                  <Tooltip title="Permanently delete this function">
+                    <TableActionButton variant="danger" onClick={() => onDeleteFunction?.(objectName)}>
+                      <DeleteIcon />
+                      Delete
+                    </TableActionButton>
+                  </Tooltip>
+                </Box>
+              </Box>
+            </EmptyState>
+            <TestProcedureFunctionDialog
+              open={testDialogOpen}
+              objectName={objectName}
+              objectType="function"
+              details={(func as any) || null}
+              onClose={() => setTestDialogOpen(false)}
+              onTest={(query) => {
+                setTestDialogOpen(false);
+                onTestFunction?.(objectName, query);
+              }}
+              isLoading={functionLoading}
+            />
+          </>
         ) : (
           <EmptyState>
             <span>Details not available for this object type</span>
