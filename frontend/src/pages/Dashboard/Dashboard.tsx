@@ -26,9 +26,10 @@ import DeleteDatabaseDialog from "./DeleteDatabaseDialog/DeleteDatabaseDialog";
 import SwitchDatabaseDialog from "./SwitchDatabaseDialog/SwitchDatabaseDialog";
 import { SchemaExplorer, ObjectDetailsPanel } from "./SchemaExplorer";
 import { QueryEditor } from "./QueryEditor";
-import { CreateTableDialog, CreateViewDialog, CreateFunctionDialog, CreateProcedureDialog, AddColumnDialog, DeleteTableDialog, TableEditor } from "./TableEditor";
+import { CreateTableDialog, CreateViewDialog, CreateFunctionDialog, CreateProcedureDialog, AddColumnDialog, DeleteTableDialog, ConfirmDialog, TableEditor } from "./TableEditor";
+import { ApisPage } from "./ApisPage";
 import { useDatabases, useRefreshDatabase, useDisconnectDatabase, useReconnectDatabase } from "../../api/entities/databases";
-import { useDropProcedure, useDropFunction } from "../../api/entities/schema";
+import { useDropProcedure, useDropFunction, useProcedureDetails, useFunctionDetails, useSchemaObjects } from "../../api/entities/schema";
 import { toastService } from "../../services";
 
 // Icons
@@ -40,6 +41,9 @@ import { DatabaseDto } from "../../api/models/DatabaseDto";
 type SelectedObjectType = 'table' | 'view' | 'index' | 'procedure' | 'function';
 
 export default function Dashboard() {
+  // Main navigation tab (Dashboard / APIs)
+  const [mainTab, setMainTab] = useState(0);
+
   // Fetch databases from API
   const { data: databasesData, isLoading, refetch: refetchDatabases } = useDatabases();
 
@@ -55,7 +59,7 @@ export default function Dashboard() {
   // Get databases from API
   const databases: DatabaseDto[] = databasesData?.databases || [];
 
-  const [selectedDatabaseId, setSelectedDatabaseId] = useState<string>("");
+  const [selectedDatabaseId, setSelectedDatabaseId] = useState<number | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isConnectDialogOpen, setIsConnectDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -69,14 +73,14 @@ export default function Dashboard() {
   const [initialCreateEngine, setInitialCreateEngine] = useState<
     DatabaseDto['engine'] | undefined
   >(undefined);
-  
+
   // Dashboard tab state
   const [activeTab, setActiveTab] = useState(0);
-  
+
   // Schema Explorer state
   const [selectedObjectName, setSelectedObjectName] = useState<string | null>(null);
   const [selectedObjectType, setSelectedObjectType] = useState<SelectedObjectType>('table');
-  
+
   // Table Management state
   const [isCreateTableDialogOpen, setIsCreateTableDialogOpen] = useState(false);
   const [isCreateViewDialogOpen, setIsCreateViewDialogOpen] = useState(false);
@@ -86,6 +90,14 @@ export default function Dashboard() {
   const [isDeleteTableDialogOpen, setIsDeleteTableDialogOpen] = useState(false);
   const [isTableEditorOpen, setIsTableEditorOpen] = useState(false);
   const [tableToModify, setTableToModify] = useState<string | null>(null);
+
+  // Edit procedure/function state
+  const [editingProcedureName, setEditingProcedureName] = useState<string | null>(null);
+  const [editingFunctionName, setEditingFunctionName] = useState<string | null>(null);
+
+  // Delete confirmation state
+  const [procedureToDelete, setProcedureToDelete] = useState<string | null>(null);
+  const [functionToDelete, setFunctionToDelete] = useState<string | null>(null);
 
   // Schema version to trigger query result refresh when schema changes
   const [schemaVersion, setSchemaVersion] = useState(0);
@@ -98,6 +110,21 @@ export default function Dashboard() {
 
   // Get the currently connected database
   const connectedDatabase = databases.find((db) => db.status === 'connected') || null;
+
+  // Fetch schema objects to get existing procedure/function names
+  const { data: schemaData } = useSchemaObjects(connectedDatabase?.id);
+  const existingProcedures = schemaData?.objects?.filter(o => o.type === 'procedure').map(o => o.name) || [];
+  const existingFunctions = schemaData?.objects?.filter(o => o.type === 'function').map(o => o.name) || [];
+
+  // Fetch procedure/function details when editing
+  const { data: editProcedureData } = useProcedureDetails(
+    editingProcedureName && connectedDatabase ? connectedDatabase.id : undefined,
+    editingProcedureName || undefined
+  );
+  const { data: editFunctionData } = useFunctionDetails(
+    editingFunctionName && connectedDatabase ? connectedDatabase.id : undefined,
+    editingFunctionName || undefined
+  );
 
   // Auto-refresh connected databases on mount to get fresh stats
   useEffect(() => {
@@ -112,7 +139,7 @@ export default function Dashboard() {
 
   // Auto-select last connected database when data loads
   useEffect(() => {
-    if (databases.length > 0 && !selectedDatabaseId) {
+    if (databases.length > 0 && selectedDatabaseId === null) {
       // Find the most recently connected database
       const lastConnected = databases.reduce((latest, db) => {
         if (!latest) return db;
@@ -126,7 +153,7 @@ export default function Dashboard() {
     databases.find((db) => db.id === selectedDatabaseId) || null;
 
   // Delete procedure/function mutations
-  const { mutate: dropProcedure } = useDropProcedure(selectedDatabaseId || '', {
+  const { mutate: dropProcedure } = useDropProcedure(selectedDatabaseId ?? 0, {
     onSuccess: () => {
       toastService.success('Procedure deleted successfully');
       setSchemaVersion(v => v + 1);
@@ -137,7 +164,7 @@ export default function Dashboard() {
     },
   });
 
-  const { mutate: dropFunction } = useDropFunction(selectedDatabaseId || '', {
+  const { mutate: dropFunction } = useDropFunction(selectedDatabaseId ?? 0, {
     onSuccess: () => {
       toastService.success('Function deleted successfully');
       setSchemaVersion(v => v + 1);
@@ -148,7 +175,7 @@ export default function Dashboard() {
     },
   });
 
-  const handleSelectDatabase = (id: string) => {
+  const handleSelectDatabase = (id: number) => {
     const targetDb: DatabaseDto | undefined = databases.find((db) => db.id === id);
     if (!targetDb) return;
 
@@ -176,13 +203,13 @@ export default function Dashboard() {
     }
   };
 
-  const handleDisconnect = (id: string) => {
+  const handleDisconnect = (id: number) => {
     disconnectDatabase(id);
     setActiveTab(0); // Go back to Overview tab
     setSelectedObjectName(null); // Clear any selected object
   };
 
-  const handleConnect = (id: string) => {
+  const handleConnect = (id: number) => {
     const targetDb = databases.find((db) => db.id === id);
     if (!targetDb) return;
 
@@ -196,7 +223,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleSwitched = (newDatabaseId: string) => {
+  const handleSwitched = (newDatabaseId: number) => {
     setSelectedDatabaseId(newDatabaseId);
     setDatabaseToSwitchTo(null);
   };
@@ -210,13 +237,13 @@ export default function Dashboard() {
     setIsConnectDialogOpen(true);
   };
 
-  const handleDatabaseConnected = (databaseId: string) => {
+  const handleDatabaseConnected = (databaseId: number) => {
     setSelectedDatabaseId(databaseId);
   };
 
-  const handleDeleteDatabase = (id?: string) => {
+  const handleDeleteDatabase = (id?: number) => {
     const dbId = id || selectedDatabaseId;
-    const dbToDelete = databases.find((db) => db.id === dbId);
+    const dbToDelete = dbId !== null ? databases.find((db) => db.id === dbId) : undefined;
     if (dbToDelete) {
       setDatabaseToDelete(dbToDelete);
       setIsDeleteDialogOpen(true);
@@ -234,18 +261,18 @@ export default function Dashboard() {
       }, remainingDatabases[0]);
       setSelectedDatabaseId(lastConnected.id);
     } else {
-      setSelectedDatabaseId("");
+      setSelectedDatabaseId(null);
     }
     setDatabaseToDelete(null);
-    
+
     // Reset schema states and go to Overview tab
     setSelectedObjectName(null);
     setActiveTab(0);
   };
 
-  const handleRefresh = (databaseId?: string) => {
-    const idToRefresh = databaseId || selectedDatabaseId;
-    if (idToRefresh) {
+  const handleRefresh = (databaseId?: number) => {
+    const idToRefresh = databaseId ?? selectedDatabaseId;
+    if (idToRefresh !== null) {
       refreshDatabase(idToRefresh);
     } else {
       refetchDatabases();
@@ -336,24 +363,36 @@ export default function Dashboard() {
   };
 
   const handleEditProcedure = (procedureName: string) => {
+    setEditingProcedureName(procedureName);
     setTableToModify(procedureName);
     setIsCreateProcedureDialogOpen(true);
   };
 
   const handleDeleteProcedure = (procedureName: string) => {
-    if (window.confirm(`Delete procedure "${procedureName}"? This action cannot be undone.`)) {
-      dropProcedure(procedureName);
+    setProcedureToDelete(procedureName);
+  };
+
+  const handleConfirmDeleteProcedure = () => {
+    if (procedureToDelete) {
+      dropProcedure(procedureToDelete);
+      setProcedureToDelete(null);
     }
   };
 
   const handleEditFunction = (functionName: string) => {
+    setEditingFunctionName(functionName);
     setTableToModify(functionName);
     setIsCreateFunctionDialogOpen(true);
   };
 
   const handleDeleteFunction = (functionName: string) => {
-    if (window.confirm(`Delete function "${functionName}"? This action cannot be undone.`)) {
-      dropFunction(functionName);
+    setFunctionToDelete(functionName);
+  };
+
+  const handleConfirmDeleteFunction = () => {
+    if (functionToDelete) {
+      dropFunction(functionToDelete);
+      setFunctionToDelete(null);
     }
   };
 
@@ -382,7 +421,11 @@ export default function Dashboard() {
     return (
       <DashboardWrapper>
         <DashboardHeader>
-          <Navbar onRefresh={handleRefresh} />
+          <Navbar 
+            onRefresh={handleRefresh} 
+            activeMainTab={mainTab} 
+            onMainTabChange={setMainTab} 
+          />
         </DashboardHeader>
         <DashboardBody>
           <Sidebar
@@ -395,11 +438,15 @@ export default function Dashboard() {
             onAddDatabase={handleCreateDatabase}
           />
           <DashboardContent>
-            <EmptyState
-              onCreatePostgres={() => handleCreateDatabase("postgres")}
-              onCreateMySQL={() => handleCreateDatabase("mysql")}
-              onConnect={handleConnectDatabase}
-            />
+            {mainTab === 0 ? (
+              <EmptyState
+                onCreatePostgres={() => handleCreateDatabase("postgres")}
+                onCreateMySQL={() => handleCreateDatabase("mysql")}
+                onConnect={handleConnectDatabase}
+              />
+            ) : (
+              <ApisPage connectedDatabase={null} />
+            )}
           </DashboardContent>
         </DashboardBody>
         <DatabaseActionsPanel
@@ -422,7 +469,11 @@ export default function Dashboard() {
   return (
     <DashboardWrapper>
       <DashboardHeader>
-        <Navbar onRefresh={handleRefresh} />
+        <Navbar 
+          onRefresh={handleRefresh} 
+          activeMainTab={mainTab} 
+          onMainTabChange={setMainTab} 
+        />
       </DashboardHeader>
       <DashboardBody>
         <Sidebar
@@ -435,78 +486,83 @@ export default function Dashboard() {
           onAddDatabase={handleCreateDatabase}
         />
         <DashboardContent>
-          <ContentHeader>
-            <ContentTitle>
-              {activeTab === 0 && 'Dashboard Overview'}
-              {activeTab === 1 && 'Schema Explorer'}
-              {activeTab === 2 && 'Query Editor'}
-            </ContentTitle>
-            <QuickActionsBar>
-              {activeTab === 0 && (
-                <>
-                  <QuickActionButton
-                    variant="primary"
-                    onClick={() => handleCreateDatabase()}
-                  >
-                    <AddIcon sx={{ fontSize: "1rem" }} />
-                    Create Database
-                  </QuickActionButton>
-                  <QuickActionButton onClick={handleConnectDatabase}>
-                    <LinkIcon sx={{ fontSize: "1rem" }} />
-                    Connect Existing
-                  </QuickActionButton>
-                </>
-              )}
-              {activeTab === 1 && connectedDatabase && (
-                <QuickActionButton
-                  variant="primary"
-                  onClick={handleCreateTable}
+          {/* APIs Page */}
+          {mainTab === 1 ? (
+            <ApisPage connectedDatabase={connectedDatabase} />
+          ) : (
+            <>
+              <ContentHeader>
+                <ContentTitle>
+                  {activeTab === 0 && 'Dashboard Overview'}
+                  {activeTab === 1 && 'Schema Explorer'}
+                  {activeTab === 2 && 'Query Editor'}
+                </ContentTitle>
+                <QuickActionsBar>
+                  {activeTab === 0 && (
+                    <>
+                      <QuickActionButton
+                        variant="primary"
+                        onClick={() => handleCreateDatabase()}
+                      >
+                        <AddIcon sx={{ fontSize: "1rem" }} />
+                        Create Database
+                      </QuickActionButton>
+                      <QuickActionButton onClick={handleConnectDatabase}>
+                        <LinkIcon sx={{ fontSize: "1rem" }} />
+                        Connect Existing
+                      </QuickActionButton>
+                    </>
+                  )}
+                  {activeTab === 1 && connectedDatabase && (
+                    <QuickActionButton
+                      variant="primary"
+                      onClick={handleCreateTable}
+                    >
+                      <TableViewIcon sx={{ fontSize: "1rem" }} />
+                      Create Table
+                    </QuickActionButton>
+                  )}
+                </QuickActionsBar>
+              </ContentHeader>
+
+              <TabsContainer>
+                <StyledTabs
+                  value={activeTab}
+                  onChange={(_e, newValue) => setActiveTab(newValue)}
                 >
-                  <TableViewIcon sx={{ fontSize: "1rem" }} />
-                  Create Table
-                </QuickActionButton>
+                  <StyledTab label="Overview" />
+                  <StyledTab label="Schema" disabled={!connectedDatabase} />
+                  <StyledTab label="Query" disabled={!connectedDatabase} />
+                </StyledTabs>
+              </TabsContainer>
+
+              {/* Overview Tab */}
+              {activeTab === 0 && (
+                <TabPanel>
+                  {selectedDatabase && selectedDatabase.status === 'connected' && (
+                    <ActiveDatabaseSummary
+                      database={selectedDatabase}
+                      onDisconnect={() => handleDisconnect(selectedDatabase.id)}
+                      onRefresh={() => handleRefresh(selectedDatabase.id)}
+                      onDelete={() => handleDeleteDatabase(selectedDatabase.id)}
+                    />
+                  )}
+
+                  <OverviewStatsCards
+                    databases={databases}
+                    selectedDatabaseId={selectedDatabase?.status === 'connected' ? selectedDatabaseId : null}
+                  />
+
+                  <DashboardGrid>
+                    <UsageCharts selectedDatabaseId={selectedDatabaseId} />
+                  </DashboardGrid>
+                </TabPanel>
               )}
-            </QuickActionsBar>
-          </ContentHeader>
 
-          <TabsContainer>
-            <StyledTabs
-              value={activeTab}
-              onChange={(_e, newValue) => setActiveTab(newValue)}
-            >
-              <StyledTab label="Overview" />
-              <StyledTab label="Schema" disabled={!connectedDatabase} />
-              <StyledTab label="Query" disabled={!connectedDatabase} />
-            </StyledTabs>
-          </TabsContainer>
-
-          {/* Overview Tab */}
-          {activeTab === 0 && (
-            <TabPanel>
-              {selectedDatabase && selectedDatabase.status === 'connected' && (
-                <ActiveDatabaseSummary
-                  database={selectedDatabase}
-                  onDisconnect={() => handleDisconnect(selectedDatabase.id)}
-                  onRefresh={() => handleRefresh(selectedDatabase.id)}
-                  onDelete={() => handleDeleteDatabase(selectedDatabase.id)}
-                />
-              )}
-
-              <OverviewStatsCards
-                databases={databases}
-                selectedDatabaseId={selectedDatabase?.status === 'connected' ? selectedDatabaseId : ''}
-              />
-
-              <DashboardGrid>
-                <UsageCharts selectedDatabaseId={selectedDatabaseId} />
-              </DashboardGrid>
-            </TabPanel>
-          )}
-
-          {/* Schema Explorer Tab */}
-          {activeTab === 1 && connectedDatabase && (
-            <TabPanel sx={{ display: 'flex', gap: '1.5rem', flexDirection: 'row', flex: 1 }}>
-              <SchemaExplorer
+              {/* Schema Explorer Tab */}
+              {activeTab === 1 && connectedDatabase && (
+                <TabPanel sx={{ display: 'flex', gap: '1.5rem', flexDirection: 'row', flex: 1 }}>
+                  <SchemaExplorer
                 databaseId={connectedDatabase.id}
                 onSelectObject={handleSelectObject}
                 onCreateTable={handleCreateTable}
@@ -538,16 +594,18 @@ export default function Dashboard() {
             </TabPanel>
           )}
 
-          {/* Query Editor Tab */}
-          {activeTab === 2 && connectedDatabase && (
-            <TabPanel>
-              <QueryEditor
-                key={`query-editor-${connectedDatabase.id}-${schemaVersion}`}
-                databaseId={connectedDatabase.id}
-                engine={connectedDatabase.engine}
-                initialQuery={initialQuery}
-              />
-            </TabPanel>
+              {/* Query Editor Tab */}
+              {activeTab === 2 && connectedDatabase && (
+                <TabPanel>
+                  <QueryEditor
+                    key={`query-editor-${connectedDatabase.id}-${schemaVersion}`}
+                    databaseId={connectedDatabase.id}
+                    engine={connectedDatabase.engine}
+                    initialQuery={initialQuery}
+                  />
+                </TabPanel>
+              )}
+            </>
           )}
         </DashboardContent>
       </DashboardBody>
@@ -583,7 +641,7 @@ export default function Dashboard() {
         }}
         onSwitched={handleSwitched}
       />
-      
+
       {/* Table Management Dialogs */}
       {connectedDatabase && (
         <>
@@ -603,17 +661,29 @@ export default function Dashboard() {
           />
           <CreateFunctionDialog
             open={isCreateFunctionDialogOpen}
-            onClose={() => setIsCreateFunctionDialogOpen(false)}
+            onClose={() => {
+              setIsCreateFunctionDialogOpen(false);
+              setEditingFunctionName(null);
+            }}
             databaseId={connectedDatabase.id}
             engine={connectedDatabase.engine}
             onSuccess={handleSchemaChanged}
+            editFunction={editFunctionData?.function}
+            existingFunctions={existingFunctions}
+            isEditMode={!!editingFunctionName}
           />
           <CreateProcedureDialog
             open={isCreateProcedureDialogOpen}
-            onClose={() => setIsCreateProcedureDialogOpen(false)}
+            onClose={() => {
+              setIsCreateProcedureDialogOpen(false);
+              setEditingProcedureName(null);
+            }}
             databaseId={connectedDatabase.id}
             engine={connectedDatabase.engine}
             onSuccess={handleSchemaChanged}
+            editProcedure={editProcedureData?.procedure}
+            existingProcedures={existingProcedures}
+            isEditMode={!!editingProcedureName}
           />
           {tableToModify && (
             <>
@@ -651,6 +721,36 @@ export default function Dashboard() {
               />
             </>
           )}
+
+          {/* Delete Procedure Confirmation Dialog */}
+          <ConfirmDialog
+            open={!!procedureToDelete}
+            onClose={() => setProcedureToDelete(null)}
+            onConfirm={handleConfirmDeleteProcedure}
+            title="Delete Procedure"
+            message={
+              <>
+                You are about to permanently delete the procedure <strong>"{procedureToDelete}"</strong>.
+                This action is irreversible and cannot be undone.
+              </>
+            }
+            confirmText="Delete Procedure"
+          />
+
+          {/* Delete Function Confirmation Dialog */}
+          <ConfirmDialog
+            open={!!functionToDelete}
+            onClose={() => setFunctionToDelete(null)}
+            onConfirm={handleConfirmDeleteFunction}
+            title="Delete Function"
+            message={
+              <>
+                You are about to permanently delete the function <strong>"{functionToDelete}"</strong>.
+                This action is irreversible and cannot be undone.
+              </>
+            }
+            confirmText="Delete Function"
+          />
         </>
       )}
     </DashboardWrapper>

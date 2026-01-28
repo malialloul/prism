@@ -2,8 +2,6 @@ import {
   IconButton,
   Tooltip,
   Checkbox,
-  MenuItem,
-  InputAdornment,
   Box,
   Skeleton,
 } from '@mui/material';
@@ -13,6 +11,8 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import UndoIcon from '@mui/icons-material/Undo';
 import WarningIcon from '@mui/icons-material/Warning';
 import EditIcon from '@mui/icons-material/Edit';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import type { RowData, EditingCell } from '../TableEditor.types';
 import { formatDisplayValue } from '../TableEditor.utils';
 import { Pagination } from '../../../../components';
@@ -28,7 +28,6 @@ import {
   EditableTable,
   SortableHeader,
   EditableCell,
-  EditInput,
   NewRowIndicator,
   ModifiedRowIndicator,
 } from './DataTab.styles';
@@ -95,8 +94,8 @@ export default function DataTab({
   searchValue,
   sortColumn,
   sortDirection,
-  editingCell,
-  editValue,
+  editingCell: _editingCell,
+  editValue: _editValue,
   pendingChanges,
   isLoading,
   onSearchValueChange,
@@ -105,10 +104,6 @@ export default function DataTab({
   onSortClick,
   onPageChange,
   onPageSizeChange,
-  onCellClick,
-  onCellChange,
-  onCellBlur,
-  onKeyDown,
   onRowEdit,
   onSelectRow,
   onSelectAll,

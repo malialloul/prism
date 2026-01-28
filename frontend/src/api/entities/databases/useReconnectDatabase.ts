@@ -12,7 +12,7 @@ interface UseReconnectDatabaseOptions {
 export function useReconnectDatabase(options: UseReconnectDatabaseOptions = {}) {
   const queryClient = useQueryClient();
 
-  return useMutation<{ database: DatabaseDto; message: string }, ApiError, string>({
+  return useMutation<{ database: DatabaseDto; message: string }, ApiError, number>({
     mutationFn: (id) => DatabasesService.postDatabaseConnect(id),
     onSuccess: (response) => {
       // Invalidate databases list to trigger refresh

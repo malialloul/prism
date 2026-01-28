@@ -28,11 +28,11 @@ import { DatabaseDto } from '../../../api/models/DatabaseDto';
 
 interface SidebarProps {
   databases: DatabaseDto[];
-  selectedId: string;
-  onSelect: (id: string) => void;
-  onConnect: (id: string) => void;
-  onDisconnect: (id: string) => void;
-  onDelete: (id: string) => void;
+  selectedId: number | null;
+  onSelect: (id: number) => void;
+  onConnect: (id: number) => void;
+  onDisconnect: (id: number) => void;
+  onDelete: (id: number) => void;
   onAddDatabase: () => void;
 }
 
@@ -54,7 +54,7 @@ export default function Sidebar({
     }
   };
 
-  const handleDelete = (e: React.MouseEvent, id: string) => {
+  const handleDelete = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
     onDelete(id);
   };

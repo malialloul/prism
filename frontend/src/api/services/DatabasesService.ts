@@ -88,7 +88,7 @@ export class DatabasesService {
    * @returns DatabaseDto Database details
    * @throws ApiError
    */
-  public static getDatabase(id: string): CancelablePromise<{ database: DatabaseDto }> {
+  public static getDatabase(id: number): CancelablePromise<{ database: DatabaseDto }> {
     return __request(OpenAPI, {
       method: 'GET',
       url: `/databases/${id}`,
@@ -105,7 +105,7 @@ export class DatabasesService {
    * @returns void
    * @throws ApiError
    */
-  public static deleteDatabase(id: string): CancelablePromise<{ message: string }> {
+  public static deleteDatabase(id: number): CancelablePromise<{ message: string }> {
     return __request(OpenAPI, {
       method: 'DELETE',
       url: `/databases/${id}`,
@@ -122,7 +122,7 @@ export class DatabasesService {
    * @returns DatabaseDto Refreshed database
    * @throws ApiError
    */
-  public static postDatabaseRefresh(id: string): CancelablePromise<{ database: DatabaseDto }> {
+  public static postDatabaseRefresh(id: number): CancelablePromise<{ database: DatabaseDto }> {
     return __request(OpenAPI, {
       method: 'POST',
       url: `/databases/${id}/refresh`,
@@ -139,7 +139,7 @@ export class DatabasesService {
    * @returns DatabaseDto Disconnected database
    * @throws ApiError
    */
-  public static postDatabaseDisconnect(id: string): CancelablePromise<{ database: DatabaseDto; message: string }> {
+  public static postDatabaseDisconnect(id: number): CancelablePromise<{ database: DatabaseDto; message: string }> {
     return __request(OpenAPI, {
       method: 'POST',
       url: `/databases/${id}/disconnect`,
@@ -156,7 +156,7 @@ export class DatabasesService {
    * @returns DatabaseDto Connected database
    * @throws ApiError
    */
-  public static postDatabaseConnect(id: string): CancelablePromise<{ database: DatabaseDto; message: string }> {
+  public static postDatabaseConnect(id: number): CancelablePromise<{ database: DatabaseDto; message: string }> {
     return __request(OpenAPI, {
       method: 'POST',
       url: `/databases/${id}/connect`,
@@ -167,4 +167,39 @@ export class DatabasesService {
       },
     });
   }
+
+  /**
+   * Get query execution statistics
+   * @param databaseId Optional database ID to filter stats
+   * @returns QueryStatsResponse Query statistics
+   * @throws ApiError
+   */
+  public static getQueryStats(databaseId?: number): CancelablePromise<QueryStatsResponse> {
+    const query = databaseId !== undefined ? `?databaseId=${databaseId}` : '';
+    return __request(OpenAPI, {
+      method: 'GET',
+      url: `/databases/stats/queries${query}`,
+      errors: {
+        401: 'Unauthorized',
+      },
+    });
+  }
+}
+
+export interface QueryStatsResponse {
+  totalQueries: number;
+  queriesLastHour: number;
+  queriesLastDay: number;
+  queriesByDatabase: Array<{
+    databaseId: number;
+    count: number;
+  }>;
+  avgExecutionTimeMs: number;
+  successRate: number;
+  hourlyData: Array<{
+    hour: number;
+    queries: number;
+    errors: number;
+    avgLatencyMs: number;
+  }>;
 }

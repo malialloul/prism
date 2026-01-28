@@ -272,7 +272,7 @@ export const createDatabaseService = async (
   const decryptedPassword = decryptTransmission(password);
 
   // For hosted databases, we generate unique connection details using user ID
-  const userIdShort = userId.replace(/-/g, '').substring(0, 8); // First 8 chars of UUID without dashes
+  const userIdShort = String(userId).padStart(8, '0').substring(0, 8); // Pad and take first 8 chars of integer ID
   const sanitizedName = name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
   const host = 'localhost';
   const port = engine === 'postgres' ? 5432 : 3306;

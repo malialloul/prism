@@ -10,7 +10,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { useTableDetails, useViewDetails, useProcedureDetails, useFunctionDetails } from '../../../../api/entities/schema';
-import type { SchemaObjectType, TableDetailsDto, ViewDetailsDto } from '../../../../api/models/SchemaDto';
+import type { SchemaObjectType, TableDetailsDto, ViewDetailsDto, ProcedureDetailsDto, FunctionDetailsDto } from '../../../../api/models/SchemaDto';
 import { TestProcedureFunctionDialog } from './TestProcedureFunctionDialog';
 import { DatabaseDto } from '../../../../api/models/DatabaseDto';
 import { toastService } from '../../../../services';
@@ -37,7 +37,7 @@ import {
 } from './ObjectDetailsPanel.styles';
 
 interface ObjectDetailsPanelProps {
-  databaseId: string | undefined;
+  databaseId: number | undefined;
   objectName: string | undefined;
   objectType: SchemaObjectType | undefined;
   engine?: DatabaseDto['engine'];
@@ -135,7 +135,7 @@ export default function ObjectDetailsPanel({
           </Tooltip>
         )}
       </DetailsPanelHeader>
-      
+
       {objectType === 'table' && (
         <TableActionsBar>
           <Tooltip title="Add a new column to this table">
@@ -184,7 +184,7 @@ export default function ObjectDetailsPanel({
           </Tooltip>
         </ViewActionsBar>
       )}
-      
+
       <DetailsPanelContent>
         {isLoading ? (
           <EmptyState>
@@ -197,38 +197,19 @@ export default function ObjectDetailsPanel({
           <TableDetails table={table} onNavigateToTable={onNavigateToTable} />
         ) : objectType === 'view' && view ? (
           <ViewDetails view={view} />
-        ) : objectType === 'procedure' ? (
+        ) : objectType === 'procedure' && procedure ? (
           <>
-            <EmptyState>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                <span>Procedure: {objectName}</span>
-                <Box sx={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                  <Tooltip title="Edit this procedure definition">
-                    <TableActionButton onClick={() => onEditProcedure?.(objectName)}>
-                      <EditIcon />
-                      Edit
-                    </TableActionButton>
-                  </Tooltip>
-                  <Tooltip title="Test this procedure in the Query Editor">
-                    <TableActionButton onClick={() => setTestDialogOpen(true)}>
-                      <PlayArrowIcon />
-                      Test
-                    </TableActionButton>
-                  </Tooltip>
-                  <Tooltip title="Permanently delete this procedure">
-                    <TableActionButton variant="danger" onClick={() => onDeleteProcedure?.(objectName)}>
-                      <DeleteIcon />
-                      Delete
-                    </TableActionButton>
-                  </Tooltip>
-                </Box>
-              </Box>
-            </EmptyState>
+            <ProcedureDetails
+              procedure={procedure}
+              onEdit={() => onEditProcedure?.(objectName)}
+              onTest={() => setTestDialogOpen(true)}
+              onDelete={() => onDeleteProcedure?.(objectName)}
+            />
             <TestProcedureFunctionDialog
               open={testDialogOpen}
               objectName={objectName}
               objectType="procedure"
-              details={(procedure as any) || null}
+              details={procedure}
               onClose={() => setTestDialogOpen(false)}
               onTest={(query) => {
                 setTestDialogOpen(false);
@@ -237,38 +218,25 @@ export default function ObjectDetailsPanel({
               isLoading={procedureLoading}
             />
           </>
-        ) : objectType === 'function' ? (
+        ) : objectType === 'procedure' ? (
+          <EmptyState>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <span>Loading procedure details...</span>
+            </Box>
+          </EmptyState>
+        ) : objectType === 'function' && func ? (
           <>
-            <EmptyState>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                <span>Function: {objectName}</span>
-                <Box sx={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                  <Tooltip title="Edit this function definition">
-                    <TableActionButton onClick={() => onEditFunction?.(objectName)}>
-                      <EditIcon />
-                      Edit
-                    </TableActionButton>
-                  </Tooltip>
-                  <Tooltip title="Test this function in the Query Editor">
-                    <TableActionButton onClick={() => setTestDialogOpen(true)}>
-                      <PlayArrowIcon />
-                      Test
-                    </TableActionButton>
-                  </Tooltip>
-                  <Tooltip title="Permanently delete this function">
-                    <TableActionButton variant="danger" onClick={() => onDeleteFunction?.(objectName)}>
-                      <DeleteIcon />
-                      Delete
-                    </TableActionButton>
-                  </Tooltip>
-                </Box>
-              </Box>
-            </EmptyState>
+            <FunctionDetails
+              func={func}
+              onEdit={() => onEditFunction?.(objectName)}
+              onTest={() => setTestDialogOpen(true)}
+              onDelete={() => onDeleteFunction?.(objectName)}
+            />
             <TestProcedureFunctionDialog
               open={testDialogOpen}
               objectName={objectName}
               objectType="function"
-              details={(func as any) || null}
+              details={func}
               onClose={() => setTestDialogOpen(false)}
               onTest={(query) => {
                 setTestDialogOpen(false);
@@ -277,6 +245,12 @@ export default function ObjectDetailsPanel({
               isLoading={functionLoading}
             />
           </>
+        ) : objectType === 'function' ? (
+          <EmptyState>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <span>Loading function details...</span>
+            </Box>
+          </EmptyState>
         ) : (
           <EmptyState>
             <span>Details not available for this object type</span>
@@ -345,7 +319,7 @@ function TableDetails({ table, onNavigateToTable }: { table: TableDetailsDto; on
                 </td>
                 <td>
                   {col.isForeignKey && col.foreignKeyRef && (
-                    <ForeignKeyLink 
+                    <ForeignKeyLink
                       onClick={() => onNavigateToTable?.(col.foreignKeyRef!.table)}
                       title={`Go to ${col.foreignKeyRef.table}`}
                     >
@@ -403,13 +377,13 @@ function ViewDetails({ view }: { view: ViewDetailsDto }) {
       'THEN', 'ELSE', 'END', 'NULL', 'TRUE', 'FALSE', 'IS', 'LIKE', 'BETWEEN',
       'EXISTS', 'COALESCE', 'CAST', 'WITH', 'RECURSIVE', 'OVER', 'PARTITION',
     ];
-    
+
     let result = sql;
     keywords.forEach((keyword) => {
       const regex = new RegExp(`\\b(${keyword})\\b`, 'gi');
       result = result.replace(regex, `<span class="keyword">$1</span>`);
     });
-    
+
     return result;
   };
 
@@ -464,6 +438,234 @@ function ViewDetails({ view }: { view: ViewDetailsDto }) {
           </ColumnsTable>
         </DetailsSection>
       )}
+    </>
+  );
+}
+
+function ProcedureDetails({
+  procedure,
+  onEdit,
+  onTest,
+  onDelete,
+}: {
+  procedure: ProcedureDetailsDto;
+  onEdit?: () => void;
+  onTest?: () => void;
+  onDelete?: () => void;
+}) {
+  const highlightSql = (sql: string) => {
+    const keywords = [
+      'SELECT', 'FROM', 'WHERE', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER',
+      'ON', 'AND', 'OR', 'NOT', 'IN', 'AS', 'ORDER', 'BY', 'GROUP', 'HAVING',
+      'LIMIT', 'OFFSET', 'UNION', 'ALL', 'DISTINCT', 'CREATE', 'PROCEDURE',
+      'INSERT', 'UPDATE', 'DELETE', 'DROP', 'ALTER', 'BEGIN', 'END', 'DECLARE',
+      'THEN', 'ELSE', 'IF', 'ELSIF', 'LOOP', 'WHILE', 'FOR', 'RETURN', 'RETURNS',
+      'LANGUAGE', 'PLPGSQL', 'SQL', 'CALL', 'RAISE', 'NOTICE', 'EXCEPTION',
+    ];
+
+    let result = sql;
+    keywords.forEach((keyword) => {
+      const regex = new RegExp(`\\b(${keyword})\\b`, 'gi');
+      result = result.replace(regex, `<span class="keyword">$1</span>`);
+    });
+
+    return result;
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(procedure.definition);
+    toastService.success('Definition copied to clipboard');
+  };
+
+  return (
+    <>
+      <StatRow>
+        <StatItem>
+          <span>Parameters:</span>
+          <span>{procedure.parameters.length}</span>
+        </StatItem>
+        <StatItem>
+          <span>Schema:</span>
+          <span>{procedure.schema || 'public'}</span>
+        </StatItem>
+      </StatRow>
+
+      <Box sx={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', mb: 2, mt: 1 }}>
+        <Tooltip title="Edit this procedure definition">
+          <TableActionButton onClick={onEdit}>
+            <EditIcon />
+            Edit
+          </TableActionButton>
+        </Tooltip>
+        <Tooltip title="Test this procedure in the Query Editor">
+          <TableActionButton onClick={onTest}>
+            <PlayArrowIcon />
+            Test
+          </TableActionButton>
+        </Tooltip>
+        <Tooltip title="Copy definition to clipboard">
+          <TableActionButton onClick={copyToClipboard}>
+            <ContentCopyIcon />
+            Copy
+          </TableActionButton>
+        </Tooltip>
+        <Tooltip title="Permanently delete this procedure">
+          <TableActionButton variant="danger" onClick={onDelete}>
+            <DeleteIcon />
+            Delete
+          </TableActionButton>
+        </Tooltip>
+      </Box>
+
+      {procedure.parameters.length > 0 && (
+        <DetailsSection>
+          <DetailsSectionTitle>Parameters ({procedure.parameters.length})</DetailsSectionTitle>
+          <ColumnsTable>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Mode</th>
+              </tr>
+            </thead>
+            <tbody>
+              {procedure.parameters.map((param, index) => (
+                <tr key={param.name || index}>
+                  <td style={{ fontWeight: 500 }}>{param.name || `param${index + 1}`}</td>
+                  <td>
+                    <ColumnBadge variant="type">{param.type}</ColumnBadge>
+                  </td>
+                  <td>
+                    <ColumnBadge variant={param.mode === 'OUT' ? 'nullable' : 'primary'}>
+                      {param.mode}
+                    </ColumnBadge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </ColumnsTable>
+        </DetailsSection>
+      )}
+
+      <DetailsSection>
+        <DetailsSectionTitle>Definition</DetailsSectionTitle>
+        <SqlCodeBlock
+          dangerouslySetInnerHTML={{ __html: highlightSql(procedure.definition) }}
+        />
+      </DetailsSection>
+    </>
+  );
+}
+
+function FunctionDetails({
+  func,
+  onEdit,
+  onTest,
+  onDelete,
+}: {
+  func: FunctionDetailsDto;
+  onEdit?: () => void;
+  onTest?: () => void;
+  onDelete?: () => void;
+}) {
+  const highlightSql = (sql: string) => {
+    const keywords = [
+      'SELECT', 'FROM', 'WHERE', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER',
+      'ON', 'AND', 'OR', 'NOT', 'IN', 'AS', 'ORDER', 'BY', 'GROUP', 'HAVING',
+      'LIMIT', 'OFFSET', 'UNION', 'ALL', 'DISTINCT', 'CREATE', 'FUNCTION',
+      'INSERT', 'UPDATE', 'DELETE', 'DROP', 'ALTER', 'BEGIN', 'END', 'DECLARE',
+      'THEN', 'ELSE', 'IF', 'ELSIF', 'LOOP', 'WHILE', 'FOR', 'RETURN', 'RETURNS',
+      'LANGUAGE', 'PLPGSQL', 'SQL', 'IMMUTABLE', 'STABLE', 'VOLATILE',
+    ];
+
+    let result = sql;
+    keywords.forEach((keyword) => {
+      const regex = new RegExp(`\\b(${keyword})\\b`, 'gi');
+      result = result.replace(regex, `<span class="keyword">$1</span>`);
+    });
+
+    return result;
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(func.definition);
+    toastService.success('Definition copied to clipboard');
+  };
+
+  return (
+    <>
+      <StatRow>
+        <StatItem>
+          <span>Parameters:</span>
+          <span>{func.parameters.length}</span>
+        </StatItem>
+        <StatItem>
+          <span>Returns:</span>
+          <span>{func.returnType}</span>
+        </StatItem>
+        <StatItem>
+          <span>Schema:</span>
+          <span>{func.schema || 'public'}</span>
+        </StatItem>
+      </StatRow>
+
+      <Box sx={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', mb: 2, mt: 1 }}>
+        <Tooltip title="Edit this function definition">
+          <TableActionButton onClick={onEdit}>
+            <EditIcon />
+            Edit
+          </TableActionButton>
+        </Tooltip>
+        <Tooltip title="Test this function in the Query Editor">
+          <TableActionButton onClick={onTest}>
+            <PlayArrowIcon />
+            Test
+          </TableActionButton>
+        </Tooltip>
+        <Tooltip title="Copy definition to clipboard">
+          <TableActionButton onClick={copyToClipboard}>
+            <ContentCopyIcon />
+            Copy
+          </TableActionButton>
+        </Tooltip>
+        <Tooltip title="Permanently delete this function">
+          <TableActionButton variant="danger" onClick={onDelete}>
+            <DeleteIcon />
+            Delete
+          </TableActionButton>
+        </Tooltip>
+      </Box>
+
+      {func.parameters.length > 0 && (
+        <DetailsSection>
+          <DetailsSectionTitle>Parameters ({func.parameters.length})</DetailsSectionTitle>
+          <ColumnsTable>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              {func.parameters.map((param, index) => (
+                <tr key={param.name || index}>
+                  <td style={{ fontWeight: 500 }}>{param.name || `param${index + 1}`}</td>
+                  <td>
+                    <ColumnBadge variant="type">{param.type}</ColumnBadge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </ColumnsTable>
+        </DetailsSection>
+      )}
+
+      <DetailsSection>
+        <DetailsSectionTitle>Definition</DetailsSectionTitle>
+        <SqlCodeBlock
+          dangerouslySetInnerHTML={{ __html: highlightSql(func.definition) }}
+        />
+      </DetailsSection>
     </>
   );
 }

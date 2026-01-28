@@ -31,7 +31,7 @@ interface SwitchDatabaseDialogProps {
   currentDatabase: DatabaseDto | null;
   targetDatabase: DatabaseDto | null;
   onClose: () => void;
-  onSwitched: (newDatabaseId: string) => void;
+  onSwitched: (newDatabaseId: number) => void;
 }
 
 export default function SwitchDatabaseDialog({

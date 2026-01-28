@@ -5,7 +5,7 @@ import type { SavedQueryDto } from '../../models/SchemaDto';
 
 export const SAVED_QUERIES_KEY = ['saved-queries'];
 
-export function useSavedQueries(databaseId: string | undefined) {
+export function useSavedQueries(databaseId: number | undefined) {
   return useQuery({
     queryKey: [...SAVED_QUERIES_KEY, databaseId],
     queryFn: () => SchemaService.getSavedQueries(databaseId!),
@@ -19,7 +19,7 @@ interface UseSaveQueryOptions {
   onError?: (error: ApiError) => void;
 }
 
-export function useSaveQuery(databaseId: string, options: UseSaveQueryOptions = {}) {
+export function useSaveQuery(databaseId: number, options: UseSaveQueryOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation<{ query: SavedQueryDto; message: string }, ApiError, { name: string; sql: string }>({
@@ -39,7 +39,7 @@ interface UseDeleteSavedQueryOptions {
   onError?: (error: ApiError) => void;
 }
 
-export function useDeleteSavedQuery(databaseId: string, options: UseDeleteSavedQueryOptions = {}) {
+export function useDeleteSavedQuery(databaseId: number, options: UseDeleteSavedQueryOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation<{ message: string }, ApiError, string>({

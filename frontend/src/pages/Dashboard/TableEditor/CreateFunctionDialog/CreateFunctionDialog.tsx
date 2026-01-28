@@ -1,4 +1,4 @@
-import { useState, ChangeEvent } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { ToggleButton, ToggleButtonGroup, Autocomplete } from '@mui/material';
 import { ButtonLoadingSkeleton } from '../../../../components';
 import FunctionsIcon from '@mui/icons-material/Functions';
@@ -6,7 +6,7 @@ import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import { useCreateFunction } from '../../../../api/entities/schema';
 import { toastService } from '../../../../services';
-import type { FunctionParameterDto } from '../../../../api/models/SchemaDto';
+import type { FunctionParameterDto, FunctionDetailsDto } from '../../../../api/models/SchemaDto';
 import { POSTGRES_DATA_TYPES, MYSQL_DATA_TYPES } from '../../../../api/models/SchemaDto';
 import {
   StyledDialog,
@@ -35,9 +35,15 @@ import {
 interface CreateFunctionDialogProps {
   open: boolean;
   onClose: () => void;
-  databaseId: string;
+  databaseId: number;
   engine: 'postgres' | 'mysql';
   onSuccess?: () => void;
+  /** If provided, the dialog will be in edit mode with pre-filled data */
+  editFunction?: FunctionDetailsDto | null;
+  /** List of existing function names to prevent duplicates */
+  existingFunctions?: string[];
+  /** Explicit flag for edit mode (use when editFunction might not be loaded yet) */
+  isEditMode?: boolean;
 }
 
 export default function CreateFunctionDialog({
@@ -46,6 +52,9 @@ export default function CreateFunctionDialog({
   databaseId,
   engine,
   onSuccess,
+  editFunction,
+  existingFunctions = [],
+  isEditMode: isEditModeProp,
 }: CreateFunctionDialogProps) {
   const [functionName, setFunctionName] = useState('');
   const [parameters, setParameters] = useState<FunctionParameterDto[]>([]);
@@ -53,15 +62,64 @@ export default function CreateFunctionDialog({
   const [body, setBody] = useState('');
   const [language, setLanguage] = useState<'sql' | 'plpgsql'>(engine === 'postgres' ? 'plpgsql' : 'sql');
 
+  // Use explicit prop if provided, otherwise infer from editFunction
+  const isEditMode = isEditModeProp ?? !!editFunction;
+
+  // Helper to normalize type names from PostgreSQL format to our format
+  const normalizeType = (type: string): string => {
+    const typeMap: Record<string, string> = {
+      'character varying': 'VARCHAR(255)',
+      'character': 'CHAR(1)',
+      'timestamp without time zone': 'TIMESTAMP',
+      'timestamp with time zone': 'TIMESTAMPTZ',
+      'time without time zone': 'TIME',
+      'time with time zone': 'TIMETZ',
+      'double precision': 'DOUBLE PRECISION',
+    };
+    const lower = type.toLowerCase();
+    return typeMap[lower] || type.toUpperCase();
+  };
+
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (open && editFunction) {
+      setFunctionName(editFunction.name);
+      setParameters(editFunction.parameters.map(p => ({
+        name: p.name,
+        type: normalizeType(p.type),
+      })));
+      setReturnType(normalizeType(editFunction.returnType));
+      // Extract body from definition - try to get just the body part
+      const definition = editFunction.definition || '';
+      // For PL/pgSQL, the body is between $$ or $<identifier>$ markers (e.g., $function$, $BODY$)
+      let extractedBody = definition;
+      // Match both $$ and $identifier$ patterns
+      const dollarMatch = definition.match(/\$(\w*)\$\s*([\s\S]*?)\s*\$\1\$/);
+      if (dollarMatch) {
+        extractedBody = dollarMatch[2].trim();
+      }
+      setBody(extractedBody);
+      // Detect language from definition
+      if (definition.toLowerCase().includes('language plpgsql')) {
+        setLanguage('plpgsql');
+      } else if (definition.toLowerCase().includes('language sql')) {
+        setLanguage('sql');
+      }
+    } else if (open && !editFunction) {
+      // Reset for create mode
+      resetForm();
+    }
+  }, [open, editFunction]);
+
   const { mutate: createFunction, isPending } = useCreateFunction(databaseId, {
     onSuccess: (message) => {
-      toastService.success(message);
+      toastService.success(isEditMode ? 'Function updated successfully' : message);
       onClose();
       resetForm();
       onSuccess?.();
     },
     onError: (error) => {
-      toastService.error(error.message || 'Failed to create function');
+      toastService.error(error.message || `Failed to ${isEditMode ? 'update' : 'create'} function`);
     },
   });
 
@@ -93,6 +151,12 @@ export default function CreateFunctionDialog({
       return;
     }
 
+    // Check for duplicate name (only in create mode)
+    if (!isEditMode && existingFunctions.some(f => f.toLowerCase() === functionName.trim().toLowerCase())) {
+      toastService.error(`A function named "${functionName.trim()}" already exists`);
+      return;
+    }
+
     if (!returnType.trim()) {
       toastService.error('Please enter a return type');
       return;
@@ -116,6 +180,7 @@ export default function CreateFunctionDialog({
       returnType: returnType.trim(),
       body: body.trim(),
       language: engine === 'postgres' ? language : undefined,
+      isEdit: isEditMode,
     });
   };
 
@@ -143,10 +208,12 @@ export default function CreateFunctionDialog({
         <div>
           <DialogTitle>
             <FunctionsIcon sx={{ fontSize: '1.25rem', marginRight: '0.5rem' }} />
-            Create Function
+            {isEditMode ? 'Edit Function' : 'Create Function'}
           </DialogTitle>
           <DialogSubtitle>
-            Create a reusable function that returns a value
+            {isEditMode
+              ? 'Modify the function definition'
+              : 'Create a reusable function that returns a value'}
           </DialogSubtitle>
         </div>
       </DialogHeader>
@@ -160,6 +227,7 @@ export default function CreateFunctionDialog({
             value={functionName}
             onChange={(e) => setFunctionName(e.target.value)}
             size="small"
+            disabled={isEditMode} // Can't change name when editing
           />
         </FormGroup>
 
@@ -258,10 +326,10 @@ export default function CreateFunctionDialog({
           {isPending ? (
             <>
               <ButtonLoadingSkeleton size="small" />
-              Creating...
+              {isEditMode ? 'Updating...' : 'Creating...'}
             </>
           ) : (
-            'Create Function'
+            isEditMode ? 'Update Function' : 'Create Function'
           )}
         </SubmitButton>
       </DialogFooter>

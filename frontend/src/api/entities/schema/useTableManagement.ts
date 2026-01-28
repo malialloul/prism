@@ -10,7 +10,7 @@ interface UseTableMutationOptions {
   onError?: (error: ApiError) => void;
 }
 
-export function useCreateTable(databaseId: string, options: UseTableMutationOptions = {}) {
+export function useCreateTable(databaseId: number, options: UseTableMutationOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation<{ message: string }, ApiError, CreateTableDto>({
@@ -25,7 +25,7 @@ export function useCreateTable(databaseId: string, options: UseTableMutationOpti
   });
 }
 
-export function useDropTable(databaseId: string, options: UseTableMutationOptions = {}) {
+export function useDropTable(databaseId: number, options: UseTableMutationOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation<{ message: string }, ApiError, string>({
@@ -40,7 +40,7 @@ export function useDropTable(databaseId: string, options: UseTableMutationOption
   });
 }
 
-export function useAddColumn(databaseId: string, tableName: string, options: UseTableMutationOptions = {}) {
+export function useAddColumn(databaseId: number, tableName: string, options: UseTableMutationOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation<{ message: string }, ApiError, AddColumnDto>({
@@ -55,7 +55,7 @@ export function useAddColumn(databaseId: string, tableName: string, options: Use
   });
 }
 
-export function useModifyColumn(databaseId: string, tableName: string, options: UseTableMutationOptions = {}) {
+export function useModifyColumn(databaseId: number, tableName: string, options: UseTableMutationOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation<{ message: string }, ApiError, { columnName: string; modifications: ModifyColumnDto }>({
@@ -70,7 +70,7 @@ export function useModifyColumn(databaseId: string, tableName: string, options: 
   });
 }
 
-export function useDropColumn(databaseId: string, tableName: string, options: UseTableMutationOptions = {}) {
+export function useDropColumn(databaseId: number, tableName: string, options: UseTableMutationOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation<{ message: string }, ApiError, string>({
@@ -85,7 +85,7 @@ export function useDropColumn(databaseId: string, tableName: string, options: Us
   });
 }
 
-export function useCreateView(databaseId: string, options: UseTableMutationOptions = {}) {
+export function useCreateView(databaseId: number, options: UseTableMutationOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation<{ message: string }, ApiError, CreateViewDto>({
@@ -100,7 +100,7 @@ export function useCreateView(databaseId: string, options: UseTableMutationOptio
   });
 }
 
-export function useDropView(databaseId: string, options: UseTableMutationOptions = {}) {
+export function useDropView(databaseId: number, options: UseTableMutationOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation<{ message: string }, ApiError, string>({
@@ -115,7 +115,7 @@ export function useDropView(databaseId: string, options: UseTableMutationOptions
   });
 }
 
-export function useCreateFunction(databaseId: string, options: UseTableMutationOptions = {}) {
+export function useCreateFunction(databaseId: number, options: UseTableMutationOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation<{ message: string }, ApiError, CreateFunctionDto>({
@@ -130,7 +130,7 @@ export function useCreateFunction(databaseId: string, options: UseTableMutationO
   });
 }
 
-export function useDropFunction(databaseId: string, options: UseTableMutationOptions = {}) {
+export function useDropFunction(databaseId: number, options: UseTableMutationOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation<{ message: string }, ApiError, string>({
@@ -145,7 +145,7 @@ export function useDropFunction(databaseId: string, options: UseTableMutationOpt
   });
 }
 
-export function useCreateProcedure(databaseId: string, options: UseTableMutationOptions = {}) {
+export function useCreateProcedure(databaseId: number, options: UseTableMutationOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation<{ message: string }, ApiError, CreateProcedureDto>({
@@ -160,7 +160,7 @@ export function useCreateProcedure(databaseId: string, options: UseTableMutation
   });
 }
 
-export function useDropProcedure(databaseId: string, options: UseTableMutationOptions = {}) {
+export function useDropProcedure(databaseId: number, options: UseTableMutationOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation<{ message: string }, ApiError, string>({

@@ -3,7 +3,7 @@ import type { ColumnDetailsDto } from '../../../api/models/SchemaDto';
 export interface TableEditorProps {
   open: boolean;
   onClose: () => void;
-  databaseId: string;
+  databaseId: number;
   tableName: string;
   engine: 'postgres' | 'mysql';
   onDataChanged?: () => void;

@@ -25,7 +25,7 @@ export const UserSchema = registerTable(
 export const PasswordResetTokenSchema = registerTable(
   "password_reset_tokens",
   z.object({
-    userId: z.string().uuid(),
+    userId: z.number().int(),
     token: z.string(),
     expiresAt: z.date(),
     usedAt: z.date().optional(),
@@ -44,7 +44,7 @@ export const PasswordResetTokenSchema = registerTable(
 export const BackupCodeSchema = registerTable(
   "backup_codes",
   z.object({
-    userId: z.string().uuid(),
+    userId: z.number().int(),
     codeHash: z.string(),
     usedAt: z.date().optional(),
   }),
@@ -116,7 +116,7 @@ export const Login2FASchema = z.object({
 
 // Public user schema for API responses (excludes sensitive fields)
 export const PublicUserSchema = z.object({
-  id: z.string().uuid(),
+  id: z.number().int(),
   email: z.string().email(),
   fullName: z.string().optional(),
   createdAt: z.date(),

@@ -5,7 +5,7 @@ import { registerTable } from "../config/schema-registry";
 export const DatabaseConnectionSchema = registerTable(
   "database_connections",
   z.object({
-    userId: z.string().uuid(),
+    userId: z.number().int(),
     name: z.string(),
     engine: z.enum(["postgres", "mysql"]),
     host: z.string(),
@@ -34,8 +34,8 @@ export const DatabaseConnectionSchema = registerTable(
 export const SavedQuerySchema = registerTable(
   "saved_queries",
   z.object({
-    userId: z.string().uuid(),
-    databaseId: z.string().uuid(),
+    userId: z.number().int(),
+    databaseId: z.number().int(),
     name: z.string(),
     sql: z.string(),
   }),
@@ -90,7 +90,7 @@ export const UpdateDatabaseSchema = z.object({
 
 // Response schemas
 export const DatabaseResponseSchema = z.object({
-  id: z.string().uuid(),
+  id: z.number().int(),
   name: z.string(),
   engine: z.enum(["postgres", "mysql"]),
   host: z.string(),

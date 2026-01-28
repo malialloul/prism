@@ -2,6 +2,8 @@ import { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tooltip } from '@mui/material';
 import { Brightness4, Brightness7 } from '@mui/icons-material';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import ApiIcon from '@mui/icons-material/Api';
 import {
   NavbarWrapper,
   LeftSection,
@@ -10,6 +12,8 @@ import {
   LogoText,
   RightSection,
   ActionButton,
+  NavTabs,
+  NavTab,
 } from './Navbar.styles';   
 import { UserAvatar } from '../../../components';
 import { AppContext } from '../../../App';
@@ -20,9 +24,11 @@ import NotificationsIcon from '@mui/icons-material/NotificationsOutlined';
 
 interface NavbarProps {
   onRefresh?: () => void;
+  activeMainTab?: number;
+  onMainTabChange?: (tab: number) => void;
 }
 
-export default function Navbar({ onRefresh }: NavbarProps) {
+export default function Navbar({ onRefresh, activeMainTab = 0, onMainTabChange }: NavbarProps) {
   const navigate = useNavigate();
   const { darkMode, setDarkMode } = useContext(AppContext);
 
@@ -33,6 +39,19 @@ export default function Navbar({ onRefresh }: NavbarProps) {
           <LogoIcon>⬡</LogoIcon>
           <LogoText>Prism</LogoText>
         </Logo>
+        
+        <NavTabs value={activeMainTab} onChange={(_, v) => onMainTabChange?.(v)}>
+          <NavTab 
+            icon={<DashboardIcon fontSize="small" />} 
+            iconPosition="start" 
+            label="Dashboard" 
+          />
+          <NavTab 
+            icon={<ApiIcon fontSize="small" />} 
+            iconPosition="start" 
+            label="APIs" 
+          />
+        </NavTabs>
       </LeftSection>
 
       <RightSection>

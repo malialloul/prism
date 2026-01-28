@@ -32,7 +32,7 @@ import {
 interface CreateViewDialogProps {
   open: boolean;
   onClose: () => void;
-  databaseId: string;
+  databaseId: number;
   engine: 'postgres' | 'mysql';
   onSuccess?: () => void;
 }

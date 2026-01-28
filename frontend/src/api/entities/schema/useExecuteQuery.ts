@@ -12,7 +12,7 @@ interface UseExecuteQueryOptions {
   onError?: (error: ApiError) => void;
 }
 
-export function useExecuteQuery(databaseId: string, options: UseExecuteQueryOptions = {}) {
+export function useExecuteQuery(databaseId: number, options: UseExecuteQueryOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation<QueryResultDto, ApiError, string>({

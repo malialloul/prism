@@ -4,7 +4,7 @@ import type { SchemaObjectType } from '../../models/SchemaDto';
 
 export const OBJECT_DETAILS_QUERY_KEY = ['object-details'];
 
-export function useTableDetails(databaseId: string | undefined, tableName: string | undefined) {
+export function useTableDetails(databaseId: number | undefined, tableName: string | undefined) {
   return useQuery({
     queryKey: [...OBJECT_DETAILS_QUERY_KEY, 'table', databaseId, tableName],
     queryFn: () => SchemaService.getTableDetails(databaseId!, tableName!),
@@ -13,7 +13,7 @@ export function useTableDetails(databaseId: string | undefined, tableName: strin
   });
 }
 
-export function useViewDetails(databaseId: string | undefined, viewName: string | undefined) {
+export function useViewDetails(databaseId: number | undefined, viewName: string | undefined) {
   return useQuery({
     queryKey: [...OBJECT_DETAILS_QUERY_KEY, 'view', databaseId, viewName],
     queryFn: () => SchemaService.getViewDetails(databaseId!, viewName!),
@@ -22,7 +22,7 @@ export function useViewDetails(databaseId: string | undefined, viewName: string 
   });
 }
 
-export function useProcedureDetails(databaseId: string | undefined, procedureName: string | undefined) {
+export function useProcedureDetails(databaseId: number | undefined, procedureName: string | undefined) {
   return useQuery({
     queryKey: [...OBJECT_DETAILS_QUERY_KEY, 'procedure', databaseId, procedureName],
     queryFn: () => SchemaService.getProcedureDetails(databaseId!, procedureName!),
@@ -31,7 +31,7 @@ export function useProcedureDetails(databaseId: string | undefined, procedureNam
   });
 }
 
-export function useFunctionDetails(databaseId: string | undefined, functionName: string | undefined) {
+export function useFunctionDetails(databaseId: number | undefined, functionName: string | undefined) {
   return useQuery({
     queryKey: [...OBJECT_DETAILS_QUERY_KEY, 'function', databaseId, functionName],
     queryFn: () => SchemaService.getFunctionDetails(databaseId!, functionName!),
@@ -41,7 +41,7 @@ export function useFunctionDetails(databaseId: string | undefined, functionName:
 }
 
 export function useObjectDetails(
-  databaseId: string | undefined,
+  databaseId: number | undefined,
   objectName: string | undefined,
   objectType: SchemaObjectType | undefined
 ) {

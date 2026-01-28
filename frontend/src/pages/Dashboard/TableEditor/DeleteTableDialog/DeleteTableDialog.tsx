@@ -20,7 +20,7 @@ import {
 interface DeleteTableDialogProps {
   open: boolean;
   onClose: () => void;
-  databaseId: string;
+  databaseId: number;
   tableName: string;
   onSuccess?: () => void;
 }
@@ -60,7 +60,7 @@ export default function DeleteTableDialog({
         <DialogTitle>Delete Table</DialogTitle>
         <DialogSubtitle>This action cannot be undone</DialogSubtitle>
       </DialogHeader>
-      
+
       <DialogContent>
         <WarningBox>
           <WarningIcon />

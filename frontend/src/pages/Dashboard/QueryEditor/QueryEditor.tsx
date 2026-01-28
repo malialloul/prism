@@ -51,7 +51,7 @@ import {
 } from './QueryEditor.styles';
 
 interface QueryEditorProps {
-  databaseId: string | undefined;
+  databaseId: number | undefined;
   engine?: 'postgres' | 'mysql';
   initialQuery?: string;
 }
@@ -66,6 +66,7 @@ export default function QueryEditor({
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [queryName, setQueryName] = useState('');
   const [showSavedQueries, setShowSavedQueries] = useState(false);
+  const [queryToDelete, setQueryToDelete] = useState<string | null>(null);
 
   // Search and sort state
   const [searchValue, setSearchValue] = useState('');
@@ -126,7 +127,7 @@ export default function QueryEditor({
   const { data: savedQueriesData, refetch: refetchSavedQueries } = useSavedQueries(databaseId);
   const savedQueries = savedQueriesData?.queries || [];
 
-  const { mutate: executeQuery, isPending: isExecuting } = useExecuteQuery(databaseId || '', {
+  const { mutate: executeQuery, isPending: isExecuting } = useExecuteQuery(databaseId ?? 0, {
     onSuccess: (queryResult) => {
       setResult(queryResult);
       setPage(0); // Reset to first page on new query
@@ -139,7 +140,7 @@ export default function QueryEditor({
     },
   });
 
-  const { mutate: saveQuery, isPending: isSaving } = useSaveQuery(databaseId || '', {
+  const { mutate: saveQuery, isPending: isSaving } = useSaveQuery(databaseId ?? 0, {
     onSuccess: () => {
       setSaveDialogOpen(false);
       setQueryName('');
@@ -147,7 +148,7 @@ export default function QueryEditor({
     },
   });
 
-  const { mutate: deleteQuery } = useDeleteSavedQuery(databaseId || '', {
+  const { mutate: deleteQuery } = useDeleteSavedQuery(databaseId ?? 0, {
     onSuccess: () => {
       refetchSavedQueries();
     },
@@ -170,10 +171,15 @@ export default function QueryEditor({
 
   const handleDeleteQuery = useCallback((e: React.MouseEvent, queryId: string) => {
     e.stopPropagation();
-    if (confirm('Are you sure you want to delete this saved query?')) {
-      deleteQuery(queryId);
+    setQueryToDelete(queryId);
+  }, []);
+
+  const handleConfirmDeleteQuery = useCallback(() => {
+    if (queryToDelete) {
+      deleteQuery(queryToDelete);
+      setQueryToDelete(null);
     }
-  }, [deleteQuery]);
+  }, [queryToDelete, deleteQuery]);
 
   const handleExportCSV = useCallback(() => {
     if (!result?.rows || !result.columns) return;
@@ -408,6 +414,24 @@ export default function QueryEditor({
             disabled={!queryName.trim() || isSaving}
           >
             {isSaving ? 'Saving...' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Query Confirmation Dialog */}
+      <Dialog open={!!queryToDelete} onClose={() => setQueryToDelete(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Delete Saved Query</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete this saved query? This action cannot be undone.
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setQueryToDelete(null)}>Cancel</Button>
+          <Button
+            onClick={handleConfirmDeleteQuery}
+            variant="contained"
+            color="error"
+          >
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

@@ -6,3 +6,4 @@ export { useDeleteDatabase } from './useDeleteDatabaseConnection';
 export { useRefreshDatabase } from './useRefreshDatabase';
 export { useDisconnectDatabase } from './useDisconnectDatabase';
 export { useReconnectDatabase } from './useReconnectDatabase';
+export { useQueryStats, QUERY_STATS_KEY } from './useQueryStats';

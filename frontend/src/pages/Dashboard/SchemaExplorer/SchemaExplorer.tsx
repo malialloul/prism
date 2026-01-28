@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { Tooltip, Box, Skeleton } from '@mui/material';
-import { ButtonLoadingSkeleton } from '../../../components';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import StorageIcon from '@mui/icons-material/Storage';
@@ -27,7 +26,7 @@ import {
 } from './SchemaExplorer.styles';
 
 interface SchemaExplorerProps {
-  databaseId: string | undefined;
+  databaseId: number | undefined;
   selectedObject?: { name: string; type: SchemaObjectType } | null;
   onSelectObject: (name: string, type: SchemaObjectType) => void;
   onCreateTable?: () => void;
@@ -41,12 +40,12 @@ const sectionConfig: {
   label: string;
   icon: string;
 }[] = [
-  { type: 'table', label: 'Tables', icon: 'T' },
-  { type: 'view', label: 'Views', icon: 'V' },
-  { type: 'index', label: 'Indexes', icon: 'I' },
-  { type: 'procedure', label: 'Procedures', icon: 'P' },
-  { type: 'function', label: 'Functions', icon: 'F' },
-];
+    { type: 'table', label: 'Tables', icon: 'T' },
+    { type: 'view', label: 'Views', icon: 'V' },
+    { type: 'index', label: 'Indexes', icon: 'I' },
+    { type: 'procedure', label: 'Procedures', icon: 'P' },
+    { type: 'function', label: 'Functions', icon: 'F' },
+  ];
 
 export default function SchemaExplorer({
   databaseId,
@@ -130,18 +129,18 @@ export default function SchemaExplorer({
               const items = groupedObjects[type];
               const isExpanded = expandedSections[type];
               const canCreate = type === 'table' || type === 'view' || type === 'function' || type === 'procedure';
-              const handleCreate = 
-                type === 'table' ? onCreateTable : 
-                type === 'view' ? onCreateView : 
-                type === 'function' ? onCreateFunction :
-                type === 'procedure' ? onCreateProcedure :
-                undefined;
-              const createLabel = 
-                type === 'table' ? 'Table' : 
-                type === 'view' ? 'View' : 
-                type === 'function' ? 'Function' :
-                type === 'procedure' ? 'Procedure' :
-                '';
+              const handleCreate =
+                type === 'table' ? onCreateTable :
+                  type === 'view' ? onCreateView :
+                    type === 'function' ? onCreateFunction :
+                      type === 'procedure' ? onCreateProcedure :
+                        undefined;
+              const createLabel =
+                type === 'table' ? 'Table' :
+                  type === 'view' ? 'View' :
+                    type === 'function' ? 'Function' :
+                      type === 'procedure' ? 'Procedure' :
+                        '';
 
               return (
                 <TreeSection key={type}>

@@ -31,7 +31,7 @@ import {
 interface CreateTableDialogProps {
   open: boolean;
   onClose: () => void;
-  databaseId: string;
+  databaseId: number;
   engine: 'postgres' | 'mysql';
   onSuccess?: () => void;
 }
@@ -86,7 +86,7 @@ export default function CreateTableDialog({
   const handleColumnChange = (index: number, field: keyof CreateColumnDto, value: string | boolean) => {
     const newColumns = [...columns];
     newColumns[index] = { ...newColumns[index], [field]: value };
-    
+
     // If setting as primary key, unset other primary keys and set not nullable
     if (field === 'isPrimaryKey' && value === true) {
       newColumns.forEach((col, i) => {
@@ -94,13 +94,13 @@ export default function CreateTableDialog({
       });
       newColumns[index].nullable = false;
     }
-    
+
     setColumns(newColumns);
   };
 
   const handleSubmit = () => {
     if (!tableName.trim() || columns.length === 0) return;
-    
+
     const validColumns = columns.filter(col => col.name.trim());
     if (validColumns.length === 0) return;
 
@@ -115,7 +115,7 @@ export default function CreateTableDialog({
         <DialogTitle>Create New Table</DialogTitle>
         <DialogSubtitle>Define the structure for your new table</DialogSubtitle>
       </DialogHeader>
-      
+
       <DialogContent>
         <FormGroup>
           <FormLabel>Table Name</FormLabel>
@@ -137,7 +137,7 @@ export default function CreateTableDialog({
             <span>Primary</span>
             <span></span>
           </ColumnsHeader>
-          
+
           {columns.map((column, index) => (
             <ColumnDefinitionCard key={index}>
               <ColumnRow>

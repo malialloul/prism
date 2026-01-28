@@ -133,14 +133,13 @@ export function registerTable<T extends ZodRawShape>(
 
   const columns: TableColumn[] = [];
 
-  // Add automatic ID column
+  // Add automatic ID column (SERIAL = auto-incrementing INTEGER)
   if (withId) {
     columns.push({
       name: "id",
-      type: "UUID",
+      type: "SERIAL",
       nullable: false,
       primaryKey: true,
-      defaultValue: "gen_random_uuid()",
     });
   }
 

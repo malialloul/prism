@@ -21,7 +21,6 @@ import {
   AllDatabasesIcon,
   UserAvatar,
 } from './GlobalDatabaseSelector.styles';
-import type { Database } from '../Dashboard';
 import { clearAuthToken } from '../../../api/httpClient';
 
 // Icons
@@ -32,9 +31,10 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import NotificationsIcon from '@mui/icons-material/NotificationsOutlined';
 import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
+import { DatabaseDto } from '../../../api/models/DatabaseDto';
 
 interface GlobalDatabaseSelectorProps {
-  databases: Database[];
+  databases: DatabaseDto[];
   selectedId: string | 'all';
   onSelect: (id: string | 'all') => void;
   onDisconnect: (id: string) => void;
@@ -121,7 +121,7 @@ export default function GlobalDatabaseSelector({
               <DatabaseMeta>{connectedCount} connected</DatabaseMeta>
             </DatabaseInfo>
           </DBMenuItem>
-          
+
           {databases.map((db) => (
             <DBMenuItem key={db.id} value={db.id}>
               <StatusDot status={db.status} />
@@ -143,13 +143,13 @@ export default function GlobalDatabaseSelector({
             <RefreshIcon fontSize="small" />
           </ActionButton>
         </Tooltip>
-        
+
         <Tooltip title="Notifications">
           <ActionButton>
             <NotificationsIcon fontSize="small" />
           </ActionButton>
         </Tooltip>
-        
+
         <Tooltip title="Settings">
           <ActionButton>
             <SettingsIcon fontSize="small" />

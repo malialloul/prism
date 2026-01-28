@@ -12,12 +12,16 @@ import {
   refreshDatabase,
   disconnectDatabase,
   reconnectDatabase,
+  getQueryStatistics,
 } from './databases.controller';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authMiddleware);
+
+// Query statistics - MUST be before /:id routes to avoid conflict
+router.get('/stats/queries', getQueryStatistics);
 
 // Test connection (before saving)
 router.post('/test', testConnection);

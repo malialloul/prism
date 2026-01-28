@@ -158,6 +158,8 @@ export interface CreateFunctionDto {
   returnType: string;
   body: string;
   language?: 'sql' | 'plpgsql';
+  /** If true, drop existing function first before creating */
+  isEdit?: boolean;
 }
 
 // Procedure management types
@@ -172,6 +174,8 @@ export interface CreateProcedureDto {
   parameters: ProcedureParameterDto[];
   body: string;
   language?: 'sql' | 'plpgsql';
+  /** If true, drop existing procedure first before creating */
+  isEdit?: boolean;
 }
 
 // Response types
@@ -218,10 +222,26 @@ export const POSTGRES_DATA_TYPES = [
   'JSONB',
   'JSON',
   'BYTEA',
-  'ARRAY',
   'INET',
   'CIDR',
   'MACADDR',
+  // Array types
+  'INTEGER[]',
+  'BIGINT[]',
+  'SMALLINT[]',
+  'TEXT[]',
+  'VARCHAR[]',
+  'BOOLEAN[]',
+  'NUMERIC[]',
+  'DECIMAL[]',
+  'REAL[]',
+  'DOUBLE PRECISION[]',
+  'UUID[]',
+  'JSONB[]',
+  'JSON[]',
+  'TIMESTAMP[]',
+  'TIMESTAMPTZ[]',
+  'DATE[]',
 ] as const;
 
 export const MYSQL_DATA_TYPES = [

@@ -12,7 +12,7 @@ interface UseRefreshDatabaseOptions {
 export function useRefreshDatabase(options: UseRefreshDatabaseOptions = {}) {
   const queryClient = useQueryClient();
 
-  return useMutation<{ database: DatabaseDto }, ApiError, string>({
+  return useMutation<{ database: DatabaseDto }, ApiError, number>({
     mutationFn: (id) => DatabasesService.postDatabaseRefresh(id),
     onSuccess: (response) => {
       // Invalidate databases list to trigger refresh

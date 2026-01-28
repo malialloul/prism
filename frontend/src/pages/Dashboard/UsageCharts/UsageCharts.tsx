@@ -21,18 +21,11 @@ import {
 } from './UsageCharts.styles';
 import { getDashboardColors } from '../../../styles/theme';
 import { AppContext } from '../../../App';
+import { useQueryStats } from '../../../api/entities/databases';
 
 interface UsageChartsProps {
-  selectedDatabaseId: string;
+  selectedDatabaseId: number | null;
 }
-
-// Generate mock data for charts
-const generateMockData = (hours: number, baseValue: number, variance: number) => {
-  return Array.from({ length: hours }, (_, i) => ({
-    hour: i,
-    value: Math.max(0, baseValue + Math.floor((Math.random() - 0.5) * variance)),
-  }));
-};
 
 export default function UsageCharts({ selectedDatabaseId }: UsageChartsProps) {
   const { darkMode } = useContext(AppContext);
@@ -40,36 +33,46 @@ export default function UsageCharts({ selectedDatabaseId }: UsageChartsProps) {
   const [apiTimeRange, setApiTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
   const [queryTimeRange, setQueryTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
 
-  // Generate mock chart data based on selected database
-  const apiCallsData = useMemo(() => {
-    // Use DB id as seed for consistent but different data per DB
-    const seed = selectedDatabaseId.charCodeAt(0) || 1;
-    return generateMockData(24, Math.floor(150 * (seed * 0.3)), Math.floor(80 * (seed * 0.2)));
-  }, [selectedDatabaseId]);
+  // Fetch real query stats from the backend
+  const { data: queryStats } = useQueryStats(selectedDatabaseId ?? undefined);
 
-  const queriesData = useMemo(() => {
-    const seed = selectedDatabaseId.charCodeAt(0) || 1;
-    return generateMockData(24, Math.floor(200 * (seed * 0.3)), Math.floor(100 * (seed * 0.2)));
-  }, [selectedDatabaseId]);
+  // Use real hourly data from backend, with fallback to empty array
+  const hourlyData = queryStats?.hourlyData ?? Array.from({ length: 24 }, (_, i) => ({
+    hour: i,
+    queries: 0,
+    errors: 0,
+    avgLatencyMs: 0,
+  }));
 
-  const errorsData = useMemo(() => {
-    const multiplier = selectedDatabaseId === 'all' ? 1 : 0.3;
-    return generateMockData(24, Math.floor(5 * multiplier), Math.floor(8 * multiplier));
-  }, [selectedDatabaseId]);
+  // Transform data for charts
+  const queriesData = useMemo(() =>
+    hourlyData.map(d => ({ hour: d.hour, value: d.queries })),
+    [hourlyData]
+  );
 
-  const latencyData = useMemo(() => {
-    return generateMockData(24, 45, 30);
-  }, []);
+  const errorsData = useMemo(() =>
+    hourlyData.map(d => ({ hour: d.hour, value: d.errors })),
+    [hourlyData]
+  );
+
+  const latencyData = useMemo(() =>
+    hourlyData.map(d => ({ hour: d.hour, value: d.avgLatencyMs })),
+    [hourlyData]
+  );
+
+  // API calls data - for now same as queries (can be extended for separate API tracking)
+  const apiCallsData = queriesData;
 
   // Calculate max values for scaling
   const apiMax = Math.max(...apiCallsData.map(d => d.value), 1);
   const queryMax = Math.max(...queriesData.map(d => d.value), 1);
-  // Note: errorMax and latencyMax available for future use with tooltips
 
   // Calculate totals
   const totalApiCalls = apiCallsData.reduce((sum, d) => sum + d.value, 0);
-  const avgLatency = Math.floor(latencyData.reduce((sum, d) => sum + d.value, 0) / latencyData.length);
-  const totalQueries = queriesData.reduce((sum, d) => sum + d.value, 0);
+  const avgLatency = latencyData.length > 0
+    ? Math.floor(latencyData.reduce((sum, d) => sum + d.value, 0) / latencyData.length)
+    : 0;
+  const totalQueries = queryStats?.totalQueries ?? 0;
   const totalErrors = errorsData.reduce((sum, d) => sum + d.value, 0);
 
   const timeLabels = ['12am', '6am', '12pm', '6pm', '11pm'];
@@ -92,7 +95,7 @@ export default function UsageCharts({ selectedDatabaseId }: UsageChartsProps) {
             ))}
           </TimeRangeSelector>
         </ChartHeader>
-        
+
         <ChartLegend>
           <LegendItem>
             <LegendDot color={colors.chartPrimary} />
@@ -152,7 +155,7 @@ export default function UsageCharts({ selectedDatabaseId }: UsageChartsProps) {
             ))}
           </TimeRangeSelector>
         </ChartHeader>
-        
+
         <ChartLegend>
           <LegendItem>
             <LegendDot color={colors.chartSecondary} />
@@ -190,7 +193,7 @@ export default function UsageCharts({ selectedDatabaseId }: UsageChartsProps) {
             <ChartStatLabel>Errors</ChartStatLabel>
           </ChartStat>
           <ChartStat>
-            <ChartStatValue>{((totalErrors / totalQueries) * 100).toFixed(2)}%</ChartStatValue>
+            <ChartStatValue>{totalQueries > 0 ? ((totalErrors / totalQueries) * 100).toFixed(2) : '0.00'}%</ChartStatValue>
             <ChartStatLabel>Error Rate</ChartStatLabel>
           </ChartStat>
         </ChartStats>

@@ -25,7 +25,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static getSchemaObjects(
-    databaseId: string
+    databaseId: number
   ): CancelablePromise<{ objects: SchemaObjectDto[] }> {
     return __request(OpenAPI, {
       method: 'GET',
@@ -45,7 +45,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static getTableDetails(
-    databaseId: string,
+    databaseId: number,
     tableName: string
   ): CancelablePromise<{ table: TableDetailsDto }> {
     return __request(OpenAPI, {
@@ -66,7 +66,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static getViewDetails(
-    databaseId: string,
+    databaseId: number,
     viewName: string
   ): CancelablePromise<{ view: ViewDetailsDto }> {
     return __request(OpenAPI, {
@@ -87,7 +87,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static getProcedureDetails(
-    databaseId: string,
+    databaseId: number,
     procedureName: string
   ): CancelablePromise<{ procedure: ProcedureDetailsDto }> {
     return __request(OpenAPI, {
@@ -108,7 +108,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static getFunctionDetails(
-    databaseId: string,
+    databaseId: number,
     functionName: string
   ): CancelablePromise<{ function: FunctionDetailsDto }> {
     return __request(OpenAPI, {
@@ -129,7 +129,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static executeQuery(
-    databaseId: string,
+    databaseId: number,
     sql: string
   ): CancelablePromise<QueryResultDto> {
     return __request(OpenAPI, {
@@ -152,7 +152,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static getSavedQueries(
-    databaseId: string
+    databaseId: number
   ): CancelablePromise<{ queries: SavedQueryDto[] }> {
     return __request(OpenAPI, {
       method: 'GET',
@@ -173,7 +173,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static saveQuery(
-    databaseId: string,
+    databaseId: number,
     name: string,
     sql: string
   ): CancelablePromise<{ query: SavedQueryDto; message: string }> {
@@ -198,7 +198,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static deleteSavedQuery(
-    databaseId: string,
+    databaseId: number,
     queryId: string
   ): CancelablePromise<{ message: string }> {
     return __request(OpenAPI, {
@@ -219,7 +219,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static createTable(
-    databaseId: string,
+    databaseId: number,
     tableData: CreateTableDto
   ): CancelablePromise<{ message: string }> {
     return __request(OpenAPI, {
@@ -243,7 +243,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static dropTable(
-    databaseId: string,
+    databaseId: number,
     tableName: string
   ): CancelablePromise<{ message: string }> {
     return __request(OpenAPI, {
@@ -265,7 +265,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static addColumn(
-    databaseId: string,
+    databaseId: number,
     tableName: string,
     column: AddColumnDto
   ): CancelablePromise<{ message: string }> {
@@ -292,7 +292,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static modifyColumn(
-    databaseId: string,
+    databaseId: number,
     tableName: string,
     columnName: string,
     modifications: ModifyColumnDto
@@ -319,7 +319,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static dropColumn(
-    databaseId: string,
+    databaseId: number,
     tableName: string,
     columnName: string
   ): CancelablePromise<{ message: string }> {
@@ -341,7 +341,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static createView(
-    databaseId: string,
+    databaseId: number,
     viewData: CreateViewDto
   ): CancelablePromise<{ message: string }> {
     return __request(OpenAPI, {
@@ -365,7 +365,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static dropView(
-    databaseId: string,
+    databaseId: number,
     viewName: string
   ): CancelablePromise<{ message: string }> {
     return __request(OpenAPI, {
@@ -386,7 +386,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static createFunction(
-    databaseId: string,
+    databaseId: number,
     functionData: CreateFunctionDto
   ): CancelablePromise<{ message: string }> {
     return __request(OpenAPI, {
@@ -410,7 +410,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static dropFunction(
-    databaseId: string,
+    databaseId: number,
     functionName: string
   ): CancelablePromise<{ message: string }> {
     return __request(OpenAPI, {
@@ -431,7 +431,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static createProcedure(
-    databaseId: string,
+    databaseId: number,
     procedureData: CreateProcedureDto
   ): CancelablePromise<{ message: string }> {
     return __request(OpenAPI, {
@@ -455,7 +455,7 @@ export class SchemaService {
    * @throws ApiError
    */
   public static dropProcedure(
-    databaseId: string,
+    databaseId: number,
     procedureName: string
   ): CancelablePromise<{ message: string }> {
     return __request(OpenAPI, {

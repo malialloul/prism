@@ -1,5 +1,5 @@
 import { styled } from '@mui/material/styles';
-import { Box, IconButton } from '@mui/material';
+import { Box, IconButton, Tabs, Tab } from '@mui/material';
 import { getDashboardColors } from '../../../styles/theme';
 
 export const NavbarWrapper = styled(Box)(({ theme }) => {
@@ -17,7 +17,7 @@ export const NavbarWrapper = styled(Box)(({ theme }) => {
 export const LeftSection = styled(Box)({
   display: 'flex',
   alignItems: 'center',
-  gap: '1.5rem',
+  gap: '2rem',
 });
 
 export const Logo = styled(Box)({
@@ -50,6 +50,37 @@ export const LogoText = styled('span')(({ theme }) => {
     fontWeight: 700,
     color: colors.text,
     letterSpacing: '-0.025em',
+  };
+});
+
+export const NavTabs = styled(Tabs)(({ theme }) => {
+  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  return {
+    minHeight: 'auto',
+    '& .MuiTabs-indicator': {
+      backgroundColor: colors.primary,
+      height: '2px',
+    },
+  };
+});
+
+export const NavTab = styled(Tab)(({ theme }) => {
+  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  return {
+    minHeight: 'auto',
+    minWidth: 'auto',
+    padding: '0.5rem 1rem',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    color: colors.textMuted,
+    textTransform: 'none',
+    gap: '0.5rem',
+    '&.Mui-selected': {
+      color: colors.primary,
+    },
+    '& .MuiTab-iconWrapper': {
+      marginRight: '0.25rem',
+    },
   };
 });
 

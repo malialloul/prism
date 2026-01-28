@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { pool } from '../../../config/db';
 import { config } from '../../../config/env';
 import { NotFoundError, ValidationError } from '../../../utils/errors';
+import { logQueryExecution, detectQueryType } from '../queryStats.service';
 import type {
   SchemaObjectDto,
   TableDetailsDto,
@@ -639,16 +640,30 @@ export const getProcedureDetailsService = async (
         throw new NotFoundError('Procedure not found');
       }
 
-      // Get parameters
+      // Get parameters with proper type names (including array types like integer[])
+      // Use proallargtypes when available (has OUT/INOUT params), otherwise proargtypes
       const paramsResult = await pgPool.query(`
         SELECT 
-          p.parameter_name as name,
-          p.data_type as type,
-          p.parameter_mode as mode
-        FROM information_schema.parameters p
-        WHERE p.specific_schema = 'public' 
-          AND p.specific_name LIKE $1 || '_%'
-        ORDER BY p.ordinal_position
+          COALESCE(p.proargnames[gs.i], '') as name,
+          format_type(
+            COALESCE(p.proallargtypes[gs.i], p.proargtypes[gs.i-1]), 
+            NULL
+          ) as type,
+          CASE 
+            WHEN p.proargmodes IS NULL THEN 'IN'
+            WHEN p.proargmodes[gs.i] = 'i' THEN 'IN'
+            WHEN p.proargmodes[gs.i] = 'o' THEN 'OUT'
+            WHEN p.proargmodes[gs.i] = 'b' THEN 'INOUT'
+            ELSE 'IN'
+          END as mode
+        FROM pg_proc p
+        JOIN pg_namespace n ON p.pronamespace = n.oid
+        CROSS JOIN LATERAL generate_series(
+          1, 
+          COALESCE(array_length(p.proallargtypes, 1), p.pronargs)
+        ) as gs(i)
+        WHERE p.proname = $1 AND n.nspname = 'public' AND p.prokind = 'p'
+        ORDER BY gs.i
       `, [procedureName]);
 
       await pgPool.end();
@@ -736,14 +751,17 @@ export const getFunctionDetailsService = async (
         throw new NotFoundError('Function not found');
       }
 
-      // Get parameters
+      // Get parameters with proper type names (including array types like integer[])
+      // For functions, we only want IN parameters (no OUT/INOUT for regular functions)
       const paramsResult = await pgPool.query(`
-        SELECT p.parameter_name as name, p.data_type as type
-        FROM information_schema.parameters p
-        WHERE p.specific_schema = 'public' 
-          AND p.specific_name LIKE $1 || '_%'
-          AND p.parameter_mode = 'IN'
-        ORDER BY p.ordinal_position
+        SELECT 
+          COALESCE(p.proargnames[gs.i], '') as name,
+          format_type(p.proargtypes[gs.i-1], NULL) as type
+        FROM pg_proc p
+        JOIN pg_namespace n ON p.pronamespace = n.oid
+        CROSS JOIN LATERAL generate_series(1, p.pronargs) as gs(i)
+        WHERE p.proname = $1 AND n.nspname = 'public' AND p.prokind = 'f'
+        ORDER BY gs.i
       `, [functionName]);
 
       await pgPool.end();
@@ -817,6 +835,9 @@ export const executeQueryService = async (
 ): Promise<QueryResultDto> => {
   const conn = await getDatabaseConnection(userId, databaseId);
   const startTime = Date.now();
+  const queryType = detectQueryType(sql);
+  const userIdNum = parseInt(userId, 10);
+  const databaseIdNum = parseInt(databaseId, 10);
 
   // Basic SQL injection prevention - block dangerous commands
   const lowerSql = sql.toLowerCase().trim();
@@ -831,6 +852,16 @@ export const executeQueryService = async (
       const result = await pgPool.query(sql);
       const executionTimeMs = Date.now() - startTime;
       await pgPool.end();
+
+      // Log the successful query execution
+      await logQueryExecution({
+        userId: userIdNum,
+        databaseId: databaseIdNum,
+        queryType,
+        executionTimeMs,
+        rowsAffected: result.rowCount || 0,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
 
       // Handle different result types
       if (result.command === 'SELECT') {
@@ -857,11 +888,24 @@ export const executeQueryService = async (
       }
     } catch (error) {
       await pgPool.end();
+      const executionTimeMs = Date.now() - startTime;
       const message = error instanceof Error ? error.message : 'Query execution failed';
+
+      // Log the failed query execution
+      await logQueryExecution({
+        userId: userIdNum,
+        databaseId: databaseIdNum,
+        queryType,
+        executionTimeMs,
+        rowsAffected: 0,
+        success: false,
+        errorMessage: message,
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       return {
         success: false,
         message,
-        executionTimeMs: Date.now() - startTime,
+        executionTimeMs,
       };
     }
   } else {
@@ -873,6 +917,16 @@ export const executeQueryService = async (
 
       // Check if it's a result set or an affected rows result
       if (Array.isArray(rows) && fields) {
+        // Log the successful query execution
+        await logQueryExecution({
+          userId: userIdNum,
+          databaseId: databaseIdNum,
+          queryType,
+          executionTimeMs,
+          rowsAffected: rows.length,
+          success: true,
+        }).catch(err => console.error('Failed to log query execution:', err));
+
         return {
           success: true,
           columns: (fields as Array<{ name: string }>).map(f => f.name),
@@ -882,6 +936,17 @@ export const executeQueryService = async (
         };
       } else {
         const resultInfo = rows as { affectedRows?: number; insertId?: number };
+
+        // Log the successful query execution
+        await logQueryExecution({
+          userId: userIdNum,
+          databaseId: databaseIdNum,
+          queryType,
+          executionTimeMs,
+          rowsAffected: resultInfo.affectedRows || 0,
+          success: true,
+        }).catch(err => console.error('Failed to log query execution:', err));
+
         return {
           success: true,
           message: `Query executed successfully. Affected rows: ${resultInfo.affectedRows || 0}`,
@@ -891,11 +956,24 @@ export const executeQueryService = async (
       }
     } catch (error) {
       await mysqlConn.end();
+      const executionTimeMs = Date.now() - startTime;
       const message = error instanceof Error ? error.message : 'Query execution failed';
+
+      // Log the failed query execution
+      await logQueryExecution({
+        userId: userIdNum,
+        databaseId: databaseIdNum,
+        queryType,
+        executionTimeMs,
+        rowsAffected: 0,
+        success: false,
+        errorMessage: message,
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       return {
         success: false,
         message,
-        executionTimeMs: Date.now() - startTime,
+        executionTimeMs,
       };
     }
   }
@@ -1325,24 +1403,40 @@ export const createFunctionService = async (
   functionData: CreateFunctionDto
 ): Promise<void> => {
   const conn = await getDatabaseConnection(userId, databaseId);
-  const { name, parameters, returnType, body, language } = functionData;
+  const { name, parameters, returnType, body, language, isEdit } = functionData;
 
   if (conn.engine === 'postgres') {
     // Build parameters list
     const paramsList = parameters.map(p => `${p.name} ${p.type}`).join(', ');
     const lang = language || 'plpgsql';
     
-    const sql = `
-      CREATE OR REPLACE FUNCTION "${name}"(${paramsList})
-      RETURNS ${returnType}
-      LANGUAGE ${lang}
-      AS $$
-      ${body}
-      $$;
-    `;
-
     const pgPool = createPgPool(conn);
     try {
+      // If editing, drop ALL existing functions with this name (handles overloaded functions)
+      if (isEdit) {
+        // Get all existing function signatures and drop them all
+        const sigResult = await pgPool.query(`
+          SELECT pg_get_function_identity_arguments(p.oid) as args
+          FROM pg_proc p
+          JOIN pg_namespace n ON p.pronamespace = n.oid
+          WHERE p.proname = $1 AND n.nspname = 'public' AND p.prokind = 'f'
+        `, [name]);
+        
+        // Drop all overloaded versions of this function
+        for (const row of sigResult.rows) {
+          await pgPool.query(`DROP FUNCTION IF EXISTS "public"."${name}"(${row.args})`);
+        }
+      }
+
+      const sql = `
+        CREATE OR REPLACE FUNCTION "${name}"(${paramsList})
+        RETURNS ${returnType}
+        LANGUAGE ${lang}
+        AS $$
+        ${body}
+        $$;
+      `;
+      
       await pgPool.query(sql);
       await pgPool.end();
     } catch (error) {
@@ -1351,20 +1445,23 @@ export const createFunctionService = async (
       throw new ValidationError(message);
     }
   } else {
-    // MySQL
+    // MySQL - DROP and CREATE (no CREATE OR REPLACE for functions)
     const paramsList = parameters.map(p => `${p.name} ${p.type}`).join(', ');
     
-    const sql = `
-      CREATE FUNCTION \`${name}\`(${paramsList})
-      RETURNS ${returnType}
-      DETERMINISTIC
-      BEGIN
-      ${body}
-      END
-    `;
-
     const mysqlConn = await createMysqlConnection(conn);
     try {
+      // Always drop first for MySQL
+      await mysqlConn.execute(`DROP FUNCTION IF EXISTS \`${name}\``);
+      
+      const sql = `
+        CREATE FUNCTION \`${name}\`(${paramsList})
+        RETURNS ${returnType}
+        DETERMINISTIC
+        BEGIN
+        ${body}
+        END
+      `;
+      
       await mysqlConn.execute(sql);
       await mysqlConn.end();
     } catch (error) {
@@ -1433,23 +1530,39 @@ export const createProcedureService = async (
   procedureData: CreateProcedureDto
 ): Promise<void> => {
   const conn = await getDatabaseConnection(userId, databaseId);
-  const { name, parameters, body, language } = procedureData;
+  const { name, parameters, body, language, isEdit } = procedureData;
 
   if (conn.engine === 'postgres') {
     // Build parameters list with mode
     const paramsList = parameters.map(p => `${p.mode} ${p.name} ${p.type}`).join(', ');
     const lang = language || 'plpgsql';
     
-    const sql = `
-      CREATE OR REPLACE PROCEDURE "${name}"(${paramsList})
-      LANGUAGE ${lang}
-      AS $$
-      ${body}
-      $$;
-    `;
-
     const pgPool = createPgPool(conn);
     try {
+      // If editing, drop ALL existing procedures with this name (handles overloaded procedures)
+      if (isEdit) {
+        // Get all existing procedure signatures and drop them all
+        const sigResult = await pgPool.query(`
+          SELECT pg_get_function_identity_arguments(p.oid) as args
+          FROM pg_proc p
+          JOIN pg_namespace n ON p.pronamespace = n.oid
+          WHERE p.proname = $1 AND n.nspname = 'public' AND p.prokind = 'p'
+        `, [name]);
+        
+        // Drop all overloaded versions of this procedure
+        for (const row of sigResult.rows) {
+          await pgPool.query(`DROP PROCEDURE IF EXISTS "public"."${name}"(${row.args})`);
+        }
+      }
+
+      const sql = `
+        CREATE OR REPLACE PROCEDURE "${name}"(${paramsList})
+        LANGUAGE ${lang}
+        AS $$
+        ${body}
+        $$;
+      `;
+      
       await pgPool.query(sql);
       await pgPool.end();
     } catch (error) {
@@ -1458,18 +1571,21 @@ export const createProcedureService = async (
       throw new ValidationError(message);
     }
   } else {
-    // MySQL
+    // MySQL - DROP and CREATE (no CREATE OR REPLACE for procedures)
     const paramsList = parameters.map(p => `${p.mode} ${p.name} ${p.type}`).join(', ');
     
-    const sql = `
-      CREATE PROCEDURE \`${name}\`(${paramsList})
-      BEGIN
-      ${body}
-      END
-    `;
-
     const mysqlConn = await createMysqlConnection(conn);
     try {
+      // Always drop first for MySQL (it doesn't support OR REPLACE for procedures)
+      await mysqlConn.execute(`DROP PROCEDURE IF EXISTS \`${name}\``);
+      
+      const sql = `
+        CREATE PROCEDURE \`${name}\`(${paramsList})
+        BEGIN
+        ${body}
+        END
+      `;
+      
       await mysqlConn.execute(sql);
       await mysqlConn.end();
     } catch (error) {

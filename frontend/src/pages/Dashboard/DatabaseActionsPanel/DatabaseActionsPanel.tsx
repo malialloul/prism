@@ -67,7 +67,7 @@ interface DatabaseActionsPanelProps {
   onCloseCreateDialog: () => void;
   onOpenConnectDialog: () => void;
   onCloseConnectDialog: () => void;
-  onDatabaseConnected?: (databaseId: string) => void;
+  onDatabaseConnected?: (databaseId: number) => void;
 }
 
 export default function DatabaseActionsPanel({
@@ -214,7 +214,7 @@ export default function DatabaseActionsPanel({
     createFormik.resetForm();
   };
 
-  const isTestDisabled = !connectFormik.values.host || !connectFormik.values.username || 
+  const isTestDisabled = !connectFormik.values.host || !connectFormik.values.username ||
     !connectFormik.values.password || !connectFormik.values.database || isTesting;
 
   return (
@@ -443,7 +443,7 @@ export default function DatabaseActionsPanel({
               {isTesting ? <ButtonLoadingSkeleton size="small" /> : 'Test Connection'}
             </TestConnectionButton>
             <CancelButton type="button" onClick={handleCloseConnectDialog}>Cancel</CancelButton>
-            <SubmitButton 
+            <SubmitButton
               type="submit"
               disabled={!connectFormik.isValid || !connectFormik.dirty || isConnecting}
             >

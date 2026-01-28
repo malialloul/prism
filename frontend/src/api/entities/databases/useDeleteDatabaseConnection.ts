@@ -11,7 +11,7 @@ interface UseDeleteDatabaseOptions {
 export function useDeleteDatabase(options: UseDeleteDatabaseOptions = {}) {
   const queryClient = useQueryClient();
 
-  return useMutation<{ message: string }, ApiError, string>({
+  return useMutation<{ message: string }, ApiError, number>({
     mutationFn: (id) => DatabasesService.deleteDatabase(id),
     onSuccess: (response) => {
       // Invalidate databases list to trigger refresh

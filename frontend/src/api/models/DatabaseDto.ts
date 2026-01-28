@@ -1,5 +1,5 @@
 export interface DatabaseDto {
-  id: string;
+  id: number;
   name: string;
   engine: 'postgres' | 'mysql';
   host: string;

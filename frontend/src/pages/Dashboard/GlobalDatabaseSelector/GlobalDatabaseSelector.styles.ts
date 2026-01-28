@@ -1,6 +1,7 @@
 import { styled } from '@mui/material/styles';
 import { Box, Select, MenuItem, IconButton } from '@mui/material';
 import { dashboardColors as colors } from '../../../styles/theme';
+import { DatabaseDto } from '../../../api/models/DatabaseDto';
 
 export const SelectorWrapper = styled(Box)({
   display: 'flex',
@@ -119,16 +120,16 @@ export const EngineBadge = styled(Box, {
 
 export const StatusDot = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'status',
-})<{ status: 'connected' | 'disconnected' | 'provisioning' }>(({ status }) => ({
+})<{ status: DatabaseDto['status'] }>(({ status }) => ({
   width: '0.5rem',
   height: '0.5rem',
   borderRadius: '50%',
   backgroundColor: status === 'connected' 
     ? colors.success 
-    : status === 'provisioning' 
+    : status === 'disconnected' 
       ? colors.warning 
       : colors.error,
-  ...(status === 'provisioning' && {
+  ...(status === 'disconnected' && {
     animation: 'pulse 2s ease-in-out infinite',
   }),
 }));

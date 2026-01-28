@@ -24,7 +24,7 @@ import {
 interface AddColumnDialogProps {
   open: boolean;
   onClose: () => void;
-  databaseId: string;
+  databaseId: number;
   tableName: string;
   engine: 'postgres' | 'mysql';
   onSuccess?: () => void;
@@ -80,7 +80,7 @@ export default function AddColumnDialog({
         <DialogTitle>Add Column to {tableName}</DialogTitle>
         <DialogSubtitle>Define a new column for the table</DialogSubtitle>
       </DialogHeader>
-      
+
       <DialogContent>
         <FormGroup>
           <FormLabel>Column Name</FormLabel>

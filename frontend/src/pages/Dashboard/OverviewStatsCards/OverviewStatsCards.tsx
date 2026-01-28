@@ -10,6 +10,7 @@ import {
   StatLabel,
 } from './OverviewStatsCards.styles';
 import type { DatabaseDto } from '../../../api/models/DatabaseDto';
+import { useQueryStats } from '../../../api/entities/databases';
 
 // Icons
 import StorageIcon from '@mui/icons-material/Storage';
@@ -22,7 +23,7 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 
 interface OverviewStatsCardsProps {
   databases: DatabaseDto[];
-  selectedDatabaseId: string;
+  selectedDatabaseId: number | null;
 }
 
 // Helper to format bytes to human readable
@@ -35,17 +36,20 @@ function formatBytes(bytes: number): string {
 }
 
 export default function OverviewStatsCards({ databases, selectedDatabaseId }: OverviewStatsCardsProps) {
+  // Fetch real query stats from the backend
+  const { data: queryStats } = useQueryStats(selectedDatabaseId ?? undefined);
+
   const stats = useMemo(() => {
-    const selectedDb = databases.find(db => db.id === selectedDatabaseId);
+    const selectedDb = selectedDatabaseId ? databases.find(db => db.id === selectedDatabaseId) : null;
     const filteredDatabases = selectedDb ? [selectedDb] : databases;
 
     const totalDatabases = filteredDatabases.length;
     const totalTables = filteredDatabases.reduce((sum, db) => sum + db.tables, 0);
     const totalApis = filteredDatabases.reduce((sum, db) => sum + db.apis, 0);
-    
-    // Mock data for queries
-    const queriesExecuted = selectedDb ? Math.floor(42580 / databases.length) : 42580;
-    
+
+    // Use real query stats from the backend
+    const queriesExecuted = queryStats?.totalQueries ?? 0;
+
     // Calculate actual storage from database storageBytes
     const totalStorageBytes = filteredDatabases.reduce((sum, db) => sum + (db.storageBytes || 0), 0);
 
@@ -56,9 +60,9 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
       queriesExecuted,
       totalStorageBytes,
     };
-  }, [databases, selectedDatabaseId]);
+  }, [databases, selectedDatabaseId, queryStats]);
 
-  const selectedDb = databases.find(db => db.id === selectedDatabaseId);
+  const selectedDb = selectedDatabaseId ? databases.find(db => db.id === selectedDatabaseId) : null;
 
   const statsConfig = [
     // Only show Total Databases when no specific database is selected
@@ -88,13 +92,16 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
     },
     {
       label: 'Queries Executed',
-      value: stats.queriesExecuted >= 1000 
-        ? `${(stats.queriesExecuted / 1000).toFixed(1)}K` 
+      value: stats.queriesExecuted >= 1000
+        ? `${(stats.queriesExecuted / 1000).toFixed(1)}K`
         : stats.queriesExecuted.toString(),
       icon: <QueryStatsIcon />,
       variant: 'warning' as const,
-      trend: { value: 5, positive: false },
-      change: 'vs last hour',
+      trend: {
+        value: queryStats?.queriesLastHour ?? 0,
+        positive: (queryStats?.queriesLastHour ?? 0) > 0
+      },
+      change: 'queries last hour',
     },
     {
       label: 'Storage Used',

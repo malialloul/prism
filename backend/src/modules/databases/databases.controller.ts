@@ -12,6 +12,7 @@ import {
   reconnectDatabaseService,
   testConnectionService,
 } from './databases.service';
+import { getQueryStats } from './queryStats.service';
 import { CreateDatabaseSchema, ConnectDatabaseSchema, UpdateDatabaseSchema, TestConnectionSchema } from '../../schemas/database.schema';
 
 /**
@@ -214,6 +215,27 @@ export const reconnectDatabase = async (
     const database = await reconnectDatabaseService(userId, databaseId);
 
     res.status(200).json({ database, message: 'Database connected successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /databases/stats/queries
+ * Get query execution statistics
+ */
+export const getQueryStatistics = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = parseInt(req.user!.userId, 10);
+    const databaseIdParam = req.query.databaseId as string | undefined;
+    const databaseId = databaseIdParam ? parseInt(databaseIdParam, 10) : undefined;
+    const stats = await getQueryStats(userId, databaseId);
+
+    res.status(200).json(stats);
   } catch (error) {
     next(error);
   }

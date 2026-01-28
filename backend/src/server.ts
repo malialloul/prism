@@ -7,6 +7,8 @@ import { autoMigrate } from './config/auto-migrate';
 
 // Import all schemas to register tables
 import './schemas/auth.schema';
+import './schemas/database.schema';
+import './schemas/queryStats.schema';
 
 async function startServer() {
   try {

@@ -1,4 +1,4 @@
-import { useState, ChangeEvent } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { ToggleButton, ToggleButtonGroup, MenuItem, Autocomplete } from '@mui/material';
 import { ButtonLoadingSkeleton } from '../../../../components';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
@@ -6,7 +6,7 @@ import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import { useCreateProcedure } from '../../../../api/entities/schema';
 import { toastService } from '../../../../services';
-import type { ProcedureParameterDto } from '../../../../api/models/SchemaDto';
+import type { ProcedureParameterDto, ProcedureDetailsDto } from '../../../../api/models/SchemaDto';
 import { POSTGRES_DATA_TYPES, MYSQL_DATA_TYPES } from '../../../../api/models/SchemaDto';
 import {
   StyledDialog,
@@ -35,9 +35,15 @@ import {
 interface CreateProcedureDialogProps {
   open: boolean;
   onClose: () => void;
-  databaseId: string;
+  databaseId: number;
   engine: 'postgres' | 'mysql';
   onSuccess?: () => void;
+  /** If provided, the dialog will be in edit mode with pre-filled data */
+  editProcedure?: ProcedureDetailsDto | null;
+  /** List of existing procedure names to prevent duplicates */
+  existingProcedures?: string[];
+  /** Explicit flag for edit mode (use when editProcedure might not be loaded yet) */
+  isEditMode?: boolean;
 }
 
 export default function CreateProcedureDialog({
@@ -46,21 +52,73 @@ export default function CreateProcedureDialog({
   databaseId,
   engine,
   onSuccess,
+  editProcedure,
+  existingProcedures = [],
+  isEditMode: isEditModeProp,
 }: CreateProcedureDialogProps) {
   const [procedureName, setProcedureName] = useState('');
   const [parameters, setParameters] = useState<ProcedureParameterDto[]>([]);
   const [body, setBody] = useState('');
   const [language, setLanguage] = useState<'sql' | 'plpgsql'>(engine === 'postgres' ? 'plpgsql' : 'sql');
 
+  // Use explicit prop if provided, otherwise infer from editProcedure
+  const isEditMode = isEditModeProp ?? !!editProcedure;
+
+  // Helper to normalize type names from PostgreSQL format to our format
+  const normalizeType = (type: string): string => {
+    const typeMap: Record<string, string> = {
+      'character varying': 'VARCHAR(255)',
+      'character': 'CHAR(1)',
+      'timestamp without time zone': 'TIMESTAMP',
+      'timestamp with time zone': 'TIMESTAMPTZ',
+      'time without time zone': 'TIME',
+      'time with time zone': 'TIMETZ',
+      'double precision': 'DOUBLE PRECISION',
+    };
+    const lower = type.toLowerCase();
+    return typeMap[lower] || type.toUpperCase();
+  };
+
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (open && editProcedure) {
+      setProcedureName(editProcedure.name);
+      setParameters(editProcedure.parameters.map(p => ({
+        name: p.name,
+        type: normalizeType(p.type),
+        mode: p.mode,
+      })));
+      // Extract body from definition - try to get just the body part
+      const definition = editProcedure.definition || '';
+      // For PL/pgSQL, the body is between $$ or $<identifier>$ markers (e.g., $procedure$, $BODY$)
+      let extractedBody = definition;
+      // Match both $$ and $identifier$ patterns
+      const dollarMatch = definition.match(/\$(\w*)\$\s*([\s\S]*?)\s*\$\1\$/);
+      if (dollarMatch) {
+        extractedBody = dollarMatch[2].trim();
+      }
+      setBody(extractedBody);
+      // Detect language from definition
+      if (definition.toLowerCase().includes('language plpgsql')) {
+        setLanguage('plpgsql');
+      } else if (definition.toLowerCase().includes('language sql')) {
+        setLanguage('sql');
+      }
+    } else if (open && !editProcedure) {
+      // Reset for create mode
+      resetForm();
+    }
+  }, [open, editProcedure]);
+
   const { mutate: createProcedure, isPending } = useCreateProcedure(databaseId, {
     onSuccess: (message) => {
-      toastService.success(message);
+      toastService.success(isEditMode ? 'Procedure updated successfully' : message);
       onClose();
       resetForm();
       onSuccess?.();
     },
     onError: (error) => {
-      toastService.error(error.message || 'Failed to create procedure');
+      toastService.error(error.message || `Failed to ${isEditMode ? 'update' : 'create'} procedure`);
     },
   });
 
@@ -91,6 +149,12 @@ export default function CreateProcedureDialog({
       return;
     }
 
+    // Check for duplicate name (only in create mode)
+    if (!isEditMode && existingProcedures.some(p => p.toLowerCase() === procedureName.trim().toLowerCase())) {
+      toastService.error(`A procedure named "${procedureName.trim()}" already exists`);
+      return;
+    }
+
     if (!body.trim()) {
       toastService.error('Please enter the procedure body');
       return;
@@ -108,6 +172,7 @@ export default function CreateProcedureDialog({
       parameters,
       body: body.trim(),
       language: engine === 'postgres' ? language : undefined,
+      isEdit: isEditMode,
     });
   };
 
@@ -135,10 +200,12 @@ export default function CreateProcedureDialog({
         <div>
           <DialogTitle>
             <AccountTreeIcon sx={{ fontSize: '1.25rem', marginRight: '0.5rem' }} />
-            Create Procedure
+            {isEditMode ? 'Edit Procedure' : 'Create Procedure'}
           </DialogTitle>
           <DialogSubtitle>
-            Create a stored procedure for reusable database operations
+            {isEditMode
+              ? 'Modify the stored procedure definition'
+              : 'Create a stored procedure for reusable database operations'}
           </DialogSubtitle>
         </div>
       </DialogHeader>
@@ -152,6 +219,7 @@ export default function CreateProcedureDialog({
             value={procedureName}
             onChange={(e) => setProcedureName(e.target.value)}
             size="small"
+            disabled={isEditMode} // Can't change name when editing
           />
         </FormGroup>
 
@@ -239,10 +307,10 @@ export default function CreateProcedureDialog({
           {isPending ? (
             <>
               <ButtonLoadingSkeleton size="small" />
-              Creating...
+              {isEditMode ? 'Updating...' : 'Creating...'}
             </>
           ) : (
-            'Create Procedure'
+            isEditMode ? 'Update Procedure' : 'Create Procedure'
           )}
         </SubmitButton>
       </DialogFooter>
