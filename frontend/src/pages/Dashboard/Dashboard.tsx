@@ -421,10 +421,10 @@ export default function Dashboard() {
     return (
       <DashboardWrapper>
         <DashboardHeader>
-          <Navbar 
-            onRefresh={handleRefresh} 
-            activeMainTab={mainTab} 
-            onMainTabChange={setMainTab} 
+          <Navbar
+            onRefresh={handleRefresh}
+            activeMainTab={mainTab}
+            onMainTabChange={setMainTab}
           />
         </DashboardHeader>
         <DashboardBody>
@@ -469,10 +469,10 @@ export default function Dashboard() {
   return (
     <DashboardWrapper>
       <DashboardHeader>
-        <Navbar 
-          onRefresh={handleRefresh} 
-          activeMainTab={mainTab} 
-          onMainTabChange={setMainTab} 
+        <Navbar
+          onRefresh={handleRefresh}
+          activeMainTab={mainTab}
+          onMainTabChange={setMainTab}
         />
       </DashboardHeader>
       <DashboardBody>
@@ -563,36 +563,36 @@ export default function Dashboard() {
               {activeTab === 1 && connectedDatabase && (
                 <TabPanel sx={{ display: 'flex', gap: '1.5rem', flexDirection: 'row', flex: 1 }}>
                   <SchemaExplorer
-                databaseId={connectedDatabase.id}
-                onSelectObject={handleSelectObject}
-                onCreateTable={handleCreateTable}
-                onCreateView={handleCreateView}
-                onCreateFunction={() => setIsCreateFunctionDialogOpen(true)}
-                onCreateProcedure={() => setIsCreateProcedureDialogOpen(true)}
-              />
-              {selectedObjectName && (
-                <ObjectDetailsPanel
-                  databaseId={connectedDatabase.id}
-                  objectName={selectedObjectName}
-                  objectType={selectedObjectType}
-                  engine={connectedDatabase.engine}
-                  onClose={handleCloseObjectDetails}
-                  onAddColumn={handleAddColumn}
-                  onEditTable={handleEditTable}
-                  onDeleteTable={handleDeleteTable}
-                  onNavigateToTable={(tableName) => handleSelectObject(tableName, 'table')}
-                  onQueryView={handleQueryView}
-                  onDeleteView={handleDeleteView}
-                  onTestProcedure={handleTestProcedure}
-                  onTestFunction={handleTestFunction}
-                  onEditProcedure={handleEditProcedure}
-                  onDeleteProcedure={handleDeleteProcedure}
-                  onEditFunction={handleEditFunction}
-                  onDeleteFunction={handleDeleteFunction}
-                />
+                    databaseId={connectedDatabase.id}
+                    onSelectObject={handleSelectObject}
+                    onCreateTable={handleCreateTable}
+                    onCreateView={handleCreateView}
+                    onCreateFunction={() => setIsCreateFunctionDialogOpen(true)}
+                    onCreateProcedure={() => setIsCreateProcedureDialogOpen(true)}
+                  />
+                  {selectedObjectName && (
+                    <ObjectDetailsPanel
+                      databaseId={connectedDatabase.id}
+                      objectName={selectedObjectName}
+                      objectType={selectedObjectType}
+                      engine={connectedDatabase.engine}
+                      onClose={handleCloseObjectDetails}
+                      onAddColumn={handleAddColumn}
+                      onEditTable={handleEditTable}
+                      onDeleteTable={handleDeleteTable}
+                      onNavigateToTable={(tableName) => handleSelectObject(tableName, 'table')}
+                      onQueryView={handleQueryView}
+                      onDeleteView={handleDeleteView}
+                      onTestProcedure={handleTestProcedure}
+                      onTestFunction={handleTestFunction}
+                      onEditProcedure={handleEditProcedure}
+                      onDeleteProcedure={handleDeleteProcedure}
+                      onEditFunction={handleEditFunction}
+                      onDeleteFunction={handleDeleteFunction}
+                    />
+                  )}
+                </TabPanel>
               )}
-            </TabPanel>
-          )}
 
               {/* Query Editor Tab */}
               {activeTab === 2 && connectedDatabase && (

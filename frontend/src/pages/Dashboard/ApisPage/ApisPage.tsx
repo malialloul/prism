@@ -78,8 +78,8 @@ const columnsToFilterInfo = (columns: ColumnDto[]): ColumnInfo[] => {
         type: mapColumnType(col.type),
         isPrimaryKey: col.isPrimaryKey,
         isForeignKey: col.isForeignKey,
-        isAutoIncrement: col.extra?.toLowerCase().includes('auto_increment') || 
-                         col.defaultValue?.toLowerCase().includes('nextval'),
+        isAutoIncrement: col.extra?.toLowerCase().includes('auto_increment') ||
+            col.defaultValue?.toLowerCase().includes('nextval'),
         // TODO: Parse enum values from type if it's an enum
     }));
 };

@@ -14,7 +14,7 @@ import {
   ActionButton,
   NavTabs,
   NavTab,
-} from './Navbar.styles';   
+} from './Navbar.styles';
 import { UserAvatar } from '../../../components';
 import { AppContext } from '../../../App';
 
@@ -39,17 +39,17 @@ export default function Navbar({ onRefresh, activeMainTab = 0, onMainTabChange }
           <LogoIcon>⬡</LogoIcon>
           <LogoText>Prism</LogoText>
         </Logo>
-        
+
         <NavTabs value={activeMainTab} onChange={(_, v) => onMainTabChange?.(v)}>
-          <NavTab 
-            icon={<DashboardIcon fontSize="small" />} 
-            iconPosition="start" 
-            label="Dashboard" 
+          <NavTab
+            icon={<DashboardIcon fontSize="small" />}
+            iconPosition="start"
+            label="Dashboard"
           />
-          <NavTab 
-            icon={<ApiIcon fontSize="small" />} 
-            iconPosition="start" 
-            label="APIs" 
+          <NavTab
+            icon={<ApiIcon fontSize="small" />}
+            iconPosition="start"
+            label="APIs"
           />
         </NavTabs>
       </LeftSection>
@@ -66,7 +66,7 @@ export default function Navbar({ onRefresh, activeMainTab = 0, onMainTabChange }
             <RefreshIcon fontSize="small" />
           </ActionButton>
         </Tooltip>
-        
+
         <Tooltip title="Notifications">
           <ActionButton>
             <NotificationsIcon fontSize="small" />
