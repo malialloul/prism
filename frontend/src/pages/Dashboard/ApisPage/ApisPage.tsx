@@ -5,6 +5,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import StorageIcon from '@mui/icons-material/Storage';
 import TableViewIcon from '@mui/icons-material/TableView';
 import CodeIcon from '@mui/icons-material/Code';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
 import {
     ApisPageWrapper,
     ApisHeader,
@@ -22,6 +23,8 @@ import {
     NoDatabaseMessage,
 } from './ApisPage.styles';
 import TryItPanel from './TryItPanel';
+import { AiPanel } from './AiPanel';
+import { OpenApiPanel } from './OpenApiPanel';
 import type { ApiEndpoint, ColumnInfo, ColumnType } from './ApisPage.types';
 import { getCrudEndpoints } from './ApisPage.types';
 import { useSchemaObjects, useTableDetails } from '../../../api/entities/schema';
@@ -99,6 +102,7 @@ export default function ApisPage({ connectedDatabase }: ApisPageProps) {
     const [selectedEndpoint, setSelectedEndpoint] = useState<ApiEndpoint | null>(null);
     const [selectedTable, setSelectedTable] = useState<string | null>(null);
     const [expandedTables, setExpandedTables] = useState<Set<string>>(new Set());
+    const [openApiRefreshKey, setOpenApiRefreshKey] = useState(0);
 
     // Fetch schema objects to get table list
     const { data: schemaData, isLoading } = useSchemaObjects(connectedDatabase?.id);
@@ -146,6 +150,11 @@ export default function ApisPage({ connectedDatabase }: ApisPageProps) {
         setSelectedTable(tableName);
     };
 
+    const handleApiSaved = () => {
+        // Trigger refresh of Open API tab
+        setOpenApiRefreshKey(prev => prev + 1);
+    };
+
     if (!connectedDatabase) {
         return (
             <ApisPageWrapper>
@@ -166,7 +175,12 @@ export default function ApisPage({ connectedDatabase }: ApisPageProps) {
                 <ApisTitle>API Explorer</ApisTitle>
                 <ApisTabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
                     <ApisTab label="Auto-generated APIs" />
-                    <ApisTab label="Custom APIs" disabled />
+                    <ApisTab 
+                        icon={<SmartToyIcon sx={{ fontSize: '1rem', mr: 0.5 }} />} 
+                        iconPosition="start" 
+                        label="AI SQL Generator" 
+                    />
+                    <ApisTab label="Open API" />
                 </ApisTabs>
             </ApisHeader>
 
@@ -226,13 +240,16 @@ export default function ApisPage({ connectedDatabase }: ApisPageProps) {
 
             {activeTab === 1 && (
                 <ApisContent>
-                    <NoDatabaseMessage>
-                        <CodeIcon sx={{ fontSize: '4rem', opacity: 0.3 }} />
-                        <Box sx={{ fontSize: '1.25rem', fontWeight: 500 }}>Custom APIs Coming Soon</Box>
-                        <Box sx={{ fontSize: '0.875rem', maxWidth: '400px' }}>
-                            Create custom API endpoints with your own logic, validation, and transformations.
-                        </Box>
-                    </NoDatabaseMessage>
+                    <AiPanel 
+                        connectedDatabase={connectedDatabase} 
+                        onApiSaved={handleApiSaved}
+                    />
+                </ApisContent>
+            )}
+
+            {activeTab === 2 && (
+                <ApisContent key={openApiRefreshKey}>
+                    <OpenApiPanel connectedDatabase={connectedDatabase} />
                 </ApisContent>
             )}
         </ApisPageWrapper>

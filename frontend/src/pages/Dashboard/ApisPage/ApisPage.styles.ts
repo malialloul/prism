@@ -54,6 +54,9 @@ export const ApisTab = styled(Tab)(({ theme }) => {
     '&.Mui-selected': {
       color: colors.primary,
     },
+    '& .MuiTab-iconWrapper': {
+      marginRight: '0.25rem',
+    },
   };
 });
 
