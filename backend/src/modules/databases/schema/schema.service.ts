@@ -987,38 +987,52 @@ export const getSavedQueriesService = async (
   databaseId: string
 ): Promise<SavedQueryDto[]> => {
   const result = await pool.query(
-    `SELECT id, database_id, name, sql, created_at, updated_at
+    `SELECT id, database_id, name, slug, description, sql, parameters, method, is_public, created_at, updated_at
      FROM saved_queries
      WHERE user_id = $1 AND database_id = $2
      ORDER BY updated_at DESC`,
     [userId, databaseId]
   );
 
-  return result.rows.map((row: {
-    id: string;
-    database_id: string;
-    name: string;
-    sql: string;
-    created_at: Date;
-    updated_at: Date;
-  }) => ({
+  return result.rows.map((row: any) => ({
     id: row.id,
     databaseId: row.database_id,
     name: row.name,
+    description: row.description,
     sql: row.sql,
+    parameters: row.parameters ? JSON.parse(row.parameters) : [],
+    method: row.method || 'GET',
+    isPublic: row.is_public || false,
+    endpoint: `/databases/${row.database_id}/api/${row.slug || row.id}`,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));
 };
 
 /**
- * Save a query
+ * Generate a URL-friendly slug from a name
+ */
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
+    .replace(/^-+|-+$/g, '')     // Remove leading/trailing hyphens
+    .substring(0, 100);          // Limit length
+}
+
+/**
+ * Save a query (API)
  */
 export const saveQueryService = async (
   userId: string,
   databaseId: string,
   name: string,
-  sql: string
+  sql: string,
+  description?: string,
+  parameters?: any[],
+  method: string = 'GET',
+  isPublic: boolean = false
 ): Promise<SavedQueryDto> => {
   // Verify database belongs to user
   const dbCheck = await pool.query(
@@ -1029,11 +1043,25 @@ export const saveQueryService = async (
     throw new NotFoundError('Database not found');
   }
 
+  // Generate slug from name
+  const slug = generateSlug(name);
+  
+  // Check if slug already exists for this database
+  const existingSlug = await pool.query(
+    'SELECT id, name FROM saved_queries WHERE database_id = $1 AND slug = $2',
+    [databaseId, slug]
+  );
+  if (existingSlug.rowCount && existingSlug.rowCount > 0) {
+    throw new ValidationError(`An API with a similar name already exists: "${existingSlug.rows[0].name}". Please choose a different name.`);
+  }
+
+  const parametersJson = parameters ? JSON.stringify(parameters) : null;
+
   const result = await pool.query(
-    `INSERT INTO saved_queries (user_id, database_id, name, sql)
-     VALUES ($1, $2, $3, $4)
-     RETURNING id, database_id, name, sql, created_at, updated_at`,
-    [userId, databaseId, name, sql]
+    `INSERT INTO saved_queries (user_id, database_id, name, slug, description, sql, parameters, method, is_public)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     RETURNING id, database_id, name, slug, description, sql, parameters, method, is_public, created_at, updated_at`,
+    [userId, databaseId, name, slug, description, sql, parametersJson, method, isPublic]
   );
 
   const row = result.rows[0];
@@ -1041,10 +1069,298 @@ export const saveQueryService = async (
     id: row.id,
     databaseId: row.database_id,
     name: row.name,
+    description: row.description,
     sql: row.sql,
+    parameters: row.parameters ? JSON.parse(row.parameters) : [],
+    method: row.method,
+    isPublic: row.is_public,
+    endpoint: `/databases/${row.database_id}/api/${row.slug}`,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+};
+
+/**
+ * Execute a saved query with parameters
+ * @param queryIdOrSlug - Can be either the numeric ID or the slug
+ */
+export const executeSavedQueryService = async (
+  userId: string,
+  databaseId: string,
+  queryIdOrSlug: string,
+  params: Record<string, any>
+): Promise<QueryResultDto> => {
+  // Get the saved query - try by slug first, then by ID
+  const isNumeric = /^\d+$/.test(queryIdOrSlug);
+  
+  let queryResult;
+  if (isNumeric) {
+    // Try to find by ID
+    queryResult = await pool.query(
+      `SELECT sq.*, dc.engine
+       FROM saved_queries sq
+       JOIN database_connections dc ON sq.database_id = dc.id
+       WHERE sq.id = $1 AND sq.database_id = $2 AND (sq.user_id = $3 OR sq.is_public = true)`,
+      [queryIdOrSlug, databaseId, userId]
+    );
+  }
+  
+  // If not found by ID or not numeric, try by slug
+  if (!queryResult || queryResult.rowCount === 0) {
+    queryResult = await pool.query(
+      `SELECT sq.*, dc.engine
+       FROM saved_queries sq
+       JOIN database_connections dc ON sq.database_id = dc.id
+       WHERE sq.slug = $1 AND sq.database_id = $2 AND (sq.user_id = $3 OR sq.is_public = true)`,
+      [queryIdOrSlug, databaseId, userId]
+    );
+  }
+
+  if (queryResult.rowCount === 0) {
+    throw new NotFoundError('API not found');
+  }
+
+  const savedQuery = queryResult.rows[0];
+  let sql = savedQuery.sql;
+  const parameters: any[] = savedQuery.parameters ? JSON.parse(savedQuery.parameters) : [];
+
+  // Replace parameters in SQL
+  for (const param of parameters) {
+    const value = params[param.name];
+    if (value === undefined && param.required !== false) {
+      throw new ValidationError(`Missing required parameter: ${param.name}`);
+    }
+    
+    if (value !== undefined) {
+      // Format value based on operator and type
+      let formattedValue: string;
+      const colType = (param.columnType || '').toLowerCase();
+      const numericTypes = ['int', 'integer', 'smallint', 'bigint', 'decimal', 'numeric', 'float', 'double', 'real', 'serial', 'bigserial'];
+      const isNumericType = numericTypes.some(t => colType === t || colType.startsWith(t + '('));
+      const isNumericValue = !isNaN(Number(value)) && String(value) !== '';
+      
+      const escapedValue = String(value).replace(/'/g, "''");
+      
+      if (param.operator === 'contains') {
+        formattedValue = `'%${escapedValue}%'`;
+      } else if (param.operator === 'starts_with') {
+        formattedValue = `'${escapedValue}%'`;
+      } else if (param.operator === 'ends_with') {
+        formattedValue = `'%${escapedValue}'`;
+      } else if (isNumericType && isNumericValue) {
+        formattedValue = String(value);
+      } else {
+        formattedValue = `'${escapedValue}'`;
+      }
+      
+      // Replace all occurrences of the parameter
+      sql = sql.split(`:${param.name}`).join(formattedValue);
+    }
+  }
+
+  // Execute the query on the user's database
+  const conn = await getDatabaseConnection(userId, databaseId);
+  const startTime = Date.now();
+  
+  if (conn.engine === 'postgres') {
+    const pgPool = createPgPool(conn);
+    try {
+      const result = await pgPool.query(sql);
+      const executionTimeMs = Date.now() - startTime;
+      await pgPool.end();
+
+      return {
+        success: true,
+        columns: result.fields?.map((f: any) => f.name) || [],
+        rows: result.rows || [],
+        rowCount: result.rowCount || result.rows?.length || 0,
+        executionTimeMs,
+      };
+    } catch (error: any) {
+      await pgPool.end();
+      throw new ValidationError(error.message || 'Query execution failed');
+    }
+  } else {
+    const mysqlConn = await createMysqlConnection(conn);
+    try {
+      const [rows, fields] = await mysqlConn.execute(sql);
+      const executionTimeMs = Date.now() - startTime;
+      await mysqlConn.end();
+
+      if (Array.isArray(rows) && fields) {
+        return {
+          success: true,
+          columns: (fields as Array<{ name: string }>).map(f => f.name),
+          rows: rows as Record<string, unknown>[],
+          rowCount: rows.length,
+          executionTimeMs,
+        };
+      } else {
+        const resultInfo = rows as { affectedRows?: number };
+        return {
+          success: true,
+          message: `Query executed successfully. Affected rows: ${resultInfo.affectedRows || 0}`,
+          affectedRows: resultInfo.affectedRows || 0,
+          executionTimeMs,
+        };
+      }
+    } catch (error: any) {
+      await mysqlConn.end();
+      throw new ValidationError(error.message || 'Query execution failed');
+    }
+  }
+};
+
+/**
+ * Execute a PUBLIC saved query with parameters (no authentication required)
+ */
+export const executePublicQueryService = async (
+  databaseId: string,
+  queryIdOrSlug: string,
+  params: Record<string, any>
+): Promise<QueryResultDto> => {
+  // Get the saved query - only if it's public
+  const isNumeric = /^\d+$/.test(queryIdOrSlug);
+  
+  let queryResult;
+  if (isNumeric) {
+    queryResult = await pool.query(
+      `SELECT sq.*, dc.engine, dc.host, dc.port, dc.username, dc.password_encrypted, dc.database, dc.ssl
+       FROM saved_queries sq
+       JOIN database_connections dc ON sq.database_id = dc.id
+       WHERE sq.id = $1 AND sq.database_id = $2 AND sq.is_public = true`,
+      [queryIdOrSlug, databaseId]
+    );
+  }
+  
+  if (!queryResult || queryResult.rowCount === 0) {
+    queryResult = await pool.query(
+      `SELECT sq.*, dc.engine, dc.host, dc.port, dc.username, dc.password_encrypted, dc.database, dc.ssl
+       FROM saved_queries sq
+       JOIN database_connections dc ON sq.database_id = dc.id
+       WHERE sq.slug = $1 AND sq.database_id = $2 AND sq.is_public = true`,
+      [queryIdOrSlug, databaseId]
+    );
+  }
+
+  if (queryResult.rowCount === 0) {
+    throw new NotFoundError('Public API not found');
+  }
+
+  const savedQuery = queryResult.rows[0];
+  let sql = savedQuery.sql;
+  const parameters: any[] = savedQuery.parameters ? JSON.parse(savedQuery.parameters) : [];
+
+  // Replace parameters in SQL
+  for (const param of parameters) {
+    const value = params[param.name];
+    if (value === undefined && param.required !== false) {
+      throw new ValidationError(`Missing required parameter: ${param.name}`);
+    }
+    
+    if (value !== undefined) {
+      let formattedValue: string;
+      const colType = (param.columnType || '').toLowerCase();
+      const numericTypes = ['int', 'integer', 'smallint', 'bigint', 'decimal', 'numeric', 'float', 'double', 'real', 'serial', 'bigserial'];
+      const isNumericType = numericTypes.some(t => colType === t || colType.startsWith(t + '('));
+      const isNumericValue = !isNaN(Number(value)) && String(value) !== '';
+      
+      const escapedValue = String(value).replace(/'/g, "''");
+      
+      if (param.operator === 'contains') {
+        formattedValue = `'%${escapedValue}%'`;
+      } else if (param.operator === 'starts_with') {
+        formattedValue = `'${escapedValue}%'`;
+      } else if (param.operator === 'ends_with') {
+        formattedValue = `'%${escapedValue}'`;
+      } else if (isNumericType && isNumericValue) {
+        formattedValue = String(value);
+      } else {
+        formattedValue = `'${escapedValue}'`;
+      }
+      
+      sql = sql.split(`:${param.name}`).join(formattedValue);
+    }
+  }
+
+  // Execute on the database using connection info from the query
+  const conn = {
+    engine: savedQuery.engine as 'postgres' | 'mysql',
+    host: savedQuery.host,
+    port: savedQuery.port,
+    username: savedQuery.username,
+    password: decrypt(savedQuery.password_encrypted),
+    database: savedQuery.database,
+    ssl: savedQuery.ssl,
+  };
+  
+  const startTime = Date.now();
+  
+  if (conn.engine === 'postgres') {
+    const pgPool = createPgPool(conn);
+    try {
+      const result = await pgPool.query(sql);
+      const executionTimeMs = Date.now() - startTime;
+      await pgPool.end();
+
+      return {
+        success: true,
+        columns: result.fields?.map((f: any) => f.name) || [],
+        rows: result.rows || [],
+        rowCount: result.rowCount || result.rows?.length || 0,
+        executionTimeMs,
+      };
+    } catch (error: any) {
+      await pgPool.end();
+      throw new ValidationError(error.message || 'Query execution failed');
+    }
+  } else {
+    const mysqlConn = await createMysqlConnection(conn);
+    try {
+      const [rows, fields] = await mysqlConn.execute(sql);
+      const executionTimeMs = Date.now() - startTime;
+      await mysqlConn.end();
+
+      if (Array.isArray(rows) && fields) {
+        return {
+          success: true,
+          columns: (fields as Array<{ name: string }>).map(f => f.name),
+          rows: rows as Record<string, unknown>[],
+          rowCount: rows.length,
+          executionTimeMs,
+        };
+      } else {
+        const resultInfo = rows as { affectedRows?: number };
+        return {
+          success: true,
+          message: `Query executed successfully. Affected rows: ${resultInfo.affectedRows || 0}`,
+          affectedRows: resultInfo.affectedRows || 0,
+          executionTimeMs,
+        };
+      }
+    } catch (error: any) {
+      await mysqlConn.end();
+      throw new ValidationError(error.message || 'Query execution failed');
+    }
+  }
+};
+
+/**
+ * Toggle API public/private status
+ */
+export const toggleApiPublicService = async (
+  userId: string,
+  queryId: string,
+  isPublic: boolean
+): Promise<void> => {
+  const result = await pool.query(
+    'UPDATE saved_queries SET is_public = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3',
+    [isPublic, queryId, userId]
+  );
+
+  if (result.rowCount === 0) {
+    throw new NotFoundError('API not found');
+  }
 };
 
 /**

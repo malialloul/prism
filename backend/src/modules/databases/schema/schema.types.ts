@@ -96,11 +96,24 @@ export interface QueryResultDto {
   executionTimeMs?: number;
 }
 
+export interface SavedQueryParameterDto {
+  name: string;
+  columnName: string;
+  columnType: string;
+  operator: string;
+  required?: boolean;
+}
+
 export interface SavedQueryDto {
   id: string;
   databaseId: string;
   name: string;
+  description?: string;
   sql: string;
+  parameters?: SavedQueryParameterDto[];
+  method: string;
+  isPublic: boolean;
+  endpoint?: string; // Generated endpoint path
   createdAt: Date;
   updatedAt: Date;
 }

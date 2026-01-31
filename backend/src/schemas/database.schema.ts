@@ -30,14 +30,19 @@ export const DatabaseConnectionSchema = registerTable(
   }
 );
 
-// Saved queries table - stores user's saved SQL queries
+// Saved queries table - stores user's saved SQL queries (APIs)
 export const SavedQuerySchema = registerTable(
   "saved_queries",
   z.object({
     userId: z.number().int(),
     databaseId: z.number().int(),
     name: z.string(),
+    slug: z.string(), // URL-friendly name for the endpoint
+    description: z.string().optional(),
     sql: z.string(),
+    parameters: z.string().optional(), // JSON string of parameter definitions
+    method: z.string().default('GET'), // HTTP method
+    isPublic: z.boolean().default(false),
   }),
   {
     withId: true,
@@ -45,7 +50,12 @@ export const SavedQuerySchema = registerTable(
     columnOverrides: {
       userId: { references: { table: "users", column: "id" } },
       databaseId: { references: { table: "database_connections", column: "id" } },
+      slug: { type: "VARCHAR(100)" },
       sql: { type: "TEXT" },
+      parameters: { type: "TEXT", nullable: true },
+      description: { type: "TEXT", nullable: true },
+      method: { type: "VARCHAR(10)", defaultValue: "'GET'" },
+      isPublic: { type: "BOOLEAN", defaultValue: "false" },
     },
   }
 );

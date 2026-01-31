@@ -10,6 +10,9 @@ import {
   getSavedQueriesService,
   saveQueryService,
   deleteQueryService,
+  executeSavedQueryService,
+  executePublicQueryService,
+  toggleApiPublicService,
   createTableService,
   addColumnService,
   modifyColumnService,
@@ -186,17 +189,26 @@ export const saveQuery = async (
   try {
     const userId = req.user!.userId;
     const databaseId = req.params.id as string;
-    const { name, sql } = req.body;
+    const { name, sql, description, parameters, method, isPublic } = req.body;
 
     if (!name || !sql) {
       res.status(400).json({ message: 'Name and SQL are required' });
       return;
     }
 
-    const query = await saveQueryService(userId, databaseId, name, sql);
+    const query = await saveQueryService(
+      userId, 
+      databaseId, 
+      name, 
+      sql,
+      description,
+      parameters,
+      method || 'GET',
+      isPublic || false
+    );
 
     res.status(201).json({ 
-      message: 'Query saved successfully',
+      message: 'API saved successfully',
       query 
     });
   } catch (error) {
@@ -220,6 +232,86 @@ export const deleteSavedQuery = async (
     await deleteQueryService(userId, queryId);
 
     res.status(200).json({ message: 'Query deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET/POST /databases/:id/api/:slugOrId
+ * Execute a saved query/API with parameters
+ * Parameters can be passed via query string (GET) or body (POST)
+ */
+export const executeSavedQuery = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const databaseId = req.params.id as string;
+    const slugOrId = req.params.slugOrId as string;
+    
+    // Get parameters from query string (GET) or body (POST)
+    const params = req.method === 'GET' ? req.query : req.body;
+    
+    const result = await executeSavedQueryService(userId, databaseId, slugOrId, params as Record<string, any>);
+
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET/POST /public/databases/:id/api/:slugOrId
+ * Execute a PUBLIC saved query/API without authentication
+ */
+export const executePublicQuery = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const databaseId = req.params.id as string;
+    const slugOrId = req.params.slugOrId as string;
+    
+    // Get parameters from query string (GET) or body (POST)
+    const params = req.method === 'GET' ? req.query : req.body;
+    
+    const result = await executePublicQueryService(databaseId, slugOrId, params as Record<string, any>);
+
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PATCH /databases/:id/queries/:queryId/public
+ * Toggle API public/private status
+ */
+export const toggleApiPublic = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const queryId = req.params.queryId as string;
+    const { isPublic } = req.body;
+
+    if (typeof isPublic !== 'boolean') {
+      res.status(400).json({ message: 'isPublic must be a boolean' });
+      return;
+    }
+
+    await toggleApiPublicService(userId, queryId, isPublic);
+
+    res.status(200).json({ 
+      message: isPublic ? 'API is now public' : 'API is now private',
+      isPublic 
+    });
   } catch (error) {
     next(error);
   }
@@ -502,6 +594,50 @@ export const dropProcedure = async (
     await dropProcedureService(userId, databaseId, procedureName);
 
     res.status(200).json({ message: `Procedure "${procedureName}" dropped successfully` });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /databases/:id/schema/full
+ * Get complete schema with all tables and their columns
+ */
+export const getFullSchema = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const databaseId = req.params.id as string;
+    
+    // Get all schema objects first
+    const objects = await getSchemaObjectsService(userId, databaseId);
+    
+    // Get detailed info for each table
+    const tablesWithDetails = await Promise.all(
+      objects
+        .filter((obj: any) => obj.type === 'table' || obj.objectType === 'TABLE')
+        .map(async (table: any) => {
+          try {
+            const details = await getTableDetailsService(userId, databaseId, table.name);
+            return details;
+          } catch (error) {
+            // Return table with empty columns if details fail
+            return {
+              name: table.name,
+              columns: [],
+              type: 'table',
+            };
+          }
+        })
+    );
+
+    res.status(200).json({ 
+      tables: tablesWithDetails,
+      count: tablesWithDetails.length 
+    });
   } catch (error) {
     next(error);
   }

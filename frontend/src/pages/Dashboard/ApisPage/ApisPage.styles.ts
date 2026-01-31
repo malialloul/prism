@@ -66,6 +66,7 @@ export const ApisContent = styled(Box)({
   gap: '1rem',
   minHeight: 0,
   overflow: 'hidden',
+  width: '100%',
 });
 
 export const EndpointsList = styled(Box)(({ theme }) => {

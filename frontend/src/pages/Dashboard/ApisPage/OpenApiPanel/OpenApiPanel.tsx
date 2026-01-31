@@ -1,147 +1,128 @@
-import { useState, useCallback } from 'react';
-import { Box, Tooltip, CircularProgress, Collapse } from '@mui/material';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import DeleteIcon from '@mui/icons-material/Delete';
-import CodeIcon from '@mui/icons-material/Code';
+import { useState } from 'react';
 import ApiIcon from '@mui/icons-material/Api';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import SmartToyIcon from '@mui/icons-material/SmartToy';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import PublicIcon from '@mui/icons-material/Public';
+import LockIcon from '@mui/icons-material/Lock';
+import {
+  Box,
+  Typography,
+  Paper,
+  IconButton,
+  Chip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Button,
+  CircularProgress,
+  Alert,
+  Tooltip,
+  Switch,
+  FormControlLabel,
+} from '@mui/material';
 import {
   OpenApiWrapper,
-  ApiListPanel,
-  ApiListHeader,
-  ApiListTitle,
-  ApiListContent,
-  ApiCard,
-  ApiCardHeader,
-  ApiCardTitle,
-  ApiCardDescription,
-  ApiCardPath,
-  OperationBadge,
-  TryItPanel,
-  TryItHeader,
-  TryItTitle,
-  TryItContent,
-  TryItSection,
-  SectionTitle,
-  ParamInput,
-  SqlViewSection,
-  SqlPreview,
-  ExecuteButton,
-  DeleteButton,
-  ResponseSection,
-  ResponseHeader,
-  ResponseStatus,
-  ResponseTime,
-  ResponseBody,
   EmptyState,
   EmptyStateTitle,
   EmptyStateSubtitle,
-  ToggleSqlButton,
 } from './OpenApiPanel.styles';
-import { useGeneratedApis, useDeleteGeneratedApi, useExecuteGeneratedApi } from '../../../../api/entities/ai';
-import type { GeneratedApiDto, ExecuteApiResultDto } from '../../../../api/models/AiTypes';
+import { useSavedQueries, useDeleteSavedQuery } from '../../../../api/entities/schema';
+import { SchemaService } from '../../../../api/services/SchemaService';
 import type { DatabaseDto } from '../../../../api/models/DatabaseDto';
+import type { SavedQueryDto, SavedQueryParameterDto } from '../../../../api/models/SchemaDto';
 
 interface OpenApiPanelProps {
   connectedDatabase: DatabaseDto | null;
 }
 
 export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
-  const [selectedApi, setSelectedApi] = useState<GeneratedApiDto | null>(null);
-  const [paramValues, setParamValues] = useState<Record<string, string>>({});
-  const [showSql, setShowSql] = useState(false);
-  const [response, setResponse] = useState<{
-    data: ExecuteApiResultDto | null;
-    error: string | null;
-    time: number;
-  } | null>(null);
+  const databaseId = connectedDatabase?.id ? Number(connectedDatabase.id) : undefined;
+  const { data: savedQueriesData, isLoading, refetch } = useSavedQueries(databaseId);
+  const { mutate: deleteQuery } = useDeleteSavedQuery(databaseId || 0, {
+    onSuccess: () => refetch(),
+  });
+  
+  const [expandedApi, setExpandedApi] = useState<string | false>(false);
+  const [testParams, setTestParams] = useState<Record<string, Record<string, string>>>({});
+  const [testResults, setTestResults] = useState<Record<string, any>>({});
+  const [testLoading, setTestLoading] = useState<Record<string, boolean>>({});
 
-  const { data: apisData, isLoading } = useGeneratedApis(connectedDatabase?.id?.toString());
-  const { mutate: deleteApi, isPending: isDeleting } = useDeleteGeneratedApi(
-    connectedDatabase?.id?.toString() || ''
-  );
-  const { mutate: executeApi, isPending: isExecuting } = useExecuteGeneratedApi();
+  const savedApis = savedQueriesData?.queries || [];
 
-  const apis = apisData?.apis || [];
-
-  const handleSelectApi = useCallback((api: GeneratedApiDto) => {
-    setSelectedApi(api);
-    setResponse(null);
-    setShowSql(false);
-    // Initialize param values
-    const initialParams: Record<string, string> = {};
-    const params = typeof api.params === 'string' ? JSON.parse(api.params) : api.params;
-    params.forEach((param: string) => {
-      initialParams[param] = '';
-    });
-    setParamValues(initialParams);
-  }, []);
-
-  const handleParamChange = (param: string, value: string) => {
-    setParamValues((prev) => ({ ...prev, [param]: value }));
+  const handleCopyEndpoint = (endpoint: string) => {
+    const fullUrl = `${window.location.origin}/api${endpoint}`;
+    navigator.clipboard.writeText(fullUrl);
   };
 
-  const handleExecute = () => {
-    if (!selectedApi || !connectedDatabase) return;
-
-    const startTime = performance.now();
-
-    // Convert param values to appropriate types
-    const params: Record<string, string | number | boolean | null> = {};
-    Object.entries(paramValues).forEach(([key, value]) => {
-      if (value === '') {
-        params[key] = null;
-      } else if (value === 'true') {
-        params[key] = true;
-      } else if (value === 'false') {
-        params[key] = false;
-      } else if (!isNaN(Number(value))) {
-        params[key] = Number(value);
-      } else {
-        params[key] = value;
-      }
-    });
-
-    executeApi(
-      {
-        databaseId: connectedDatabase.id.toString(),
-        apiSlug: selectedApi.slug,
-        body: { params },
-      },
-      {
-        onSuccess: (data) => {
-          const endTime = performance.now();
-          setResponse({
-            data,
-            error: null,
-            time: Math.round(endTime - startTime),
-          });
-        },
-        onError: (error) => {
-          const endTime = performance.now();
-          setResponse({
-            data: null,
-            error: error.message || 'Failed to execute API',
-            time: Math.round(endTime - startTime),
-          });
-        },
-      }
-    );
+  // Extract slug from endpoint like "/databases/2/api/users-orders" -> "users-orders"
+  const getSlugFromEndpoint = (endpoint?: string) => {
+    if (!endpoint) return '';
+    const parts = endpoint.split('/');
+    return parts[parts.length - 1];
   };
 
-  const handleDelete = (apiId: string) => {
-    if (window.confirm('Are you sure you want to delete this API?')) {
-      deleteApi(apiId, {
-        onSuccess: () => {
-          if (selectedApi?.id === apiId) {
-            setSelectedApi(null);
-            setResponse(null);
-          }
-        },
-      });
+  const handleTestApi = async (api: SavedQueryDto) => {
+    if (!databaseId) return;
+    
+    const slug = getSlugFromEndpoint(api.endpoint);
+    
+    setTestLoading(prev => ({ ...prev, [api.id]: true }));
+    try {
+      const params = testParams[api.id] || {};
+      const result = await SchemaService.executeSavedQuery(databaseId, slug || api.id, params, api.method as 'GET' | 'POST');
+      setTestResults(prev => ({ ...prev, [api.id]: result }));
+    } catch (error: any) {
+      setTestResults(prev => ({ 
+        ...prev, 
+        [api.id]: { 
+          success: false, 
+          error: error?.body?.message || error?.message || 'Request failed' 
+        } 
+      }));
+    } finally {
+      setTestLoading(prev => ({ ...prev, [api.id]: false }));
     }
+  };
+
+  const handleParamChange = (apiId: string, paramName: string, value: string) => {
+    setTestParams(prev => ({
+      ...prev,
+      [apiId]: {
+        ...(prev[apiId] || {}),
+        [paramName]: value,
+      },
+    }));
+  };
+
+  const [toggleLoading, setToggleLoading] = useState<Record<string, boolean>>({});
+
+  const handleTogglePublic = async (api: SavedQueryDto) => {
+    if (!databaseId) return;
+    
+    setToggleLoading(prev => ({ ...prev, [api.id]: true }));
+    try {
+      await SchemaService.toggleApiPublic(databaseId, api.id, !api.isPublic);
+      // Refetch saved queries to update the UI
+      refetch();
+    } catch (error: any) {
+      console.error('Failed to toggle API public status:', error);
+    } finally {
+      setToggleLoading(prev => ({ ...prev, [api.id]: false }));
+    }
+  };
+
+  const getPublicEndpoint = (api: SavedQueryDto) => {
+    const slug = getSlugFromEndpoint(api.endpoint);
+    return `${window.location.origin}/api/databases/public/${databaseId}/api/${slug}`;
   };
 
   if (!connectedDatabase) {
@@ -151,7 +132,31 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
           <ApiIcon sx={{ fontSize: '4rem', opacity: 0.3 }} />
           <EmptyStateTitle>No Database Connected</EmptyStateTitle>
           <EmptyStateSubtitle>
-            Connect to a database to view your AI-generated API endpoints.
+            Connect to a database to view your API endpoints.
+          </EmptyStateSubtitle>
+        </EmptyState>
+      </OpenApiWrapper>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <OpenApiWrapper>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+          <CircularProgress />
+        </Box>
+      </OpenApiWrapper>
+    );
+  }
+
+  if (savedApis.length === 0) {
+    return (
+      <OpenApiWrapper>
+        <EmptyState sx={{ flex: 1 }}>
+          <ApiIcon sx={{ fontSize: '4rem', opacity: 0.3 }} />
+          <EmptyStateTitle>No APIs Created</EmptyStateTitle>
+          <EmptyStateSubtitle>
+            Use the Query Builder to create and save custom APIs.
           </EmptyStateSubtitle>
         </EmptyState>
       </OpenApiWrapper>
@@ -160,165 +165,255 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
 
   return (
     <OpenApiWrapper>
-      <ApiListPanel>
-        <ApiListHeader>
-          <ApiListTitle>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <SmartToyIcon sx={{ fontSize: '1rem' }} />
-              AI Generated APIs
-            </Box>
-          </ApiListTitle>
-          <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-            {apis.length} endpoints
-          </Box>
-        </ApiListHeader>
-
-        <ApiListContent>
-          {isLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-              <CircularProgress size={24} />
-            </Box>
-          ) : apis.length === 0 ? (
-            <EmptyState>
-              <CodeIcon sx={{ fontSize: '2.5rem', opacity: 0.3 }} />
-              <EmptyStateTitle>No APIs Yet</EmptyStateTitle>
-              <EmptyStateSubtitle>
-                Use the AI chat to generate SQL queries and save them as API endpoints.
-              </EmptyStateSubtitle>
-            </EmptyState>
-          ) : (
-            apis.map((api) => (
-              <ApiCard
-                key={api.id}
-                selected={selectedApi?.id === api.id}
-                onClick={() => handleSelectApi(api)}
-              >
-                <ApiCardHeader>
-                  <ApiCardTitle>{api.name}</ApiCardTitle>
-                  <OperationBadge
-                    label={api.operation}
-                    operation={api.operation}
-                    size="small"
+      <Box sx={{ p: 2 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+          Your APIs ({savedApis.length})
+        </Typography>
+        
+        {savedApis.map((api) => {
+          const parameters: SavedQueryParameterDto[] = api.parameters || [];
+          const result = testResults[api.id];
+          const isTestLoading = testLoading[api.id];
+          
+          return (
+            <Accordion 
+              key={api.id}
+              expanded={expandedApi === api.id}
+              onChange={(_, isExpanded) => setExpandedApi(isExpanded ? api.id : false)}
+              sx={{ mb: 1 }}
+            >
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                  <Chip 
+                    label={api.method || 'GET'} 
+                    size="small" 
+                    color={api.method === 'POST' ? 'warning' : 'success'}
+                    sx={{ fontWeight: 600, minWidth: 50 }}
                   />
-                </ApiCardHeader>
-                {api.description && (
-                  <ApiCardDescription>{api.description}</ApiCardDescription>
-                )}
-                <ApiCardPath>/ai-api/{api.slug}</ApiCardPath>
-              </ApiCard>
-            ))
-          )}
-        </ApiListContent>
-      </ApiListPanel>
-
-      <TryItPanel>
-        {!selectedApi ? (
-          <EmptyState>
-            <ApiIcon sx={{ fontSize: '3rem', opacity: 0.3 }} />
-            <EmptyStateTitle>Select an API</EmptyStateTitle>
-            <EmptyStateSubtitle>
-              Choose an API endpoint from the list to test it and view the generated SQL.
-            </EmptyStateSubtitle>
-          </EmptyState>
-        ) : (
-          <>
-            <TryItHeader>
-              <TryItTitle>
-                <OperationBadge
-                  label={selectedApi.operation}
-                  operation={selectedApi.operation}
-                />
-                <span>{selectedApi.name}</span>
-              </TryItTitle>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <ToggleSqlButton
-                  startIcon={showSql ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                  onClick={() => setShowSql(!showSql)}
-                >
-                  {showSql ? 'Hide SQL' : 'View SQL'}
-                </ToggleSqlButton>
-                <Tooltip title="Delete API">
-                  <DeleteButton
-                    size="small"
-                    onClick={() => handleDelete(selectedApi.id)}
-                    disabled={isDeleting}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </DeleteButton>
-                </Tooltip>
-              </Box>
-            </TryItHeader>
-
-            <TryItContent>
-              <Collapse in={showSql}>
-                <SqlViewSection>
-                  <SectionTitle>Generated SQL</SectionTitle>
-                  <SqlPreview>
-                    <code>{selectedApi.sql}</code>
-                  </SqlPreview>
-                </SqlViewSection>
-              </Collapse>
-
-              {(() => {
-                const params = typeof selectedApi.params === 'string' 
-                  ? JSON.parse(selectedApi.params) 
-                  : selectedApi.params;
-                return params.length > 0 && (
-                  <TryItSection>
-                    <SectionTitle>Parameters</SectionTitle>
-                    {params.map((param: string, index: number) => (
-                      <ParamInput key={param}>
-                        <label>
-                          ${index + 1} - {param}
-                        </label>
-                        <input
-                          type="text"
-                          value={paramValues[param] || ''}
-                          onChange={(e) => handleParamChange(param, e.target.value)}
-                          placeholder={`Enter ${param}...`}
-                        />
-                      </ParamInput>
-                    ))}
-                  </TryItSection>
-                );
-              })()}
-
-              <TryItSection>
-                <ExecuteButton
-                  variant="contained"
-                  startIcon={isExecuting ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
-                  onClick={handleExecute}
-                  disabled={isExecuting}
-                  fullWidth
-                >
-                  {isExecuting ? 'Executing...' : 'Execute'}
-                </ExecuteButton>
-              </TryItSection>
-
-              {response && (
-                <ResponseSection>
-                  <ResponseHeader>
-                    <SectionTitle>Response</SectionTitle>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <ResponseStatus success={!response.error}>
-                        {response.error ? 'Error' : `${response.data?.rowCount || 0} rows`}
-                      </ResponseStatus>
-                      <ResponseTime>{response.time}ms</ResponseTime>
-                    </Box>
-                  </ResponseHeader>
-                  <ResponseBody>
-                    {response.error ? (
-                      <Box sx={{ color: '#f93e3e' }}>{response.error}</Box>
+                  <Typography sx={{ fontWeight: 500 }}>{api.name}</Typography>
+                  <Tooltip title={api.isPublic ? 'Public API' : 'Private API'}>
+                    {api.isPublic ? (
+                      <PublicIcon sx={{ fontSize: 18, color: 'success.main' }} />
                     ) : (
-                      JSON.stringify(response.data?.result || [], null, 2)
+                      <LockIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
                     )}
-                  </ResponseBody>
-                </ResponseSection>
-              )}
-            </TryItContent>
-          </>
-        )}
-      </TryItPanel>
+                  </Tooltip>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      fontFamily: 'monospace', 
+                      color: 'text.secondary',
+                      ml: 'auto',
+                      mr: 2,
+                    }}
+                  >
+                    {api.endpoint}
+                  </Typography>
+                </Box>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {/* Public Access Toggle */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                        Public Access
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {api.isPublic 
+                          ? 'Anyone can access this API without authentication' 
+                          : 'Only authenticated users can access this API'}
+                      </Typography>
+                    </Box>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={api.isPublic || false}
+                          onChange={() => handleTogglePublic(api)}
+                          disabled={toggleLoading[api.id]}
+                          color="success"
+                        />
+                      }
+                      label={toggleLoading[api.id] ? <CircularProgress size={16} /> : (api.isPublic ? 'Public' : 'Private')}
+                      labelPlacement="start"
+                    />
+                  </Box>
+
+                  {/* Endpoint */}
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                      Endpoint {!api.isPublic && '(requires authentication)'}
+                    </Typography>
+                    <Paper sx={{ p: 1.5, backgroundColor: '#f5f5f5', display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography 
+                        sx={{ 
+                          fontFamily: 'monospace', 
+                          fontSize: '0.85rem',
+                          flex: 1,
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        {window.location.origin}/api{api.endpoint}
+                      </Typography>
+                      <Tooltip title="Copy URL">
+                        <IconButton size="small" onClick={() => handleCopyEndpoint(api.endpoint || '')}>
+                          <ContentCopyIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Paper>
+                  </Box>
+
+                  {/* Public Endpoint */}
+                  {api.isPublic && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5, color: 'success.main' }}>
+                        Public Endpoint (no authentication required)
+                      </Typography>
+                      <Paper sx={{ p: 1.5, backgroundColor: '#e8f5e9', display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <PublicIcon sx={{ fontSize: 18, color: 'success.main' }} />
+                        <Typography 
+                          sx={{ 
+                            fontFamily: 'monospace', 
+                            fontSize: '0.85rem',
+                            flex: 1,
+                            wordBreak: 'break-all',
+                          }}
+                        >
+                          {getPublicEndpoint(api)}
+                        </Typography>
+                        <Tooltip title="Copy Public URL">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => navigator.clipboard.writeText(getPublicEndpoint(api))}
+                          >
+                            <ContentCopyIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Paper>
+                    </Box>
+                  )}
+
+                  {/* Description */}
+                  {api.description && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                        Description
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {api.description}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {/* Parameters */}
+                  {parameters.length > 0 && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                        Parameters
+                      </Typography>
+                      <TableContainer component={Paper} variant="outlined">
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>Operator</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>Test Value</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {parameters.map((param) => (
+                              <TableRow key={param.name}>
+                                <TableCell>
+                                  <code>{param.name}</code>
+                                  {param.required && <span style={{ color: 'red' }}> *</span>}
+                                </TableCell>
+                                <TableCell>{param.columnType}</TableCell>
+                                <TableCell>{param.operator}</TableCell>
+                                <TableCell>
+                                  <TextField
+                                    size="small"
+                                    placeholder={`Enter ${param.name}`}
+                                    value={testParams[api.id]?.[param.name] || ''}
+                                    onChange={(e) => handleParamChange(api.id, param.name, e.target.value)}
+                                    sx={{ width: 200 }}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Box>
+                  )}
+
+                  {/* Test Button */}
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                      variant="contained"
+                      startIcon={isTestLoading ? <CircularProgress size={16} /> : <PlayArrowIcon />}
+                      onClick={() => handleTestApi(api)}
+                      disabled={isTestLoading}
+                    >
+                      Test API
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => {
+                        if (confirm('Are you sure you want to delete this API?')) {
+                          deleteQuery(api.id);
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </Box>
+
+                  {/* Test Results */}
+                  {result && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                        Response
+                      </Typography>
+                      {result.success === false ? (
+                        <Alert severity="error">{result.error || 'Request failed'}</Alert>
+                      ) : (
+                        <Paper sx={{ p: 1.5, backgroundColor: '#f5f5f5', maxHeight: 300, overflow: 'auto' }}>
+                          <Typography variant="caption" sx={{ color: 'success.main', display: 'block', mb: 1 }}>
+                            ✅ {result.rowCount} rows returned • {result.executionTimeMs}ms
+                          </Typography>
+                          <pre style={{ margin: 0, fontSize: '0.75rem', overflow: 'auto' }}>
+                            {JSON.stringify(result.rows?.slice(0, 10), null, 2)}
+                          </pre>
+                          {result.rows?.length > 10 && (
+                            <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1, display: 'block' }}>
+                              Showing first 10 of {result.rowCount} rows
+                            </Typography>
+                          )}
+                        </Paper>
+                      )}
+                    </Box>
+                  )}
+
+                  {/* SQL Preview */}
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                      SQL Query
+                    </Typography>
+                    <Paper sx={{ p: 1.5, backgroundColor: '#1e1e1e', maxHeight: 150, overflow: 'auto' }}>
+                      <pre style={{ margin: 0, color: '#d4d4d4', fontSize: '0.75rem' }}>
+                        {api.sql}
+                      </pre>
+                    </Paper>
+                  </Box>
+                </Box>
+              </AccordionDetails>
+            </Accordion>
+          );
+        })}
+      </Box>
     </OpenApiWrapper>
   );
 }

@@ -4,8 +4,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import StorageIcon from '@mui/icons-material/Storage';
 import TableViewIcon from '@mui/icons-material/TableView';
-import CodeIcon from '@mui/icons-material/Code';
-import SmartToyIcon from '@mui/icons-material/SmartToy';
+import BuildIcon from '@mui/icons-material/Build';
 import {
     ApisPageWrapper,
     ApisHeader,
@@ -23,8 +22,8 @@ import {
     NoDatabaseMessage,
 } from './ApisPage.styles';
 import TryItPanel from './TryItPanel';
-import { AiPanel } from './AiPanel';
 import { OpenApiPanel } from './OpenApiPanel';
+import QueryBuilderImproved from './QueryBuilder/QueryBuilderImproved';
 import type { ApiEndpoint, ColumnInfo, ColumnType } from './ApisPage.types';
 import { getCrudEndpoints } from './ApisPage.types';
 import { useSchemaObjects, useTableDetails } from '../../../api/entities/schema';
@@ -174,17 +173,23 @@ export default function ApisPage({ connectedDatabase }: ApisPageProps) {
             <ApisHeader>
                 <ApisTitle>API Explorer</ApisTitle>
                 <ApisTabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
-                    <ApisTab label="Auto-generated APIs" />
                     <ApisTab 
-                        icon={<SmartToyIcon sx={{ fontSize: '1rem', mr: 0.5 }} />} 
+                        icon={<BuildIcon sx={{ fontSize: '1rem', mr: 0.5 }} />} 
                         iconPosition="start" 
-                        label="AI SQL Generator" 
+                        label="Build Query" 
                     />
+                    <ApisTab label="Auto-generated APIs" />
                     <ApisTab label="Open API" />
                 </ApisTabs>
             </ApisHeader>
 
             {activeTab === 0 && (
+                <ApisContent>
+                    <QueryBuilderImproved connectedDatabase={connectedDatabase} onApiSaved={handleApiSaved} />
+                </ApisContent>
+            )}
+
+            {activeTab === 1 && (
                 <ApisContent>
                     <EndpointsList>
                         {isLoading ? (
@@ -235,15 +240,6 @@ export default function ApisPage({ connectedDatabase }: ApisPageProps) {
                     </EndpointsList>
 
                     <TryItPanel endpoint={selectedEndpoint} columns={columnInfo} />
-                </ApisContent>
-            )}
-
-            {activeTab === 1 && (
-                <ApisContent>
-                    <AiPanel 
-                        connectedDatabase={connectedDatabase} 
-                        onApiSaved={handleApiSaved}
-                    />
                 </ApisContent>
             )}
 

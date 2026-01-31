@@ -38,6 +38,23 @@ export class SchemaService {
   }
 
   /**
+   * GET /databases/{databaseId}/schema/full
+   * Get complete schema with all tables and their columns
+   */
+  public static getFullSchema(
+    databaseId: number
+  ): CancelablePromise<{ tables: Array<{ name: string; columns: Array<{ name: string; type: string }> }>; count: number }> {
+    return __request(OpenAPI, {
+      method: 'GET',
+      url: `/databases/${databaseId}/schema/full`,
+      errors: {
+        401: 'Unauthorized',
+        404: 'Database not found',
+      },
+    });
+  }
+
+  /**
    * Get table details
    * @param databaseId Database ID
    * @param tableName Table name
@@ -165,22 +182,42 @@ export class SchemaService {
   }
 
   /**
-   * Save a query
+   * Save a query/API
    * @param databaseId Database ID
    * @param name Query name
    * @param sql SQL query string
+   * @param options Optional parameters for the API
    * @returns SavedQueryDto Saved query
    * @throws ApiError
    */
   public static saveQuery(
     databaseId: number,
     name: string,
-    sql: string
+    sql: string,
+    options?: {
+      description?: string;
+      parameters?: Array<{
+        name: string;
+        columnName: string;
+        columnType: string;
+        operator: string;
+        required?: boolean;
+      }>;
+      method?: string;
+      isPublic?: boolean;
+    }
   ): CancelablePromise<{ query: SavedQueryDto; message: string }> {
     return __request(OpenAPI, {
       method: 'POST',
       url: `/databases/${databaseId}/queries`,
-      body: { name, sql },
+      body: { 
+        name, 
+        sql,
+        description: options?.description,
+        parameters: options?.parameters,
+        method: options?.method || 'GET',
+        isPublic: options?.isPublic || false,
+      },
       mediaType: 'application/json',
       errors: {
         400: 'Invalid request',
@@ -188,6 +225,49 @@ export class SchemaService {
         404: 'Database not found',
       },
     });
+  }
+
+  /**
+   * Execute a saved query/API with parameters
+   * @param databaseId Database ID
+   * @param slugOrId Query/API slug or ID
+   * @param params Parameters to pass to the query
+   * @param method HTTP method (GET or POST)
+   * @returns QueryResultDto Query result
+   * @throws ApiError
+   */
+  public static executeSavedQuery(
+    databaseId: number,
+    slugOrId: string,
+    params?: Record<string, any>,
+    method: 'GET' | 'POST' = 'GET'
+  ): CancelablePromise<QueryResultDto> {
+    if (method === 'GET') {
+      const queryString = params 
+        ? '?' + new URLSearchParams(params as Record<string, string>).toString()
+        : '';
+      return __request(OpenAPI, {
+        method: 'GET',
+        url: `/databases/${databaseId}/api/${slugOrId}${queryString}`,
+        errors: {
+          400: 'Invalid parameters',
+          401: 'Unauthorized',
+          404: 'API not found',
+        },
+      });
+    } else {
+      return __request(OpenAPI, {
+        method: 'POST',
+        url: `/databases/${databaseId}/api/${slugOrId}`,
+        body: params,
+        mediaType: 'application/json',
+        errors: {
+          400: 'Invalid parameters',
+          401: 'Unauthorized',
+          404: 'API not found',
+        },
+      });
+    }
   }
 
   /**
@@ -204,6 +284,31 @@ export class SchemaService {
     return __request(OpenAPI, {
       method: 'DELETE',
       url: `/databases/${databaseId}/queries/${queryId}`,
+      errors: {
+        401: 'Unauthorized',
+        404: 'Not found',
+      },
+    });
+  }
+
+  /**
+   * Toggle API public/private status
+   * @param databaseId Database ID
+   * @param queryId Query ID
+   * @param isPublic Whether the API should be public
+   * @returns void
+   * @throws ApiError
+   */
+  public static toggleApiPublic(
+    databaseId: number,
+    queryId: string,
+    isPublic: boolean
+  ): CancelablePromise<{ message: string; isPublic: boolean }> {
+    return __request(OpenAPI, {
+      method: 'PATCH',
+      url: `/databases/${databaseId}/queries/${queryId}/public`,
+      body: { isPublic },
+      mediaType: 'application/json',
       errors: {
         401: 'Unauthorized',
         404: 'Not found',
