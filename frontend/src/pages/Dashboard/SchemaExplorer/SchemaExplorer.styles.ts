@@ -69,15 +69,8 @@ export const TreeSectionHeader = styled(Box, {
 
 export const SectionIcon = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'type',
-})<{ type: 'table' | 'view' | 'index' | 'procedure' | 'function' }>(({ theme, type }) => {
+})<{ type: 'table' }>(({ theme }) => {
   const colors = getDashboardColors(theme.palette.mode === 'dark');
-  const colorMap = {
-    table: colors.primary,
-    view: colors.info,
-    index: colors.warning,
-    procedure: colors.success,
-    function: colors.secondary,
-  };
   return {
     width: '1.25rem',
     height: '1.25rem',
@@ -85,8 +78,8 @@ export const SectionIcon = styled(Box, {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: `${colorMap[type]}20`,
-    color: colorMap[type],
+    backgroundColor: `${colors.primary}20`,
+    color: colors.primary,
     fontSize: '0.625rem',
     fontWeight: 700,
   };

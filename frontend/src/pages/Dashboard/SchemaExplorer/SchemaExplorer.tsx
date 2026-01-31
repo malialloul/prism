@@ -30,9 +30,6 @@ interface SchemaExplorerProps {
   selectedObject?: { name: string; type: SchemaObjectType } | null;
   onSelectObject: (name: string, type: SchemaObjectType) => void;
   onCreateTable?: () => void;
-  onCreateView?: () => void;
-  onCreateFunction?: () => void;
-  onCreateProcedure?: () => void;
 }
 
 const sectionConfig: {
@@ -41,10 +38,6 @@ const sectionConfig: {
   icon: string;
 }[] = [
     { type: 'table', label: 'Tables', icon: 'T' },
-    { type: 'view', label: 'Views', icon: 'V' },
-    { type: 'index', label: 'Indexes', icon: 'I' },
-    { type: 'procedure', label: 'Procedures', icon: 'P' },
-    { type: 'function', label: 'Functions', icon: 'F' },
   ];
 
 export default function SchemaExplorer({
@@ -52,27 +45,16 @@ export default function SchemaExplorer({
   selectedObject,
   onSelectObject,
   onCreateTable,
-  onCreateView,
-  onCreateFunction,
-  onCreateProcedure,
 }: SchemaExplorerProps) {
   const { data, isLoading, refetch } = useSchemaObjects(databaseId);
   const [expandedSections, setExpandedSections] = useState<Record<SchemaObjectType, boolean>>({
     table: true,
-    view: false,
-    index: false,
-    procedure: false,
-    function: false,
   });
 
   const groupedObjects = useMemo(() => {
     const objects = data?.objects || [];
     const groups: Record<SchemaObjectType, SchemaObjectDto[]> = {
       table: [],
-      view: [],
-      index: [],
-      procedure: [],
-      function: [],
     };
 
     objects.forEach((obj) => {
@@ -128,19 +110,6 @@ export default function SchemaExplorer({
             {sectionConfig.map(({ type, label, icon }) => {
               const items = groupedObjects[type];
               const isExpanded = expandedSections[type];
-              const canCreate = type === 'table' || type === 'view' || type === 'function' || type === 'procedure';
-              const handleCreate =
-                type === 'table' ? onCreateTable :
-                  type === 'view' ? onCreateView :
-                    type === 'function' ? onCreateFunction :
-                      type === 'procedure' ? onCreateProcedure :
-                        undefined;
-              const createLabel =
-                type === 'table' ? 'Table' :
-                  type === 'view' ? 'View' :
-                    type === 'function' ? 'Function' :
-                      type === 'procedure' ? 'Procedure' :
-                        '';
 
               return (
                 <TreeSection key={type}>
@@ -154,14 +123,14 @@ export default function SchemaExplorer({
                     <SectionIcon type={type}>{icon}</SectionIcon>
                     <SectionName>{label}</SectionName>
                     <SectionCount>{items.length}</SectionCount>
-                    {canCreate && handleCreate && (
+                    {onCreateTable && (
                       <SectionActions>
-                        <Tooltip title={`Create ${createLabel}`}>
+                        <Tooltip title="Create Table">
                           <ActionButton
                             size="small"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleCreate();
+                              onCreateTable();
                             }}
                           >
                             <AddIcon sx={{ fontSize: '0.875rem' }} />

@@ -3,9 +3,6 @@ import { Request, Response, NextFunction } from 'express';
 import {
   getSchemaObjectsService,
   getTableDetailsService,
-  getViewDetailsService,
-  getProcedureDetailsService,
-  getFunctionDetailsService,
   executeQueryService,
   getSavedQueriesService,
   saveQueryService,
@@ -18,12 +15,6 @@ import {
   modifyColumnService,
   dropColumnService,
   dropTableService,
-  createViewService,
-  dropViewService,
-  createFunctionService,
-  dropFunctionService,
-  createProcedureService,
-  dropProcedureService,
 } from './schema.service';
 
 /**
@@ -62,69 +53,6 @@ export const getTableDetails = async (
     const table = await getTableDetailsService(userId, databaseId, tableName);
 
     res.status(200).json({ table });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * GET /databases/:id/schema/views/:viewName
- * Get view details
- */
-export const getViewDetails = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const userId = req.user!.userId;
-    const databaseId = req.params.id as string;
-    const viewName = req.params.viewName as string;
-    const view = await getViewDetailsService(userId, databaseId, viewName);
-
-    res.status(200).json({ view });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * GET /databases/:id/schema/procedures/:procedureName
- * Get procedure details
- */
-export const getProcedureDetails = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const userId = req.user!.userId;
-    const databaseId = req.params.id as string;
-    const procedureName = req.params.procedureName as string;
-    const procedure = await getProcedureDetailsService(userId, databaseId, procedureName);
-
-    res.status(200).json({ procedure });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * GET /databases/:id/schema/functions/:functionName
- * Get function details
- */
-export const getFunctionDetails = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const userId = req.user!.userId;
-    const databaseId = req.params.id as string;
-    const functionName = req.params.functionName as string;
-    const func = await getFunctionDetailsService(userId, databaseId, functionName);
-
-    res.status(200).json({ function: func });
   } catch (error) {
     next(error);
   }
@@ -436,164 +364,6 @@ export const dropTable = async (
     await dropTableService(userId, databaseId, tableName);
 
     res.status(200).json({ message: `Table "${tableName}" dropped successfully` });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * POST /databases/:id/views
- * Create a new view
- */
-export const createView = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const userId = req.user!.userId;
-    const databaseId = req.params.id as string;
-    const { name, definition } = req.body;
-
-    if (!name || !definition) {
-      res.status(400).json({ message: 'View name and definition are required' });
-      return;
-    }
-
-    await createViewService(userId, databaseId, { name, definition });
-
-    res.status(201).json({ message: `View "${name}" created successfully` });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * DELETE /databases/:id/views/:viewName
- * Drop a view
- */
-export const dropView = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const userId = req.user!.userId;
-    const databaseId = req.params.id as string;
-    const viewName = req.params.viewName as string;
-
-    await dropViewService(userId, databaseId, viewName);
-
-    res.status(200).json({ message: `View "${viewName}" dropped successfully` });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * POST /databases/:id/functions
- * Create a new function
- */
-export const createFunction = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const userId = req.user!.userId;
-    const databaseId = req.params.id as string;
-    const { name, parameters, returnType, body, language } = req.body;
-
-    if (!name || !returnType || !body) {
-      res.status(400).json({ message: 'Function name, return type, and body are required' });
-      return;
-    }
-
-    await createFunctionService(userId, databaseId, {
-      name,
-      parameters: parameters || [],
-      returnType,
-      body,
-      language,
-    });
-
-    res.status(201).json({ message: `Function "${name}" created successfully` });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * DELETE /databases/:id/functions/:functionName
- * Drop a function
- */
-export const dropFunction = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const userId = req.user!.userId;
-    const databaseId = req.params.id as string;
-    const functionName = req.params.functionName as string;
-
-    await dropFunctionService(userId, databaseId, functionName);
-
-    res.status(200).json({ message: `Function "${functionName}" dropped successfully` });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * POST /databases/:id/procedures
- * Create a new procedure
- */
-export const createProcedure = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const userId = req.user!.userId;
-    const databaseId = req.params.id as string;
-    const { name, parameters, body, language } = req.body;
-
-    if (!name || !body) {
-      res.status(400).json({ message: 'Procedure name and body are required' });
-      return;
-    }
-
-    await createProcedureService(userId, databaseId, {
-      name,
-      parameters: parameters || [],
-      body,
-      language,
-    });
-
-    res.status(201).json({ message: `Procedure "${name}" created successfully` });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * DELETE /databases/:id/procedures/:procedureName
- * Drop a procedure
- */
-export const dropProcedure = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const userId = req.user!.userId;
-    const databaseId = req.params.id as string;
-    const procedureName = req.params.procedureName as string;
-
-    await dropProcedureService(userId, databaseId, procedureName);
-
-    res.status(200).json({ message: `Procedure "${procedureName}" dropped successfully` });
   } catch (error) {
     next(error);
   }

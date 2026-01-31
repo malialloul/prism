@@ -45,23 +45,16 @@ export const DetailsTitleText = styled('h3')(({ theme }) => {
 
 export const TypeBadge = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'type',
-})<{ type: 'table' | 'view' | 'index' | 'procedure' | 'function' }>(({ theme, type }) => {
+})<{ type: 'table' }>(({ theme }) => {
   const colors = getDashboardColors(theme.palette.mode === 'dark');
-  const colorMap = {
-    table: colors.primary,
-    view: colors.info,
-    index: colors.warning,
-    procedure: colors.success,
-    function: colors.secondary,
-  };
   return {
     padding: '0.25rem 0.5rem',
     borderRadius: '0.25rem',
     fontSize: '0.625rem',
     fontWeight: 600,
     textTransform: 'uppercase',
-    backgroundColor: `${colorMap[type]}20`,
-    color: colorMap[type],
+    backgroundColor: `${colors.primary}20`,
+    color: colors.primary,
   };
 });
 
@@ -274,47 +267,5 @@ export const ForeignKeyLink = styled('button')(({ theme }) => {
       backgroundColor: colors.info,
       color: 'white',
     },
-  };
-});
-
-export const SqlCodeBlock = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
-  return {
-    padding: '1rem',
-    backgroundColor: colors.backgroundTertiary,
-    borderRadius: '0.5rem',
-    border: `1px solid ${colors.border}`,
-    fontFamily: '"JetBrains Mono", "Fira Code", Consolas, monospace',
-    fontSize: '0.8125rem',
-    lineHeight: 1.6,
-    color: colors.text,
-    overflowX: 'auto',
-    whiteSpace: 'pre-wrap',
-    wordBreak: 'break-word',
-    '& .keyword': {
-      color: colors.primary,
-      fontWeight: 600,
-    },
-    '& .function': {
-      color: colors.info,
-    },
-    '& .string': {
-      color: colors.success,
-    },
-    '& .comment': {
-      color: colors.textMuted,
-      fontStyle: 'italic',
-    },
-  };
-});
-
-export const ViewActionsBar = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
-  return {
-    display: 'flex',
-    gap: '0.5rem',
-    padding: '0.75rem 1.25rem',
-    borderBottom: `1px solid ${colors.border}`,
-    backgroundColor: colors.backgroundSecondary,
   };
 });

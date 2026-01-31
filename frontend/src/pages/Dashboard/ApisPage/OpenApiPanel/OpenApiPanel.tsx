@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import ApiIcon from '@mui/icons-material/Api';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -29,6 +29,7 @@ import {
   Switch,
   FormControlLabel,
 } from '@mui/material';
+import { AppContext } from '../../../../App';
 import {
   OpenApiWrapper,
   EmptyState,
@@ -39,12 +40,15 @@ import { useSavedQueries, useDeleteSavedQuery } from '../../../../api/entities/s
 import { SchemaService } from '../../../../api/services/SchemaService';
 import type { DatabaseDto } from '../../../../api/models/DatabaseDto';
 import type { SavedQueryDto, SavedQueryParameterDto } from '../../../../api/models/SchemaDto';
+import { getDashboardColors } from '../../../../styles/theme';
 
 interface OpenApiPanelProps {
   connectedDatabase: DatabaseDto | null;
 }
 
 export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
+  const { darkMode } = useContext(AppContext);
+  const colors = getDashboardColors(darkMode);
   const databaseId = connectedDatabase?.id ? Number(connectedDatabase.id) : undefined;
   const { data: savedQueriesData, isLoading, refetch } = useSavedQueries(databaseId);
   const { mutate: deleteQuery } = useDeleteSavedQuery(databaseId || 0, {
@@ -59,7 +63,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
   const savedApis = savedQueriesData?.queries || [];
 
   const handleCopyEndpoint = (endpoint: string) => {
-    const fullUrl = `${window.location.origin}/api${endpoint}`;
+    const fullUrl = `${window.location.origin}${endpoint}`;
     navigator.clipboard.writeText(fullUrl);
   };
 
@@ -122,7 +126,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
 
   const getPublicEndpoint = (api: SavedQueryDto) => {
     const slug = getSlugFromEndpoint(api.endpoint);
-    return `${window.location.origin}/api/databases/public/${databaseId}/api/${slug}`;
+    return `${window.location.origin}/databases/public/${databaseId}/api/${slug}`;
   };
 
   if (!connectedDatabase) {
@@ -244,7 +248,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                       Endpoint {!api.isPublic && '(requires authentication)'}
                     </Typography>
-                    <Paper sx={{ p: 1.5, backgroundColor: '#f5f5f5', display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Paper sx={{ p: 1.5, backgroundColor: colors.backgroundTertiary, display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Typography 
                         sx={{ 
                           fontFamily: 'monospace', 
@@ -253,7 +257,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                           wordBreak: 'break-all',
                         }}
                       >
-                        {window.location.origin}/api{api.endpoint}
+                        {window.location.origin}{api.endpoint}
                       </Typography>
                       <Tooltip title="Copy URL">
                         <IconButton size="small" onClick={() => handleCopyEndpoint(api.endpoint || '')}>
@@ -269,7 +273,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5, color: 'success.main' }}>
                         Public Endpoint (no authentication required)
                       </Typography>
-                      <Paper sx={{ p: 1.5, backgroundColor: '#e8f5e9', display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Paper sx={{ p: 1.5, backgroundColor: colors.successLight, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <PublicIcon sx={{ fontSize: 18, color: 'success.main' }} />
                         <Typography 
                           sx={{ 
@@ -317,30 +321,41 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                             <TableRow>
                               <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
                               <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>Operator</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
                               <TableCell sx={{ fontWeight: 600 }}>Test Value</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {parameters.map((param) => (
-                              <TableRow key={param.name}>
-                                <TableCell>
-                                  <code>{param.name}</code>
-                                  {param.required && <span style={{ color: 'red' }}> *</span>}
-                                </TableCell>
-                                <TableCell>{param.columnType}</TableCell>
-                                <TableCell>{param.operator}</TableCell>
-                                <TableCell>
-                                  <TextField
-                                    size="small"
-                                    placeholder={`Enter ${param.name}`}
-                                    value={testParams[api.id]?.[param.name] || ''}
-                                    onChange={(e) => handleParamChange(api.id, param.name, e.target.value)}
-                                    sx={{ width: 200 }}
-                                  />
-                                </TableCell>
-                              </TableRow>
-                            ))}
+                            {parameters.map((param) => {
+                              // User-friendly descriptions for pagination params
+                              const getPaginationDescription = (name: string) => {
+                                if (name === 'pagesize') return 'Number of rows per page (default: 100)';
+                                if (name === 'pagecount') return 'Page number (1-indexed, default: 1)';
+                                return param.operator || '-';
+                              };
+                              
+                              return (
+                                <TableRow key={param.name}>
+                                  <TableCell>
+                                    <code>{param.name}</code>
+                                    {param.required && <span style={{ color: 'red' }}> *</span>}
+                                  </TableCell>
+                                  <TableCell>{param.columnType}</TableCell>
+                                  <TableCell sx={{ fontSize: '0.85rem', color: '#666' }}>
+                                    {getPaginationDescription(param.name)}
+                                  </TableCell>
+                                  <TableCell>
+                                    <TextField
+                                      size="small"
+                                      placeholder={param.name === 'pagesize' ? '100' : param.name === 'pagecount' ? '1' : `Enter ${param.name}`}
+                                      value={testParams[api.id]?.[param.name] || ''}
+                                      onChange={(e) => handleParamChange(api.id, param.name, e.target.value)}
+                                      sx={{ width: 200 }}
+                                    />
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </TableContainer>
@@ -380,18 +395,13 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                       {result.success === false ? (
                         <Alert severity="error">{result.error || 'Request failed'}</Alert>
                       ) : (
-                        <Paper sx={{ p: 1.5, backgroundColor: '#f5f5f5', maxHeight: 300, overflow: 'auto' }}>
+                        <Paper sx={{ p: 1.5, backgroundColor: colors.backgroundTertiary, maxHeight: 400, overflow: 'auto' }}>
                           <Typography variant="caption" sx={{ color: 'success.main', display: 'block', mb: 1 }}>
                             ✅ {result.rowCount} rows returned • {result.executionTimeMs}ms
                           </Typography>
-                          <pre style={{ margin: 0, fontSize: '0.75rem', overflow: 'auto' }}>
-                            {JSON.stringify(result.rows?.slice(0, 10), null, 2)}
+                          <pre style={{ margin: 0, fontSize: '0.75rem', overflow: 'auto', color: colors.text }}>
+                            {JSON.stringify(result.rows, null, 2)}
                           </pre>
-                          {result.rows?.length > 10 && (
-                            <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1, display: 'block' }}>
-                              Showing first 10 of {result.rowCount} rows
-                            </Typography>
-                          )}
                         </Paper>
                       )}
                     </Box>
@@ -402,8 +412,8 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                       SQL Query
                     </Typography>
-                    <Paper sx={{ p: 1.5, backgroundColor: '#1e1e1e', maxHeight: 150, overflow: 'auto' }}>
-                      <pre style={{ margin: 0, color: '#d4d4d4', fontSize: '0.75rem' }}>
+                    <Paper sx={{ p: 1.5, backgroundColor: darkMode ? '#1e1e1e' : '#f5f5f5', maxHeight: 150, overflow: 'auto' }}>
+                      <pre style={{ margin: 0, color: darkMode ? '#d4d4d4' : '#1e1e1e', fontSize: '0.75rem' }}>
                         {api.sql}
                       </pre>
                     </Paper>

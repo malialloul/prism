@@ -1,5 +1,5 @@
-// Schema object types
-export type SchemaObjectType = 'table' | 'view' | 'index' | 'procedure' | 'function';
+// Schema object types - only tables now
+export type SchemaObjectType = 'table';
 
 export interface SchemaObjectDto {
   name: string;
@@ -46,35 +46,6 @@ export interface TableDetailsDto {
   constraints: ConstraintDto[];
   rowCount: number;
   sampleData: Record<string, unknown>[];
-}
-
-export interface ViewDetailsDto {
-  name: string;
-  schema: string;
-  definition: string;
-  columns: ColumnDto[];
-}
-
-export interface ProcedureDetailsDto {
-  name: string;
-  schema: string;
-  definition: string;
-  parameters: {
-    name: string;
-    type: string;
-    mode: 'IN' | 'OUT' | 'INOUT';
-  }[];
-}
-
-export interface FunctionDetailsDto {
-  name: string;
-  schema: string;
-  definition: string;
-  returnType: string;
-  parameters: {
-    name: string;
-    type: string;
-  }[];
 }
 
 export interface QueryResultDto {
@@ -137,43 +108,6 @@ export interface ModifyColumnDto {
   type?: string;
   nullable?: boolean;
   defaultValue?: string;
-}
-
-export interface CreateViewDto {
-  name: string;
-  definition: string;
-}
-
-// Function management types
-export interface FunctionParameterDto {
-  name: string;
-  type: string;
-}
-
-export interface CreateFunctionDto {
-  name: string;
-  parameters: FunctionParameterDto[];
-  returnType: string;
-  body: string;
-  language?: 'sql' | 'plpgsql';
-  /** If true, drop existing function first before creating */
-  isEdit?: boolean;
-}
-
-// Procedure management types
-export interface ProcedureParameterDto {
-  name: string;
-  type: string;
-  mode: 'IN' | 'OUT' | 'INOUT';
-}
-
-export interface CreateProcedureDto {
-  name: string;
-  parameters: ProcedureParameterDto[];
-  body: string;
-  language?: 'sql' | 'plpgsql';
-  /** If true, drop existing procedure first before creating */
-  isEdit?: boolean;
 }
 
 // Data type constants

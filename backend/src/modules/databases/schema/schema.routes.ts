@@ -5,9 +5,6 @@ import {
   getSchemaObjects,
   getFullSchema,
   getTableDetails,
-  getViewDetails,
-  getProcedureDetails,
-  getFunctionDetails,
   executeQuery,
   getSavedQueries,
   saveQuery,
@@ -20,19 +17,14 @@ import {
   modifyColumn,
   dropColumn,
   dropTable,
-  createView,
-  dropView,
-  createFunction,
-  dropFunction,
-  createProcedure,
-  dropProcedure,
 } from './schema.controller';
 
 const router = Router();
+const publicRouter = Router();
 
-// PUBLIC routes (no authentication required)
-router.get('/public/:id/api/:slugOrId', executePublicQuery);
-router.post('/public/:id/api/:slugOrId', executePublicQuery);
+// PUBLIC routes (no authentication required) - exported separately
+publicRouter.get('/public/:id/api/:slugOrId', executePublicQuery);
+publicRouter.post('/public/:id/api/:slugOrId', executePublicQuery);
 
 // All routes below require authentication
 router.use(authMiddleware);
@@ -41,9 +33,6 @@ router.use(authMiddleware);
 router.get('/:id/schema', getSchemaObjects);
 router.get('/:id/schema/full', getFullSchema);
 router.get('/:id/schema/tables/:tableName', getTableDetails);
-router.get('/:id/schema/views/:viewName', getViewDetails);
-router.get('/:id/schema/procedures/:procedureName', getProcedureDetails);
-router.get('/:id/schema/functions/:functionName', getFunctionDetails);
 
 // Query execution
 router.post('/:id/query', executeQuery);
@@ -62,21 +51,10 @@ router.post('/:id/api/:slugOrId', executeSavedQuery);
 router.post('/:id/tables', createTable);
 router.delete('/:id/tables/:tableName', dropTable);
 
-// View management
-router.post('/:id/views', createView);
-router.delete('/:id/views/:viewName', dropView);
-
-// Function management
-router.post('/:id/functions', createFunction);
-router.delete('/:id/functions/:functionName', dropFunction);
-
-// Procedure management
-router.post('/:id/procedures', createProcedure);
-router.delete('/:id/procedures/:procedureName', dropProcedure);
-
 // Column management
 router.post('/:id/tables/:tableName/columns', addColumn);
 router.patch('/:id/tables/:tableName/columns/:columnName', modifyColumn);
 router.delete('/:id/tables/:tableName/columns/:columnName', dropColumn);
 
+export const publicSchemaRoutes = publicRouter;
 export default router;

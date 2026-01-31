@@ -12,6 +12,8 @@ export interface TableConnection {
   targetTableId: string;
   sourceColumn: string;
   targetColumn: string;
+  sourceColumnType?: string;
+  targetColumnType?: string;
   connectionType: 'matches' | 'startsWith' | 'contains';
 }
 

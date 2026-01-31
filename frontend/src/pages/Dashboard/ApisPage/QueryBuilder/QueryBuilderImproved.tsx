@@ -105,9 +105,11 @@ interface SelectedTable {
 interface SelectedField {
   tableId: string;
   columnName: string;
+  columnType?: string;
   aggregation?: 'count' | 'sum' | 'avg' | 'min' | 'max' | null;
   sortOrder?: 'asc' | 'desc' | null;
   distinct?: boolean;
+  alias?: string;
 }
 
 interface VisualFilter {
@@ -128,6 +130,21 @@ interface ReferenceFilter {
   targetTableId: string;
   targetColumn: string;
   filterType: 'include' | 'exclude';
+}
+
+interface ComputedField {
+  id: string;
+  name: string; // alias for the computed field
+  expression: {
+    leftTableId: string;
+    leftColumn: string;
+    leftColumnType?: string;
+    operator: '*' | '+' | '-' | '/';
+    rightTableId: string;
+    rightColumn: string;
+    rightColumnType?: string;
+  };
+  aggregation?: 'count' | 'sum' | 'avg' | 'min' | 'max' | null;
 }
 
 interface GroupingRule {
@@ -185,6 +202,84 @@ const formatSqlValue = (op: string, value: any): string => {
 };
 
 const snapToGrid = (value: number): number => Math.round(value / GRID_SIZE) * GRID_SIZE;
+
+// Helper to check if two column types are compatible for joining
+const areTypesCompatible = (type1: string | undefined, type2: string | undefined): boolean => {
+  if (!type1 || !type2) return true; // Unknown types - allow and let DB handle it
+  
+  const normalizeType = (type: string): string => {
+    const t = type.toLowerCase();
+    if (t.includes('uuid')) return 'uuid';
+    if (t.includes('int') || t.includes('serial')) return 'integer';
+    if (t.includes('char') || t.includes('text')) return 'text';
+    if (t.includes('bool')) return 'boolean';
+    if (t.includes('date') || t.includes('time')) return 'datetime';
+    if (t.includes('numeric') || t.includes('decimal') || t.includes('float') || t.includes('double') || t.includes('real')) return 'numeric';
+    return t;
+  };
+  
+  const norm1 = normalizeType(type1);
+  const norm2 = normalizeType(type2);
+  
+  // Same type family is compatible
+  if (norm1 === norm2) return true;
+  
+  // Integer and numeric are compatible
+  if ((norm1 === 'integer' && norm2 === 'numeric') || (norm1 === 'numeric' && norm2 === 'integer')) return true;
+  
+  // Text types can be compared with most things (DB will handle conversion)
+  if (norm1 === 'text' || norm2 === 'text') return true;
+  
+  return false;
+};
+
+// Generate JOIN condition - simple equality, no auto-casting
+const generateJoinCondition = (
+  sourceTable: string,
+  sourceColumn: string,
+  targetTable: string,
+  targetColumn: string
+): string => {
+  return `${sourceTable}.${sourceColumn} = ${targetTable}.${targetColumn}`;
+};
+
+// Helper to check if an aggregation is valid for a column type
+const isAggregationValidForType = (aggregation: string | null | undefined, columnType: string | undefined): boolean => {
+  if (!aggregation || !columnType) return true; // Unknown - let DB handle it
+  
+  const t = columnType.toLowerCase();
+  
+  // COUNT works on any type
+  if (aggregation === 'count') return true;
+  
+  // MIN/MAX work on any comparable type (numbers, strings, dates)
+  if (aggregation === 'min' || aggregation === 'max') return true;
+  
+  // SUM/AVG only work on numeric types
+  if (aggregation === 'sum' || aggregation === 'avg') {
+    const numericTypes = ['int', 'integer', 'smallint', 'bigint', 'tinyint', 'serial', 'bigserial',
+                          'decimal', 'numeric', 'float', 'double', 'real', 'money', 'smallmoney'];
+    return numericTypes.some(nt => t.includes(nt));
+  }
+  
+  return true;
+};
+
+// Get friendly type name for error messages
+const getFriendlyTypeName = (type: string | undefined): string => {
+  if (!type) return 'unknown';
+  const t = type.toLowerCase();
+  if (t.includes('uuid')) return 'UUID';
+  if (t.includes('int') || t.includes('serial')) return 'integer';
+  if (t.includes('char') || t.includes('text')) return 'text';
+  if (t.includes('bool')) return 'boolean';
+  if (t.includes('date')) return 'date';
+  if (t.includes('time')) return 'timestamp';
+  if (t.includes('numeric') || t.includes('decimal')) return 'decimal';
+  if (t.includes('float') || t.includes('double') || t.includes('real')) return 'float';
+  if (t.includes('json')) return 'JSON';
+  return type;
+};
 
 // ============================================================================
 // CONNECTION BUTTON COMPONENT (Replaces small dots)
@@ -273,8 +368,10 @@ interface FieldRowProps {
   hasAggregation: string | null;
   sortOrder: 'asc' | 'desc' | null;
   isGrouped: boolean;
+  alias?: string;
+  hasDuplicateName: boolean;
   connectionMode: ConnectionMode;
-  connectingFrom: { tableId: string; column: string } | null;
+  connectingFrom: { tableId: string; column: string; columnType: string } | null;
   onSelect: () => void;
   onStartConnection: (mode: ConnectionMode) => void;
   onCompleteConnection: () => void;
@@ -282,6 +379,7 @@ interface FieldRowProps {
   onOpenFilter: () => void;
   onOpenAggregation: () => void;
   onToggleGroup: () => void;
+  onSetAlias: (alias: string) => void;
   hasExistingJoin: boolean;
   hasExistingInclude: boolean;
   hasExistingExclude: boolean;
@@ -295,6 +393,8 @@ const FieldRow: React.FC<FieldRowProps> = ({
   hasAggregation,
   sortOrder,
   isGrouped,
+  alias,
+  hasDuplicateName,
   connectionMode,
   connectingFrom,
   onSelect,
@@ -304,6 +404,7 @@ const FieldRow: React.FC<FieldRowProps> = ({
   onOpenFilter,
   onOpenAggregation,
   onToggleGroup,
+  onSetAlias,
   hasExistingJoin,
   hasExistingInclude,
   hasExistingExclude,
@@ -514,6 +615,40 @@ const FieldRow: React.FC<FieldRowProps> = ({
           </Tooltip>
         </Box>
       )}
+
+      {/* Duplicate Column Warning & Alias Input */}
+      {isSelected && hasDuplicateName && connectionMode === 'none' && (
+        <Box sx={{ mt: 0.75, pt: 0.75, borderTop: `1px solid ${isDark ? '#334155' : '#eee'}` }}>
+          <Alert 
+            severity="warning" 
+            sx={{ 
+              py: 0.25, 
+              px: 1, 
+              fontSize: '0.7rem',
+              '& .MuiAlert-icon': { fontSize: 16, mr: 0.5 },
+              '& .MuiAlert-message': { py: 0 },
+            }}
+          >
+            Same column name exists in another table. Add an alias to distinguish them in results.
+          </Alert>
+          <TextField
+            size="small"
+            placeholder="Enter alias (e.g., user_id)"
+            value={alias || ''}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => onSetAlias(e.target.value)}
+            sx={{ 
+              mt: 0.75, 
+              width: '100%',
+              '& .MuiInputBase-input': { 
+                fontSize: '0.75rem', 
+                py: 0.5,
+                px: 1,
+              },
+            }}
+          />
+        </Box>
+      )}
     </Box>
   );
 };
@@ -531,16 +666,18 @@ interface TableCardComponentProps {
   tableConnections: TableConnection[];
   referenceFilters: ReferenceFilter[];
   connectionMode: ConnectionMode;
-  connectingFrom: { tableId: string; column: string } | null;
+  connectingFrom: { tableId: string; column: string; columnType: string } | null;
   onDragStart: (e: React.MouseEvent) => void;
   onRemove: () => void;
-  onFieldSelect: (columnName: string) => void;
-  onStartConnection: (column: string, mode: ConnectionMode) => void;
-  onCompleteConnection: (column: string) => void;
+  onFieldSelect: (columnName: string, columnType: string) => void;
+  onStartConnection: (column: string, columnType: string, mode: ConnectionMode) => void;
+  onCompleteConnection: (column: string, columnType: string) => void;
   onToggleSort: (columnName: string, order: 'asc' | 'desc') => void;
   onOpenFilter: (columnName: string, type: string) => void;
-  onOpenAggregation: (columnName: string) => void;
+  onOpenAggregation: (columnName: string, columnType: string) => void;
   onToggleGroup: (columnName: string) => void;
+  onSetAlias: (columnName: string, alias: string) => void;
+  duplicateColumnNames: Set<string>;
 }
 
 const TableCardComponent: React.FC<TableCardComponentProps> = ({
@@ -562,6 +699,8 @@ const TableCardComponent: React.FC<TableCardComponentProps> = ({
   onOpenFilter,
   onOpenAggregation,
   onToggleGroup,
+  onSetAlias,
+  duplicateColumnNames,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -687,15 +826,18 @@ const TableCardComponent: React.FC<TableCardComponentProps> = ({
               hasAggregation={fieldData?.aggregation || null}
               sortOrder={fieldData?.sortOrder || null}
               isGrouped={isGrouped}
+              alias={fieldData?.alias}
+              hasDuplicateName={duplicateColumnNames.has(field.name)}
               connectionMode={connectionMode}
               connectingFrom={connectingFrom}
-              onSelect={() => onFieldSelect(field.name)}
-              onStartConnection={(mode) => onStartConnection(field.name, mode)}
-              onCompleteConnection={() => onCompleteConnection(field.name)}
+              onSelect={() => onFieldSelect(field.name, field.type)}
+              onStartConnection={(mode) => onStartConnection(field.name, field.type, mode)}
+              onCompleteConnection={() => onCompleteConnection(field.name, field.type)}
               onToggleSort={(order) => onToggleSort(field.name, order)}
               onOpenFilter={() => onOpenFilter(field.name, field.type)}
-              onOpenAggregation={() => onOpenAggregation(field.name)}
+              onOpenAggregation={() => onOpenAggregation(field.name, field.type)}
               onToggleGroup={() => onToggleGroup(field.name)}
+              onSetAlias={(alias) => onSetAlias(field.name, alias)}
               hasExistingJoin={hasExistingJoin}
               hasExistingInclude={hasExistingInclude}
               hasExistingExclude={hasExistingExclude}
@@ -854,7 +996,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
 
   // Connection Mode State
   const [connectionMode, setConnectionMode] = useState<ConnectionMode>('none');
-  const [connectingFrom, setConnectingFrom] = useState<{ tableId: string; column: string } | null>(null);
+  const [connectingFrom, setConnectingFrom] = useState<{ tableId: string; column: string; columnType: string } | null>(null);
 
   // Dialogs
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -876,8 +1018,25 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
   const [filterParameterName, setFilterParameterName] = useState('');
 
   // Aggregation Dialog State
-  const [aggField, setAggField] = useState<{ tableId: string; columnName: string } | null>(null);
+  const [aggField, setAggField] = useState<{ tableId: string; columnName: string; columnType?: string } | null>(null);
   const [aggType, setAggType] = useState('count');
+
+  // Computed Fields
+  const [computedFields, setComputedFields] = useState<ComputedField[]>([]);
+  const [computedFieldDialogOpen, setComputedFieldDialogOpen] = useState(false);
+  const [computedFieldName, setComputedFieldName] = useState('');
+  const [computedLeftTable, setComputedLeftTable] = useState('');
+  const [computedLeftColumn, setComputedLeftColumn] = useState('');
+  const [computedOperator, setComputedOperator] = useState<'*' | '+' | '-' | '/'>('*');
+  const [computedRightTable, setComputedRightTable] = useState('');
+  const [computedRightColumn, setComputedRightColumn] = useState('');
+  const [computedAggregation, setComputedAggregation] = useState<'sum' | 'avg' | 'min' | 'max' | 'count' | ''>('sum');
+
+  // Pagination Settings
+  const [paginationEnabled, setPaginationEnabled] = useState(false);
+  const [defaultPageSize, setDefaultPageSize] = useState(100);
+  const [allowPageSizeParam, setAllowPageSizeParam] = useState(true);   // Allow pagesize parameter
+  const [allowPageCountParam, setAllowPageCountParam] = useState(true); // Allow pagecount (page number) parameter
 
   // Right Panel & Preview
   const [rightPanelTab, setRightPanelTab] = useState(0);
@@ -931,6 +1090,84 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
     })) || []
   , [schemaData]);
 
+  // Detect type mismatches in table connections
+  const connectionTypeErrors = useMemo(() => {
+    return tableConnections
+      .filter(conn => !areTypesCompatible(conn.sourceColumnType, conn.targetColumnType))
+      .map(conn => ({
+        id: conn.id,
+        message: `Type mismatch: ${conn.sourceTableId}.${conn.sourceColumn} (${conn.sourceColumnType || 'unknown'}) cannot be joined with ${conn.targetTableId}.${conn.targetColumn} (${conn.targetColumnType || 'unknown'})`,
+        sourceTable: conn.sourceTableId,
+        sourceColumn: conn.sourceColumn,
+        sourceType: conn.sourceColumnType,
+        targetTable: conn.targetTableId,
+        targetColumn: conn.targetColumn,
+        targetType: conn.targetColumnType,
+      }));
+  }, [tableConnections]);
+
+  // Detect invalid aggregations (e.g., SUM on UUID)
+  const aggregationErrors = useMemo(() => {
+    return selectedFields
+      .filter(f => f.aggregation && !isAggregationValidForType(f.aggregation, f.columnType))
+      .map(f => ({
+        tableId: f.tableId,
+        columnName: f.columnName,
+        columnType: f.columnType,
+        aggregation: f.aggregation,
+        message: `${f.aggregation?.toUpperCase()}() cannot be applied to ${f.tableId}.${f.columnName} (${getFriendlyTypeName(f.columnType)}). ${f.aggregation?.toUpperCase()} only works on numeric columns.`,
+      }));
+  }, [selectedFields]);
+
+  // Detect computed fields referencing tables not in the query
+  const computedFieldErrors = useMemo(() => {
+    const errors: { id: string; message: string }[] = [];
+    
+    // Check which tables are actually joined (reachable from the primary table)
+    const joinedTables = new Set<string>();
+    if (selectedTables.length > 0) {
+      joinedTables.add(selectedTables[0].id); // Primary table is always included
+      
+      // Add tables that are connected via JOINs
+      let changed = true;
+      while (changed) {
+        changed = false;
+        tableConnections.forEach(conn => {
+          if (joinedTables.has(conn.sourceTableId) && !joinedTables.has(conn.targetTableId)) {
+            joinedTables.add(conn.targetTableId);
+            changed = true;
+          } else if (joinedTables.has(conn.targetTableId) && !joinedTables.has(conn.sourceTableId)) {
+            joinedTables.add(conn.sourceTableId);
+            changed = true;
+          }
+        });
+      }
+    }
+
+    computedFields.forEach(cf => {
+      const leftTableInQuery = joinedTables.has(cf.expression.leftTableId);
+      const rightTableInQuery = joinedTables.has(cf.expression.rightTableId);
+      
+      if (!leftTableInQuery) {
+        errors.push({
+          id: cf.id,
+          message: `Calculated field "${cf.name}" uses table "${cf.expression.leftTableId}" which is not joined in the query. Add the table and create a JOIN.`,
+        });
+      }
+      if (!rightTableInQuery && cf.expression.rightTableId !== cf.expression.leftTableId) {
+        errors.push({
+          id: cf.id,
+          message: `Calculated field "${cf.name}" uses table "${cf.expression.rightTableId}" which is not joined in the query. Add the table and create a JOIN.`,
+        });
+      }
+    });
+
+    return errors;
+  }, [computedFields, selectedTables, tableConnections]);
+
+  // Combined validation errors
+  const hasValidationErrors = connectionTypeErrors.length > 0 || aggregationErrors.length > 0 || computedFieldErrors.length > 0;
+
   const apiEndpoint = useMemo(() => {
     if (selectedTables.length === 0) return '';
     const base = selectedTables.map(t => t.name).join('-');
@@ -944,19 +1181,42 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
     
     // SELECT clause
     let selectFields: string[] = [];
-    if (selectedFields.length === 0) {
+    if (selectedFields.length === 0 && computedFields.length === 0) {
       selectFields = ['*'];
     } else {
+      // Regular selected fields
       selectFields = selectedFields.map(f => {
         const tableName = f.tableId;
         const colName = `${tableName}.${f.columnName}`;
+        let fieldExpr: string;
         if (f.aggregation) {
-          return `${f.aggregation.toUpperCase()}(${colName})`;
+          fieldExpr = `${f.aggregation.toUpperCase()}(${colName})`;
+        } else if (f.distinct) {
+          fieldExpr = `DISTINCT ${colName}`;
+        } else {
+          fieldExpr = colName;
         }
-        if (f.distinct) {
-          return `DISTINCT ${colName}`;
+        // Add alias if specified
+        if (f.alias) {
+          fieldExpr += ` AS ${f.alias}`;
         }
-        return colName;
+        return fieldExpr;
+      });
+      
+      // Computed fields (expressions like quantity * price)
+      computedFields.forEach(cf => {
+        const leftCol = `${cf.expression.leftTableId}.${cf.expression.leftColumn}`;
+        const rightCol = `${cf.expression.rightTableId}.${cf.expression.rightColumn}`;
+        const expr = `${leftCol} ${cf.expression.operator} ${rightCol}`;
+        
+        let fieldExpr: string;
+        if (cf.aggregation) {
+          fieldExpr = `${cf.aggregation.toUpperCase()}(${expr})`;
+        } else {
+          fieldExpr = expr;
+        }
+        fieldExpr += ` AS ${cf.name}`;
+        selectFields.push(fieldExpr);
       });
     }
     lines.push(`SELECT ${selectFields.join(',\n       ')}`);
@@ -969,31 +1229,74 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
     // Track which tables have been added to the query
     const joinedTables = new Set<string>([primaryTable]);
     
-    // Process connections to build JOINs
-    // Each connection joins a new table to the existing set
-    tableConnections.forEach(conn => {
-      const sourceInQuery = joinedTables.has(conn.sourceTableId);
-      const targetInQuery = joinedTables.has(conn.targetTableId);
+    // Process connections to build JOINs in correct order
+    // We need to ensure each JOIN only references tables already in the query
+    const remainingConnections = [...tableConnections];
+    const maxIterations = remainingConnections.length * 2; // Prevent infinite loops
+    let iterations = 0;
+    
+    while (remainingConnections.length > 0 && iterations < maxIterations) {
+      iterations++;
+      let foundConnection = false;
       
-      if (sourceInQuery && !targetInQuery) {
-        // Source is already in query, join the target table
-        lines.push(`INNER JOIN ${conn.targetTableId}`);
-        lines.push(`  ON ${conn.sourceTableId}.${conn.sourceColumn} = ${conn.targetTableId}.${conn.targetColumn}`);
-        joinedTables.add(conn.targetTableId);
-      } else if (targetInQuery && !sourceInQuery) {
-        // Target is already in query, join the source table
-        lines.push(`INNER JOIN ${conn.sourceTableId}`);
-        lines.push(`  ON ${conn.sourceTableId}.${conn.sourceColumn} = ${conn.targetTableId}.${conn.targetColumn}`);
-        joinedTables.add(conn.sourceTableId);
-      } else if (!sourceInQuery && !targetInQuery) {
-        // Neither table is in query yet - join both (source first, then target)
-        lines.push(`INNER JOIN ${conn.sourceTableId}`);
-        lines.push(`  ON ${conn.sourceTableId}.${conn.sourceColumn} = ${conn.targetTableId}.${conn.targetColumn}`);
-        joinedTables.add(conn.sourceTableId);
-        // Note: This case shouldn't normally happen if connections are made properly
+      for (let i = 0; i < remainingConnections.length; i++) {
+        const conn = remainingConnections[i];
+        const sourceInQuery = joinedTables.has(conn.sourceTableId);
+        const targetInQuery = joinedTables.has(conn.targetTableId);
+        
+        // Skip if both tables are already joined (redundant connection)
+        if (sourceInQuery && targetInQuery) {
+          remainingConnections.splice(i, 1);
+          foundConnection = true;
+          break;
+        }
+        
+        // Can only process this connection if at least one table is already in the query
+        if (!sourceInQuery && !targetInQuery) {
+          continue; // Skip for now, try other connections first
+        }
+        
+        // Generate simple JOIN condition
+        const joinCondition = generateJoinCondition(
+          conn.sourceTableId,
+          conn.sourceColumn,
+          conn.targetTableId,
+          conn.targetColumn
+        );
+        
+        if (sourceInQuery && !targetInQuery) {
+          // Source is already in query, join the target table
+          lines.push(`INNER JOIN ${conn.targetTableId}`);
+          lines.push(`  ON ${joinCondition}`);
+          joinedTables.add(conn.targetTableId);
+        } else if (targetInQuery && !sourceInQuery) {
+          // Target is already in query, join the source table
+          lines.push(`INNER JOIN ${conn.sourceTableId}`);
+          lines.push(`  ON ${joinCondition}`);
+          joinedTables.add(conn.sourceTableId);
+        }
+        
+        remainingConnections.splice(i, 1);
+        foundConnection = true;
+        break;
       }
-      // If both tables are already in query, skip (connection is redundant)
-    });
+      
+      // If no connection could be processed, we might have disconnected tables
+      if (!foundConnection && remainingConnections.length > 0) {
+        // Try to add the first remaining connection anyway (might create invalid SQL)
+        const conn = remainingConnections.shift()!;
+        const joinCondition = generateJoinCondition(
+          conn.sourceTableId,
+          conn.sourceColumn,
+          conn.targetTableId,
+          conn.targetColumn
+        );
+        lines.push(`INNER JOIN ${conn.sourceTableId}`);
+        lines.push(`  ON ${joinCondition}`);
+        joinedTables.add(conn.sourceTableId);
+        joinedTables.add(conn.targetTableId);
+      }
+    }
 
     // WHERE clause
     const whereClauses: string[] = [];
@@ -1041,8 +1344,22 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
       lines.push(`ORDER BY ${orderCols.join(', ')}`);
     }
 
+    // LIMIT / OFFSET clause (pagination)
+    if (paginationEnabled) {
+      // Use :param syntax that backend will replace with actual values
+      if (allowPageSizeParam) {
+        lines.push(`LIMIT :pagesize`);
+      } else {
+        lines.push(`LIMIT ${defaultPageSize}`);
+      }
+      if (allowPageCountParam) {
+        // pagecount is 1-indexed page number, backend calculates offset = (pagecount - 1) * pagesize
+        lines.push(`OFFSET :offset`);
+      }
+    }
+
     return lines.join('\n');
-  }, [selectedTables, selectedFields, tableConnections, visualFilters, referenceFilters, groupingRules]);
+  }, [selectedTables, selectedFields, tableConnections, visualFilters, referenceFilters, groupingRules, paginationEnabled, defaultPageSize, allowPageSizeParam, allowPageCountParam]);
 
   // ============================================================================
   // CANVAS HANDLERS
@@ -1131,6 +1448,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
   // TABLE HANDLERS
   // ============================================================================
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleAddTable = (table: any) => {
     if (!selectedTables.find(t => t.id === table.id)) {
       const cols = Math.ceil(Math.sqrt(selectedTables.length + 1));
@@ -1149,6 +1467,39 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
       }));
     }
     setAddTableDialogOpen(false);
+  };
+
+  // Add multiple tables at once with correct positions
+  const handleAddMultipleTables = (tableIds: string[]) => {
+    const tablesToAddData = tableIds
+      .map(id => tables.find((t: any) => t.id === id))
+      .filter((t): t is any => !!t && !selectedTables.find(s => s.id === t.id));
+    
+    if (tablesToAddData.length === 0) return;
+
+    const startIndex = selectedTables.length;
+    const totalTables = startIndex + tablesToAddData.length;
+    const cols = Math.ceil(Math.sqrt(totalTables));
+    
+    const newTables = tablesToAddData.map((table) => ({
+      id: table.id,
+      name: table.name,
+      columns: table.columns || [],
+    }));
+
+    const newPositions: Record<string, TablePosition> = {};
+    tablesToAddData.forEach((table, i) => {
+      const index = startIndex + i;
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      newPositions[table.id] = {
+        x: 40 + col * (TABLE_WIDTH + 40),
+        y: 40 + row * (TABLE_HEIGHT + 40),
+      };
+    });
+
+    setSelectedTables(prev => [...prev, ...newTables]);
+    setTablePositions(prev => ({ ...prev, ...newPositions }));
   };
 
   const handleRemoveTable = (tableId: string) => {
@@ -1176,12 +1527,12 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
   // CONNECTION HANDLERS
   // ============================================================================
 
-  const startConnection = (tableId: string, column: string, mode: ConnectionMode) => {
+  const startConnection = (tableId: string, column: string, columnType: string, mode: ConnectionMode) => {
     setConnectionMode(mode);
-    setConnectingFrom({ tableId, column });
+    setConnectingFrom({ tableId, column, columnType });
   };
 
-  const completeConnection = (targetTableId: string, targetColumn: string) => {
+  const completeConnection = (targetTableId: string, targetColumn: string, targetColumnType: string) => {
     if (!connectingFrom || connectingFrom.tableId === targetTableId) {
       resetConnection();
       return;
@@ -1194,6 +1545,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
         targetTableId: targetTableId,
         sourceColumn: connectingFrom.column,
         targetColumn: targetColumn,
+        sourceColumnType: connectingFrom.columnType,
+        targetColumnType: targetColumnType,
         connectionType: 'matches',
       };
       setTableConnections(prev => [...prev.filter(c => 
@@ -1223,12 +1576,12 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
   // FIELD HANDLERS
   // ============================================================================
 
-  const toggleFieldSelect = (tableId: string, columnName: string) => {
+  const toggleFieldSelect = (tableId: string, columnName: string, columnType?: string) => {
     const exists = selectedFields.find(f => f.tableId === tableId && f.columnName === columnName);
     if (exists) {
       setSelectedFields(prev => prev.filter(f => !(f.tableId === tableId && f.columnName === columnName)));
     } else {
-      setSelectedFields(prev => [...prev, { tableId, columnName }]);
+      setSelectedFields(prev => [...prev, { tableId, columnName, columnType }]);
     }
   };
 
@@ -1239,6 +1592,25 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
         : f
     ));
   };
+
+  const handleSetAlias = (tableId: string, columnName: string, alias: string) => {
+    setSelectedFields(prev => prev.map(f =>
+      f.tableId === tableId && f.columnName === columnName
+        ? { ...f, alias: alias || undefined }
+        : f
+    ));
+  };
+
+  // Compute duplicate column names across all selected tables
+  const duplicateColumnNames = useMemo(() => {
+    const columnCounts: Record<string, number> = {};
+    selectedTables.forEach(table => {
+      table.columns.forEach(col => {
+        columnCounts[col.name] = (columnCounts[col.name] || 0) + 1;
+      });
+    });
+    return new Set(Object.keys(columnCounts).filter(name => columnCounts[name] > 1));
+  }, [selectedTables]);
 
   const toggleGrouping = (tableId: string, columnName: string) => {
     const exists = groupingRules.find(g => g.tableId === tableId && g.columnName === columnName);
@@ -1277,8 +1649,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
     setFilterDialogOpen(false);
   };
 
-  const openAggDialog = (tableId: string, columnName: string) => {
-    setAggField({ tableId, columnName });
+  const openAggDialog = (tableId: string, columnName: string, columnType?: string) => {
+    setAggField({ tableId, columnName, columnType });
     setAggType('count');
     setAggDialogOpen(true);
   };
@@ -1289,17 +1661,66 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
     if (exists) {
       setSelectedFields(prev => prev.map(f =>
         f.tableId === aggField.tableId && f.columnName === aggField.columnName
-          ? { ...f, aggregation: aggType as any }
+          ? { ...f, aggregation: aggType as any, columnType: aggField.columnType }
           : f
       ));
     } else {
       setSelectedFields(prev => [...prev, {
         tableId: aggField.tableId,
         columnName: aggField.columnName,
+        columnType: aggField.columnType,
         aggregation: aggType as any,
       }]);
     }
     setAggDialogOpen(false);
+  };
+
+  // ============================================================================
+  // COMPUTED FIELD HANDLERS
+  // ============================================================================
+
+  const openComputedFieldDialog = () => {
+    setComputedFieldName('');
+    setComputedLeftTable(selectedTables[0]?.id || '');
+    setComputedLeftColumn('');
+    setComputedOperator('*');
+    setComputedRightTable(selectedTables[0]?.id || '');
+    setComputedRightColumn('');
+    setComputedAggregation('sum');
+    setComputedFieldDialogOpen(true);
+  };
+
+  const handleAddComputedField = () => {
+    if (!computedFieldName || !computedLeftTable || !computedLeftColumn || !computedRightTable || !computedRightColumn) {
+      return;
+    }
+
+    const leftTable = selectedTables.find(t => t.id === computedLeftTable);
+    const rightTable = selectedTables.find(t => t.id === computedRightTable);
+    const leftCol = leftTable?.columns.find(c => c.name === computedLeftColumn);
+    const rightCol = rightTable?.columns.find(c => c.name === computedRightColumn);
+
+    const newField: ComputedField = {
+      id: `computed-${Date.now()}`,
+      name: computedFieldName,
+      expression: {
+        leftTableId: computedLeftTable,
+        leftColumn: computedLeftColumn,
+        leftColumnType: leftCol?.type,
+        operator: computedOperator,
+        rightTableId: computedRightTable,
+        rightColumn: computedRightColumn,
+        rightColumnType: rightCol?.type,
+      },
+      aggregation: computedAggregation || null,
+    };
+
+    setComputedFields(prev => [...prev, newField]);
+    setComputedFieldDialogOpen(false);
+  };
+
+  const removeComputedField = (id: string) => {
+    setComputedFields(prev => prev.filter(f => f.id !== id));
   };
 
   // ============================================================================
@@ -1315,6 +1736,45 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
         executionTime: '0ms',
         timestamp: new Date().toLocaleTimeString(),
         error: !databaseId ? 'No database connected' : 'No SQL query generated',
+      });
+      return;
+    }
+
+    // Check for type mismatch errors before executing
+    if (connectionTypeErrors.length > 0) {
+      setApiTestResult({
+        success: false,
+        status: 400,
+        rowCount: 0,
+        executionTime: '0ms',
+        timestamp: new Date().toLocaleTimeString(),
+        error: `Type mismatch in JOIN: ${connectionTypeErrors.map(e => e.message).join('; ')}`,
+      });
+      return;
+    }
+
+    // Check for invalid aggregation errors before executing
+    if (aggregationErrors.length > 0) {
+      setApiTestResult({
+        success: false,
+        status: 400,
+        rowCount: 0,
+        executionTime: '0ms',
+        timestamp: new Date().toLocaleTimeString(),
+        error: `Invalid aggregation: ${aggregationErrors.map(e => e.message).join('; ')}`,
+      });
+      return;
+    }
+
+    // Check for computed field errors (missing tables)
+    if (computedFieldErrors.length > 0) {
+      setApiTestResult({
+        success: false,
+        status: 400,
+        rowCount: 0,
+        executionTime: '0ms',
+        timestamp: new Date().toLocaleTimeString(),
+        error: `Missing table: ${computedFieldErrors.map(e => e.message).join('; ')}`,
       });
       return;
     }
@@ -1428,6 +1888,28 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
         operator: f.operator,
         required: true,
       }));
+
+    // Add pagination parameters if enabled
+    if (paginationEnabled) {
+      if (allowPageSizeParam) {
+        parameters.push({
+          name: 'pagesize',
+          columnName: '_pagination',
+          columnType: 'integer',
+          operator: 'equals',
+          required: false,
+        });
+      }
+      if (allowPageCountParam) {
+        parameters.push({
+          name: 'pagecount',
+          columnName: '_pagination',
+          columnType: 'integer',
+          operator: 'equals',
+          required: false,
+        });
+      }
+    }
 
     try {
       const response = await SchemaService.saveQuery(
@@ -1602,7 +2084,23 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
             <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => setAddTableDialogOpen(true)}>
               Add Table
             </Button>
-            <SaveButton size="small" variant="contained" startIcon={<SaveIcon />} onClick={() => setSaveDialogOpen(true)} disabled={!selectedTables.length}>
+            <Button 
+              size="small" 
+              variant="outlined" 
+              startIcon={<FunctionsIcon />} 
+              onClick={openComputedFieldDialog}
+              disabled={selectedTables.length < 1}
+              sx={{ borderColor: '#9c27b0', color: '#9c27b0', '&:hover': { borderColor: '#7b1fa2', backgroundColor: 'rgba(156, 39, 176, 0.08)' } }}
+            >
+              Add Calculation
+            </Button>
+            <SaveButton 
+              size="small" 
+              variant="contained" 
+              startIcon={<SaveIcon />} 
+              onClick={() => setSaveDialogOpen(true)} 
+              disabled={!selectedTables.length || hasValidationErrors}
+            >
               Save API
             </SaveButton>
           </Box>
@@ -1637,7 +2135,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                   {connectionMode === 'join' && 'Merge data where values match'}
                   {connectionMode === 'include' && 'Only show rows that have a match'}
                   {connectionMode === 'exclude' && 'Hide rows that have a match'}
-                  {' • '}From: <strong>{connectingFrom?.tableId}.{connectingFrom?.column}</strong>
+                  {' • '}From: <strong>{connectingFrom?.tableId}.{connectingFrom?.column}</strong> ({connectingFrom?.columnType || 'unknown'})
                 </Typography>
               </Box>
             </Box>
@@ -1645,6 +2143,81 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
               Cancel
             </Button>
           </Box>
+        )}
+
+        {/* Type Mismatch Error Banner */}
+        {connectionTypeErrors.length > 0 && (
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mx: 2, 
+              mt: 1,
+              '& .MuiAlert-message': { width: '100%' },
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+              ⚠️ Incompatible Column Types in JOIN
+            </Typography>
+            {connectionTypeErrors.map(err => (
+              <Typography key={err.id} variant="body2" sx={{ fontSize: '0.8rem' }}>
+                • <strong>{err.sourceTable}.{err.sourceColumn}</strong> ({err.sourceType || 'unknown'}) 
+                {' '}cannot be joined with{' '}
+                <strong>{err.targetTable}.{err.targetColumn}</strong> ({err.targetType || 'unknown'})
+              </Typography>
+            ))}
+            <Typography variant="body2" sx={{ mt: 0.5, fontSize: '0.75rem', color: 'text.secondary' }}>
+              Please select columns with compatible types (e.g., integer with integer, uuid with uuid).
+            </Typography>
+          </Alert>
+        )}
+
+        {/* Invalid Aggregation Error Banner */}
+        {aggregationErrors.length > 0 && (
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mx: 2, 
+              mt: 1,
+              '& .MuiAlert-message': { width: '100%' },
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+              ⚠️ Invalid Aggregation Function
+            </Typography>
+            {aggregationErrors.map((err, idx) => (
+              <Typography key={idx} variant="body2" sx={{ fontSize: '0.8rem' }}>
+                • <strong>{err.aggregation?.toUpperCase()}</strong> cannot be applied to{' '}
+                <strong>{err.tableId}.{err.columnName}</strong> ({getFriendlyTypeName(err.columnType)})
+              </Typography>
+            ))}
+            <Typography variant="body2" sx={{ mt: 0.5, fontSize: '0.75rem', color: 'text.secondary' }}>
+              SUM and AVG only work on numeric columns (integer, decimal, float). Use COUNT for non-numeric columns.
+            </Typography>
+          </Alert>
+        )}
+
+        {/* Missing Table Error Banner for Computed Fields */}
+        {computedFieldErrors.length > 0 && (
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mx: 2, 
+              mt: 1,
+              '& .MuiAlert-message': { width: '100%' },
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+              ⚠️ Missing Table in Calculated Field
+            </Typography>
+            {computedFieldErrors.map((err) => (
+              <Typography key={err.id} variant="body2" sx={{ fontSize: '0.8rem' }}>
+                • {err.message}
+              </Typography>
+            ))}
+            <Typography variant="body2" sx={{ mt: 0.5, fontSize: '0.75rem', color: 'text.secondary' }}>
+              Add the missing table and create a JOIN connection to include it in the query.
+            </Typography>
+          </Alert>
         )}
 
         {/* Toolbar */}
@@ -1822,13 +2395,15 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                       connectingFrom={connectingFrom}
                       onDragStart={(e) => handleTableDragStart(table.id, e)}
                       onRemove={() => handleRemoveTable(table.id)}
-                      onFieldSelect={(col) => toggleFieldSelect(table.id, col)}
-                      onStartConnection={(col, mode) => startConnection(table.id, col, mode)}
-                      onCompleteConnection={(col) => completeConnection(table.id, col)}
+                      onFieldSelect={(col, colType) => toggleFieldSelect(table.id, col, colType)}
+                      onStartConnection={(col, colType, mode) => startConnection(table.id, col, colType, mode)}
+                      onCompleteConnection={(col, colType) => completeConnection(table.id, col, colType)}
                       onToggleSort={(col, order) => toggleFieldSort(table.id, col, order)}
                       onOpenFilter={(col, type) => openFilterDialog(table.id, col, type)}
-                      onOpenAggregation={(col) => openAggDialog(table.id, col)}
+                      onOpenAggregation={(col, colType) => openAggDialog(table.id, col, colType)}
                       onToggleGroup={(col) => toggleGrouping(table.id, col)}
+                      onSetAlias={(col, alias) => handleSetAlias(table.id, col, alias)}
+                      duplicateColumnNames={duplicateColumnNames}
                     />
                   </Box>
                 );
@@ -1954,6 +2529,132 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                         />
                       ))}
                     </Box>
+                  </Box>
+                )}
+
+                {/* Computed Fields */}
+                {computedFields.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <FunctionsIcon sx={{ fontSize: 16, color: '#9c27b0' }} />
+                      Calculated Fields ({computedFields.length})
+                    </Typography>
+                    {computedFields.map(cf => (
+                      <Paper key={cf.id} sx={{ p: 1, mb: 0.5, backgroundColor: isDark ? 'rgba(156, 39, 176, 0.15)' : '#f3e5f5' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#9c27b0' }}>
+                              {cf.name}
+                            </Typography>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: isDark ? '#94a3b8' : '#666', display: 'block' }}>
+                              {cf.aggregation ? `${cf.aggregation.toUpperCase()}(` : ''}
+                              {cf.expression.leftColumn} {cf.expression.operator} {cf.expression.rightColumn}
+                              {cf.aggregation ? ')' : ''}
+                            </Typography>
+                          </Box>
+                          <IconButton size="small" onClick={() => removeComputedField(cf.id)}>
+                            <CloseIcon sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </Box>
+                      </Paper>
+                    ))}
+                  </Box>
+                )}
+
+                {/* Add Calculation Button */}
+                {selectedTables.length > 0 && (
+                  <Button 
+                    fullWidth 
+                    variant="outlined" 
+                    startIcon={<FunctionsIcon />}
+                    onClick={openComputedFieldDialog}
+                    sx={{ 
+                      mt: 2, 
+                      borderColor: '#9c27b0', 
+                      color: '#9c27b0',
+                      '&:hover': { borderColor: '#7b1fa2', backgroundColor: 'rgba(156, 39, 176, 0.08)' }
+                    }}
+                  >
+                    Add Calculated Field
+                  </Button>
+                )}
+
+                {/* Pagination Settings */}
+                {selectedTables.length > 0 && (
+                  <Box sx={{ mt: 3, pt: 2, borderTop: `1px solid ${isDark ? '#334155' : '#e0e0e0'}` }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        📄 Pagination
+                      </Typography>
+                      <FormControlLabel
+                        control={
+                          <Switch 
+                            checked={paginationEnabled} 
+                            onChange={(e) => setPaginationEnabled(e.target.checked)}
+                            size="small"
+                          />
+                        }
+                        label=""
+                        sx={{ m: 0 }}
+                      />
+                    </Box>
+                    
+                    {paginationEnabled && (
+                      <Paper sx={{ p: 1.5, backgroundColor: isDark ? 'rgba(33, 150, 243, 0.1)' : '#f5f5f5' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                          {/* Default Page Size */}
+                          <Box>
+                            <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#666', display: 'block', mb: 0.5 }}>
+                              Default Page Size (rows per page)
+                            </Typography>
+                            <TextField
+                              size="small"
+                              type="number"
+                              value={defaultPageSize}
+                              onChange={(e) => setDefaultPageSize(Math.max(1, parseInt(e.target.value) || 100))}
+                              fullWidth
+                              InputProps={{ inputProps: { min: 1, max: 10000 } }}
+                            />
+                          </Box>
+                          
+                          {/* Parameterize options */}
+                          <Box>
+                            <FormControlLabel
+                              control={
+                                <Checkbox 
+                                  checked={allowPageSizeParam} 
+                                  onChange={(e) => setAllowPageSizeParam(e.target.checked)}
+                                  size="small"
+                                />
+                              }
+                              label={
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  Allow <code style={{ backgroundColor: isDark ? '#1e293b' : '#e0e0e0', padding: '2px 4px', borderRadius: 3 }}>?pagesize=N</code> parameter
+                                </Typography>
+                              }
+                            />
+                            <FormControlLabel
+                              control={
+                                <Checkbox 
+                                  checked={allowPageCountParam} 
+                                  onChange={(e) => setAllowPageCountParam(e.target.checked)}
+                                  size="small"
+                                />
+                              }
+                              label={
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  Allow <code style={{ backgroundColor: isDark ? '#1e293b' : '#e0e0e0', padding: '2px 4px', borderRadius: 3 }}>?pagecount=N</code> parameter
+                                </Typography>
+                              }
+                            />
+                          </Box>
+                          
+                          <Alert severity="info" sx={{ py: 0.5, fontSize: '0.75rem' }}>
+                            API will support: <code>?pagesize=50&pagecount=2</code>
+                          </Alert>
+                        </Box>
+                      </Paper>
+                    )}
                   </Box>
                 )}
               </Box>
@@ -2402,11 +3103,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
             variant="contained" 
             disabled={tablesToAdd.length === 0}
             onClick={() => {
-              // Add all selected tables
-              tablesToAdd.forEach(tableId => {
-                const table = tables.find((t: any) => t.id === tableId);
-                if (table) handleAddTable(table);
-              });
+              // Add all selected tables with proper positions
+              handleAddMultipleTables(tablesToAdd);
               setAddTableDialogOpen(false);
               setTableSearchQuery('');
               setTablesToAdd([]);
@@ -2531,6 +3229,154 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
         <DialogActions>
           <Button onClick={() => setAggDialogOpen(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleAddAggregation}>Apply</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Computed Field Dialog */}
+      <Dialog open={computedFieldDialogOpen} onClose={() => setComputedFieldDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FunctionsIcon sx={{ color: '#9c27b0' }} />
+            Create Calculated Field
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ color: isDark ? '#94a3b8' : '#666', mb: 2 }}>
+            Create a calculation using two columns (e.g., quantity × price for order totals)
+          </Typography>
+          
+          <TextField
+            fullWidth
+            label="Field Name (alias)"
+            placeholder="e.g., total_price"
+            value={computedFieldName}
+            onChange={(e) => setComputedFieldName(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mb: 2 }}>
+            {/* Left Column */}
+            <Box sx={{ flex: 1 }}>
+              <FormControl fullWidth size="small" sx={{ mb: 1 }}>
+                <InputLabel>Table</InputLabel>
+                <Select 
+                  value={computedLeftTable} 
+                  onChange={(e) => { setComputedLeftTable(e.target.value); setComputedLeftColumn(''); }}
+                  label="Table"
+                >
+                  {selectedTables.map(t => (
+                    <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth size="small">
+                <InputLabel>Column</InputLabel>
+                <Select 
+                  value={computedLeftColumn} 
+                  onChange={(e) => setComputedLeftColumn(e.target.value)}
+                  label="Column"
+                  disabled={!computedLeftTable}
+                >
+                  {selectedTables.find(t => t.id === computedLeftTable)?.columns
+                    .filter(c => {
+                      const t = c.type.toLowerCase();
+                      return t.includes('int') || t.includes('decimal') || t.includes('numeric') || 
+                             t.includes('float') || t.includes('double') || t.includes('real') || t.includes('money');
+                    })
+                    .map(c => (
+                      <MenuItem key={c.name} value={c.name}>{c.name} ({c.type})</MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            {/* Operator */}
+            <FormControl sx={{ minWidth: 80 }} size="small">
+              <InputLabel>Op</InputLabel>
+              <Select 
+                value={computedOperator} 
+                onChange={(e) => setComputedOperator(e.target.value as '*' | '+' | '-' | '/')}
+                label="Op"
+              >
+                <MenuItem value="*">× (multiply)</MenuItem>
+                <MenuItem value="+">+ (add)</MenuItem>
+                <MenuItem value="-">− (subtract)</MenuItem>
+                <MenuItem value="/">÷ (divide)</MenuItem>
+              </Select>
+            </FormControl>
+
+            {/* Right Column */}
+            <Box sx={{ flex: 1 }}>
+              <FormControl fullWidth size="small" sx={{ mb: 1 }}>
+                <InputLabel>Table</InputLabel>
+                <Select 
+                  value={computedRightTable} 
+                  onChange={(e) => { setComputedRightTable(e.target.value); setComputedRightColumn(''); }}
+                  label="Table"
+                >
+                  {selectedTables.map(t => (
+                    <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth size="small">
+                <InputLabel>Column</InputLabel>
+                <Select 
+                  value={computedRightColumn} 
+                  onChange={(e) => setComputedRightColumn(e.target.value)}
+                  label="Column"
+                  disabled={!computedRightTable}
+                >
+                  {selectedTables.find(t => t.id === computedRightTable)?.columns
+                    .filter(c => {
+                      const t = c.type.toLowerCase();
+                      return t.includes('int') || t.includes('decimal') || t.includes('numeric') || 
+                             t.includes('float') || t.includes('double') || t.includes('real') || t.includes('money');
+                    })
+                    .map(c => (
+                      <MenuItem key={c.name} value={c.name}>{c.name} ({c.type})</MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
+            </Box>
+          </Box>
+
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Aggregation (optional)</InputLabel>
+            <Select 
+              value={computedAggregation} 
+              onChange={(e) => setComputedAggregation(e.target.value as any)}
+              label="Aggregation (optional)"
+            >
+              <MenuItem value="">None (raw value)</MenuItem>
+              <MenuItem value="sum">SUM - Total of all values</MenuItem>
+              <MenuItem value="avg">AVG - Average value</MenuItem>
+              <MenuItem value="min">MIN - Minimum value</MenuItem>
+              <MenuItem value="max">MAX - Maximum value</MenuItem>
+              <MenuItem value="count">COUNT - Number of rows</MenuItem>
+            </Select>
+          </FormControl>
+
+          {computedFieldName && computedLeftColumn && computedRightColumn && (
+            <Paper sx={{ p: 1.5, backgroundColor: isDark ? '#1a1f35' : '#f5f5f5', borderRadius: 1 }}>
+              <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#666' }}>Preview:</Typography>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
+                {computedAggregation ? `${computedAggregation.toUpperCase()}(` : ''}
+                {computedLeftTable}.{computedLeftColumn} {computedOperator} {computedRightTable}.{computedRightColumn}
+                {computedAggregation ? ')' : ''} AS {computedFieldName}
+              </Typography>
+            </Paper>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setComputedFieldDialogOpen(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleAddComputedField}
+            disabled={!computedFieldName || !computedLeftColumn || !computedRightColumn}
+          >
+            Add Calculated Field
+          </Button>
         </DialogActions>
       </Dialog>
 

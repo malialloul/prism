@@ -234,6 +234,14 @@ export const connectDatabaseService = async (
     throw new ValidationError(testResult.message);
   }
 
+  // Disconnect all other databases for this user first
+  await pool.query(
+    `UPDATE database_connections 
+     SET status = 'disconnected', updated_at = NOW()
+     WHERE user_id = $1 AND status = 'connected'`,
+    [userId]
+  );
+
   // Encrypt the decrypted password for storage
   const passwordEncrypted = encrypt(decryptedPassword);
 
@@ -383,6 +391,14 @@ export const createDatabaseService = async (
     }
   }
 
+  // Disconnect all other databases for this user first
+  await pool.query(
+    `UPDATE database_connections 
+     SET status = 'disconnected', updated_at = NOW()
+     WHERE user_id = $1 AND status = 'connected'`,
+    [userId]
+  );
+
   // Encrypt the password for storage (so we can connect to it later)
   const passwordEncrypted = encrypt(decryptedPassword);
 
@@ -402,6 +418,16 @@ export const createDatabaseService = async (
  * Get all databases for a user
  */
 export const getDatabasesService = async (userId: string): Promise<DatabaseDto[]> => {
+  // First, sync the apis count with actual saved_queries for this user
+  await pool.query(`
+    UPDATE database_connections dc
+    SET apis = (
+      SELECT COUNT(*) FROM saved_queries sq 
+      WHERE sq.database_id = dc.id AND sq.user_id = $1
+    )
+    WHERE dc.user_id = $1
+  `, [userId]);
+
   const result = await pool.query<DbDatabaseConnectionDto>(
     'SELECT * FROM database_connections WHERE user_id = $1 ORDER BY created_at DESC',
     [userId]

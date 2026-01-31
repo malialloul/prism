@@ -2,8 +2,8 @@
 
 import type { ApiResponseDto } from '../../../utils/errors';
 
-// Schema object types
-export type SchemaObjectType = 'table' | 'view' | 'index' | 'procedure' | 'function';
+// Schema object types - only tables now
+export type SchemaObjectType = 'table';
 
 export interface SchemaObjectDto {
   name: string;
@@ -50,35 +50,6 @@ export interface TableDetailsDto {
   constraints: ConstraintDto[];
   rowCount: number;
   sampleData: Record<string, unknown>[];
-}
-
-export interface ViewDetailsDto {
-  name: string;
-  schema: string;
-  definition: string;
-  columns: ColumnDto[];
-}
-
-export interface ProcedureDetailsDto {
-  name: string;
-  schema: string;
-  definition: string;
-  parameters: {
-    name: string;
-    type: string;
-    mode: 'IN' | 'OUT' | 'INOUT';
-  }[];
-}
-
-export interface FunctionDetailsDto {
-  name: string;
-  schema: string;
-  definition: string;
-  returnType: string;
-  parameters: {
-    name: string;
-    type: string;
-  }[];
 }
 
 // Query types
@@ -153,62 +124,15 @@ export interface DropColumnDto {
   name: string;
 }
 
-// View management types
-export interface CreateViewDto {
-  name: string;
-  definition: string;
-}
-
-// Function management types
-export interface FunctionParameterDto {
-  name: string;
-  type: string;
-}
-
-export interface CreateFunctionDto {
-  name: string;
-  parameters: FunctionParameterDto[];
-  returnType: string;
-  body: string;
-  language?: 'sql' | 'plpgsql';
-  /** If true, drop existing function first before creating */
-  isEdit?: boolean;
-}
-
-// Procedure management types
-export interface ProcedureParameterDto {
-  name: string;
-  type: string;
-  mode: 'IN' | 'OUT' | 'INOUT';
-}
-
-export interface CreateProcedureDto {
-  name: string;
-  parameters: ProcedureParameterDto[];
-  body: string;
-  language?: 'sql' | 'plpgsql';
-  /** If true, drop existing procedure first before creating */
-  isEdit?: boolean;
-}
-
 // Response types
 export type GetSchemaObjectsResponseDto = ApiResponseDto<{ objects: SchemaObjectDto[] }>;
 export type GetTableDetailsResponseDto = ApiResponseDto<{ table: TableDetailsDto }>;
-export type GetViewDetailsResponseDto = ApiResponseDto<{ view: ViewDetailsDto }>;
-export type GetProcedureDetailsResponseDto = ApiResponseDto<{ procedure: ProcedureDetailsDto }>;
-export type GetFunctionDetailsResponseDto = ApiResponseDto<{ function: FunctionDetailsDto }>;
 export type ExecuteQueryResponseDto = ApiResponseDto<QueryResultDto>;
 export type GetSavedQueriesResponseDto = ApiResponseDto<{ queries: SavedQueryDto[] }>;
 export type SaveQueryResponseDto = ApiResponseDto<{ query: SavedQueryDto }>;
 export type CreateTableResponseDto = ApiResponseDto<{ message: string }>;
 export type ModifyTableResponseDto = ApiResponseDto<{ message: string }>;
 export type DropTableResponseDto = ApiResponseDto<{ message: string }>;
-export type CreateViewResponseDto = ApiResponseDto<{ message: string }>;
-export type DropViewResponseDto = ApiResponseDto<{ message: string }>;
-export type CreateFunctionResponseDto = ApiResponseDto<{ message: string }>;
-export type DropFunctionResponseDto = ApiResponseDto<{ message: string }>;
-export type CreateProcedureResponseDto = ApiResponseDto<{ message: string }>;
-export type DropProcedureResponseDto = ApiResponseDto<{ message: string }>;
 
 // Data type constants
 export const POSTGRES_DATA_TYPES = [

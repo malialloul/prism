@@ -26,10 +26,10 @@ import DeleteDatabaseDialog from "./DeleteDatabaseDialog/DeleteDatabaseDialog";
 import SwitchDatabaseDialog from "./SwitchDatabaseDialog/SwitchDatabaseDialog";
 import { SchemaExplorer, ObjectDetailsPanel } from "./SchemaExplorer";
 import { QueryEditor } from "./QueryEditor";
-import { CreateTableDialog, CreateViewDialog, CreateFunctionDialog, CreateProcedureDialog, AddColumnDialog, DeleteTableDialog, ConfirmDialog, TableEditor } from "./TableEditor";
+import { CreateTableDialog, AddColumnDialog, DeleteTableDialog, ConfirmDialog, TableEditor } from "./TableEditor";
 import { ApisPage } from "./ApisPage";
 import { useDatabases, useRefreshDatabase, useDisconnectDatabase, useReconnectDatabase } from "../../api/entities/databases";
-import { useDropProcedure, useDropFunction, useProcedureDetails, useFunctionDetails, useSchemaObjects } from "../../api/entities/schema";
+import { useSchemaObjects } from "../../api/entities/schema";
 import { toastService } from "../../services";
 
 // Icons
@@ -37,8 +37,7 @@ import AddIcon from "@mui/icons-material/Add";
 import LinkIcon from "@mui/icons-material/Link";
 import TableViewIcon from "@mui/icons-material/TableView";
 import { DatabaseDto } from "../../api/models/DatabaseDto";
-
-type SelectedObjectType = 'table' | 'view' | 'index' | 'procedure' | 'function';
+import { SchemaObjectType } from "../../api/models/SchemaDto";
 
 export default function Dashboard() {
   // Main navigation tab (Dashboard / APIs)
@@ -79,7 +78,7 @@ export default function Dashboard() {
 
   // Schema Explorer state
   const [selectedObjectName, setSelectedObjectName] = useState<string | null>(null);
-  const [selectedObjectType, setSelectedObjectType] = useState<SelectedObjectType>('table');
+  const [selectedObjectType, setSelectedObjectType] = useState<SchemaObjectType>('table');
 
   // Table Management state
   const [isCreateTableDialogOpen, setIsCreateTableDialogOpen] = useState(false);
@@ -113,18 +112,7 @@ export default function Dashboard() {
 
   // Fetch schema objects to get existing procedure/function names
   const { data: schemaData } = useSchemaObjects(connectedDatabase?.id);
-  const existingProcedures = schemaData?.objects?.filter(o => o.type === 'procedure').map(o => o.name) || [];
-  const existingFunctions = schemaData?.objects?.filter(o => o.type === 'function').map(o => o.name) || [];
-
-  // Fetch procedure/function details when editing
-  const { data: editProcedureData } = useProcedureDetails(
-    editingProcedureName && connectedDatabase ? connectedDatabase.id : undefined,
-    editingProcedureName || undefined
-  );
-  const { data: editFunctionData } = useFunctionDetails(
-    editingFunctionName && connectedDatabase ? connectedDatabase.id : undefined,
-    editingFunctionName || undefined
-  );
+  
 
   // Auto-refresh connected databases on mount to get fresh stats
   useEffect(() => {
@@ -137,7 +125,7 @@ export default function Dashboard() {
     }
   }, [databases, refreshDatabase]);
 
-  // Auto-select last connected database when data loads
+  // Auto-select and auto-reconnect last connected database when data loads
   useEffect(() => {
     if (databases.length > 0 && selectedDatabaseId === null) {
       // Find the most recently connected database
@@ -146,34 +134,21 @@ export default function Dashboard() {
         return db.lastConnectedAt > latest.lastConnectedAt ? db : latest;
       }, databases[0]);
       setSelectedDatabaseId(lastConnected.id);
+      
+      // If no database is currently connected, auto-reconnect to the last one
+      const hasConnected = databases.some(db => db.status === 'connected');
+      if (!hasConnected && lastConnected) {
+        reconnectDatabase(lastConnected.id);
+      }
     }
-  }, [databases, selectedDatabaseId]);
+  }, [databases, selectedDatabaseId, reconnectDatabase]);
 
   const selectedDatabase =
     databases.find((db) => db.id === selectedDatabaseId) || null;
 
-  // Delete procedure/function mutations
-  const { mutate: dropProcedure } = useDropProcedure(selectedDatabaseId ?? 0, {
-    onSuccess: () => {
-      toastService.success('Procedure deleted successfully');
-      setSchemaVersion(v => v + 1);
-      setSelectedObjectName(null);
-    },
-    onError: (error) => {
-      toastService.error(error.message || 'Failed to delete procedure');
-    },
-  });
+ 
 
-  const { mutate: dropFunction } = useDropFunction(selectedDatabaseId ?? 0, {
-    onSuccess: () => {
-      toastService.success('Function deleted successfully');
-      setSchemaVersion(v => v + 1);
-      setSelectedObjectName(null);
-    },
-    onError: (error) => {
-      toastService.error(error.message || 'Failed to delete function');
-    },
-  });
+  
 
   const handleSelectDatabase = (id: number) => {
     const targetDb: DatabaseDto | undefined = databases.find((db) => db.id === id);
@@ -280,7 +255,7 @@ export default function Dashboard() {
   };
 
   // Schema Explorer handlers
-  const handleSelectObject = (name: string, type: SelectedObjectType) => {
+  const handleSelectObject = (name: string, type: SchemaObjectType) => {
     setSelectedObjectName(name);
     setSelectedObjectType(type);
   };
@@ -341,69 +316,9 @@ export default function Dashboard() {
     setActiveTab(2);
   };
 
-  const handleTestProcedure = (procedureName: string, query?: string) => {
-    // Use provided query or create a basic CALL statement
-    const callQuery = query || `CALL ${procedureName}();`;
-    setInitialQuery(callQuery);
-    // Switch to Query Editor tab
-    setActiveTab(2);
-  };
+ 
 
-  const handleTestFunction = (functionName: string, query?: string) => {
-    // Use provided query or create a basic SELECT statement
-    const selectQuery = query || `SELECT ${functionName}();`;
-    setInitialQuery(selectQuery);
-    // Switch to Query Editor tab
-    setActiveTab(2);
-  };
 
-  const handleDeleteView = (viewName: string) => {
-    setTableToModify(viewName);
-    setIsDeleteTableDialogOpen(true); // Reuse delete dialog for views
-  };
-
-  const handleEditProcedure = (procedureName: string) => {
-    setEditingProcedureName(procedureName);
-    setTableToModify(procedureName);
-    setIsCreateProcedureDialogOpen(true);
-  };
-
-  const handleDeleteProcedure = (procedureName: string) => {
-    setProcedureToDelete(procedureName);
-  };
-
-  const handleConfirmDeleteProcedure = () => {
-    if (procedureToDelete) {
-      dropProcedure(procedureToDelete);
-      setProcedureToDelete(null);
-    }
-  };
-
-  const handleEditFunction = (functionName: string) => {
-    setEditingFunctionName(functionName);
-    setTableToModify(functionName);
-    setIsCreateFunctionDialogOpen(true);
-  };
-
-  const handleDeleteFunction = (functionName: string) => {
-    setFunctionToDelete(functionName);
-  };
-
-  const handleConfirmDeleteFunction = () => {
-    if (functionToDelete) {
-      dropFunction(functionToDelete);
-      setFunctionToDelete(null);
-    }
-  };
-
-  const handleCreateView = () => {
-    setIsCreateViewDialogOpen(true);
-  };
-
-  const handleViewCreated = () => {
-    setSchemaVersion(v => v + 1); // Refresh schema to show new view
-    toastService.success('View created successfully');
-  };
 
   const handleSchemaChanged = () => {
     setSchemaVersion(v => v + 1); // Refresh schema
@@ -566,9 +481,6 @@ export default function Dashboard() {
                     databaseId={connectedDatabase.id}
                     onSelectObject={handleSelectObject}
                     onCreateTable={handleCreateTable}
-                    onCreateView={handleCreateView}
-                    onCreateFunction={() => setIsCreateFunctionDialogOpen(true)}
-                    onCreateProcedure={() => setIsCreateProcedureDialogOpen(true)}
                   />
                   {selectedObjectName && (
                     <ObjectDetailsPanel
@@ -582,13 +494,6 @@ export default function Dashboard() {
                       onDeleteTable={handleDeleteTable}
                       onNavigateToTable={(tableName) => handleSelectObject(tableName, 'table')}
                       onQueryView={handleQueryView}
-                      onDeleteView={handleDeleteView}
-                      onTestProcedure={handleTestProcedure}
-                      onTestFunction={handleTestFunction}
-                      onEditProcedure={handleEditProcedure}
-                      onDeleteProcedure={handleDeleteProcedure}
-                      onEditFunction={handleEditFunction}
-                      onDeleteFunction={handleDeleteFunction}
                     />
                   )}
                 </TabPanel>
@@ -652,39 +557,7 @@ export default function Dashboard() {
             engine={connectedDatabase.engine}
             onSuccess={handleTableCreated}
           />
-          <CreateViewDialog
-            open={isCreateViewDialogOpen}
-            onClose={() => setIsCreateViewDialogOpen(false)}
-            databaseId={connectedDatabase.id}
-            engine={connectedDatabase.engine}
-            onSuccess={handleViewCreated}
-          />
-          <CreateFunctionDialog
-            open={isCreateFunctionDialogOpen}
-            onClose={() => {
-              setIsCreateFunctionDialogOpen(false);
-              setEditingFunctionName(null);
-            }}
-            databaseId={connectedDatabase.id}
-            engine={connectedDatabase.engine}
-            onSuccess={handleSchemaChanged}
-            editFunction={editFunctionData?.function}
-            existingFunctions={existingFunctions}
-            isEditMode={!!editingFunctionName}
-          />
-          <CreateProcedureDialog
-            open={isCreateProcedureDialogOpen}
-            onClose={() => {
-              setIsCreateProcedureDialogOpen(false);
-              setEditingProcedureName(null);
-            }}
-            databaseId={connectedDatabase.id}
-            engine={connectedDatabase.engine}
-            onSuccess={handleSchemaChanged}
-            editProcedure={editProcedureData?.procedure}
-            existingProcedures={existingProcedures}
-            isEditMode={!!editingProcedureName}
-          />
+        
           {tableToModify && (
             <>
               <AddColumnDialog
@@ -722,35 +595,9 @@ export default function Dashboard() {
             </>
           )}
 
-          {/* Delete Procedure Confirmation Dialog */}
-          <ConfirmDialog
-            open={!!procedureToDelete}
-            onClose={() => setProcedureToDelete(null)}
-            onConfirm={handleConfirmDeleteProcedure}
-            title="Delete Procedure"
-            message={
-              <>
-                You are about to permanently delete the procedure <strong>"{procedureToDelete}"</strong>.
-                This action is irreversible and cannot be undone.
-              </>
-            }
-            confirmText="Delete Procedure"
-          />
+        
 
-          {/* Delete Function Confirmation Dialog */}
-          <ConfirmDialog
-            open={!!functionToDelete}
-            onClose={() => setFunctionToDelete(null)}
-            onConfirm={handleConfirmDeleteFunction}
-            title="Delete Function"
-            message={
-              <>
-                You are about to permanently delete the function <strong>"{functionToDelete}"</strong>.
-                This action is irreversible and cannot be undone.
-              </>
-            }
-            confirmText="Delete Function"
-          />
+         
         </>
       )}
     </DashboardWrapper>

@@ -9,9 +9,6 @@ import { logQueryExecution, detectQueryType } from '../queryStats.service';
 import type {
   SchemaObjectDto,
   TableDetailsDto,
-  ViewDetailsDto,
-  ProcedureDetailsDto,
-  FunctionDetailsDto,
   ColumnDto,
   IndexDto,
   ConstraintDto,
@@ -20,10 +17,52 @@ import type {
   CreateTableDto,
   AddColumnDto,
   ModifyColumnDto,
-  CreateViewDto,
-  CreateFunctionDto,
-  CreateProcedureDto,
 } from './schema.types';
+
+// Internal types for deprecated view/function/procedure features (kept for backward compatibility)
+interface ViewDetailsDto {
+  name: string;
+  schema: string;
+  definition: string;
+  columns: ColumnDto[];
+}
+
+interface ProcedureDetailsDto {
+  name: string;
+  schema: string;
+  definition: string;
+  parameters: Array<{ name: string; type: string; mode: string }>;
+}
+
+interface FunctionDetailsDto {
+  name: string;
+  schema: string;
+  definition: string;
+  returnType: string;
+  parameters: Array<{ name: string; type: string }>;
+}
+
+interface CreateViewDto {
+  name: string;
+  definition: string;
+}
+
+interface CreateFunctionDto {
+  name: string;
+  returnType: string;
+  parameters: Array<{ name: string; type: string }>;
+  body: string;
+  language?: string;
+  isEdit?: boolean;
+}
+
+interface CreateProcedureDto {
+  name: string;
+  parameters: Array<{ name: string; type: string; mode: string }>;
+  body: string;
+  language?: string;
+  isEdit?: boolean;
+}
 
 // Encryption helpers - same as in databases.service.ts
 const ENCRYPTION_KEY = crypto.scryptSync(String(config.jwt.secret), 'salt', 32);
@@ -106,7 +145,7 @@ async function createMysqlConnection(conn: Awaited<ReturnType<typeof getDatabase
 }
 
 /**
- * Get all schema objects (tables, views, procedures, functions)
+ * Get all schema objects (tables only)
  */
 export const getSchemaObjectsService = async (
   userId: string,
@@ -118,7 +157,7 @@ export const getSchemaObjectsService = async (
   if (conn.engine === 'postgres') {
     const pgPool = createPgPool(conn);
     try {
-      // Get tables
+      // Get tables only
       const tablesResult = await pgPool.query(`
         SELECT table_name as name, table_schema as schema
         FROM information_schema.tables 
@@ -127,44 +166,6 @@ export const getSchemaObjectsService = async (
       `);
       tablesResult.rows.forEach((row: { name: string; schema: string }) => {
         objects.push({ name: row.name, type: 'table', schema: row.schema });
-      });
-
-      // Get views
-      const viewsResult = await pgPool.query(`
-        SELECT table_name as name, table_schema as schema
-        FROM information_schema.views 
-        WHERE table_schema = 'public'
-        ORDER BY table_name
-      `);
-      viewsResult.rows.forEach((row: { name: string; schema: string }) => {
-        objects.push({ name: row.name, type: 'view', schema: row.schema });
-      });
-
-      // Get functions
-      const functionsResult = await pgPool.query(`
-        SELECT routine_name as name, routine_schema as schema, routine_type
-        FROM information_schema.routines 
-        WHERE routine_schema = 'public'
-        ORDER BY routine_name
-      `);
-      functionsResult.rows.forEach((row: { name: string; schema: string; routine_type: string }) => {
-        objects.push({ 
-          name: row.name, 
-          type: row.routine_type === 'PROCEDURE' ? 'procedure' : 'function', 
-          schema: row.schema 
-        });
-      });
-
-      // Get indexes (not on primary keys)
-      const indexesResult = await pgPool.query(`
-        SELECT DISTINCT indexname as name, schemaname as schema
-        FROM pg_indexes 
-        WHERE schemaname = 'public' 
-        AND indexname NOT LIKE '%_pkey'
-        ORDER BY indexname
-      `);
-      indexesResult.rows.forEach((row: { name: string; schema: string }) => {
-        objects.push({ name: row.name, type: 'index', schema: row.schema });
       });
 
       await pgPool.end();
@@ -176,7 +177,7 @@ export const getSchemaObjectsService = async (
     // MySQL
     const mysqlConn = await createMysqlConnection(conn);
     try {
-      // Get tables
+      // Get tables only
       const [tables] = await mysqlConn.execute(`
         SELECT table_name as name, table_schema as \`schema\`
         FROM information_schema.tables 
@@ -185,39 +186,6 @@ export const getSchemaObjectsService = async (
       `, [conn.database]);
       (tables as Array<{ name: string; schema: string }>).forEach(row => {
         objects.push({ name: row.name, type: 'table', schema: row.schema });
-      });
-
-      // Get views
-      const [views] = await mysqlConn.execute(`
-        SELECT table_name as name, table_schema as \`schema\`
-        FROM information_schema.views 
-        WHERE table_schema = ?
-        ORDER BY table_name
-      `, [conn.database]);
-      (views as Array<{ name: string; schema: string }>).forEach(row => {
-        objects.push({ name: row.name, type: 'view', schema: row.schema });
-      });
-
-      // Get procedures
-      const [procedures] = await mysqlConn.execute(`
-        SELECT routine_name as name, routine_schema as \`schema\`
-        FROM information_schema.routines 
-        WHERE routine_schema = ? AND routine_type = 'PROCEDURE'
-        ORDER BY routine_name
-      `, [conn.database]);
-      (procedures as Array<{ name: string; schema: string }>).forEach(row => {
-        objects.push({ name: row.name, type: 'procedure', schema: row.schema });
-      });
-
-      // Get functions
-      const [functions] = await mysqlConn.execute(`
-        SELECT routine_name as name, routine_schema as \`schema\`
-        FROM information_schema.routines 
-        WHERE routine_schema = ? AND routine_type = 'FUNCTION'
-        ORDER BY routine_name
-      `, [conn.database]);
-      (functions as Array<{ name: string; schema: string }>).forEach(row => {
-        objects.push({ name: row.name, type: 'function', schema: row.schema });
       });
 
       await mysqlConn.end();
@@ -1064,6 +1032,12 @@ export const saveQueryService = async (
     [userId, databaseId, name, slug, description, sql, parametersJson, method, isPublic]
   );
 
+  // Increment the apis count in database_connections
+  await pool.query(
+    'UPDATE database_connections SET apis = apis + 1 WHERE id = $1',
+    [databaseId]
+  );
+
   const row = result.rows[0];
   return {
     id: row.id,
@@ -1124,8 +1098,26 @@ export const executeSavedQueryService = async (
   let sql = savedQuery.sql;
   const parameters: any[] = savedQuery.parameters ? JSON.parse(savedQuery.parameters) : [];
 
-  // Replace parameters in SQL
+  // Handle pagination only if the SQL contains pagination placeholders
+  // This means pagination was enabled when the query was created
+  if (sql.includes(':pagesize') || sql.includes(':offset')) {
+    // pagecount is 1-indexed, offset = (pagecount - 1) * pagesize
+    const pagesize = params['pagesize'] ? parseInt(params['pagesize']) : 100;
+    const pagecount = params['pagecount'] ? parseInt(params['pagecount']) : 1;
+    const offset = (pagecount - 1) * pagesize;
+    
+    // Replace pagination placeholders in SQL
+    sql = sql.split(':pagesize').join(String(pagesize));
+    sql = sql.split(':offset').join(String(offset));
+  }
+
+  // Replace other parameters in SQL
   for (const param of parameters) {
+    // Skip pagination params as they're already handled
+    if (param.name === 'pagesize' || param.name === 'pagecount') {
+      continue;
+    }
+    
     const value = params[param.name];
     if (value === undefined && param.required !== false) {
       throw new ValidationError(`Missing required parameter: ${param.name}`);
@@ -1251,8 +1243,23 @@ export const executePublicQueryService = async (
   let sql = savedQuery.sql;
   const parameters: any[] = savedQuery.parameters ? JSON.parse(savedQuery.parameters) : [];
 
+  // Handle pagination only if the SQL contains pagination placeholders
+  if (sql.includes(':pagesize') || sql.includes(':offset')) {
+    const pagesize = params['pagesize'] ? parseInt(params['pagesize']) : 100;
+    const pagecount = params['pagecount'] ? parseInt(params['pagecount']) : 1;
+    const offset = (pagecount - 1) * pagesize;
+    
+    sql = sql.split(':pagesize').join(String(pagesize));
+    sql = sql.split(':offset').join(String(offset));
+  }
+
   // Replace parameters in SQL
   for (const param of parameters) {
+    // Skip pagination params as they're already handled
+    if (param.name === 'pagesize' || param.name === 'pagecount') {
+      continue;
+    }
+    
     const value = params[param.name];
     if (value === undefined && param.required !== false) {
       throw new ValidationError(`Missing required parameter: ${param.name}`);
@@ -1370,6 +1377,18 @@ export const deleteQueryService = async (
   userId: string,
   queryId: string
 ): Promise<void> => {
+  // First get the database_id before deleting
+  const queryInfo = await pool.query(
+    'SELECT database_id FROM saved_queries WHERE id = $1 AND user_id = $2',
+    [queryId, userId]
+  );
+
+  if (queryInfo.rowCount === 0) {
+    throw new NotFoundError('Query not found');
+  }
+
+  const databaseId = queryInfo.rows[0].database_id;
+
   const result = await pool.query(
     'DELETE FROM saved_queries WHERE id = $1 AND user_id = $2',
     [queryId, userId]
@@ -1378,6 +1397,12 @@ export const deleteQueryService = async (
   if (result.rowCount === 0) {
     throw new NotFoundError('Query not found');
   }
+
+  // Decrement the apis count in database_connections
+  await pool.query(
+    'UPDATE database_connections SET apis = GREATEST(apis - 1, 0) WHERE id = $1',
+    [databaseId]
+  );
 };
 
 /**

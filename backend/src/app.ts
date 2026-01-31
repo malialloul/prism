@@ -3,7 +3,7 @@ import cors from "cors";
 import authRoutes from "./modules/auth/auth.routes";
 import logsRoutes from "./modules/logs/logs.routes";
 import databasesRoutes from "./modules/databases/databases.routes";
-import schemaRoutes from "./modules/databases/schema/schema.routes";
+import schemaRoutes, { publicSchemaRoutes } from "./modules/databases/schema/schema.routes";
 import { crudRoutes } from "./modules/databases/crud";
 import swaggerUi from "swagger-ui-express";
 import { openapiDoc } from "./openapi";
@@ -21,6 +21,9 @@ app.use(express.json());
 
 app.use("/auth", authRoutes);
 app.use("/logs", logsRoutes);
+// Public schema routes MUST come first (no auth required)
+app.use("/databases", publicSchemaRoutes);
+// Then authenticated routes
 app.use("/databases", databasesRoutes);
 app.use("/databases", schemaRoutes);
 app.use("/databases", crudRoutes); // Dynamic CRUD API endpoints
