@@ -12,3 +12,8 @@ export { useDisable2FA } from './useDisable2FA';
 export { useLogin2FA } from './useLogin2FA';
 export { useDeactivateAccount } from './useDeactivateAccount';
 export { useDeleteAccount } from './useDeleteAccount';
+export { useShareAccount } from './useShareAccount';
+export { useSharedAccounts, useRevokeShare } from './useSharedAccounts';
+export { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead } from './useNotifications';
+export { useDeleteNotification } from './useDeleteNotification';
+export { useSharedLogin } from './useSharedLogin';

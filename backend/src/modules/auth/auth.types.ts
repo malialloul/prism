@@ -99,6 +99,93 @@ export interface TwoFactorStatusDto {
   enabled: boolean;
 }
 
+// Account Sharing types
+export interface ShareAccountDto {
+  email: string;
+  expiresInDays?: number;
+}
+
+export interface AcceptShareDto {
+  shareId: number;
+}
+
+export interface RevokeShareDto {
+  shareId: number;
+}
+
+export interface SharedLoginDto {
+  ownerEmail: string;
+  tempPassword: string;
+}
+
+export interface SharedAccountDto {
+  id: number;
+  ownerUserId: number;
+  ownerEmail: string;
+  ownerFullName: string | null;
+  sharedWithEmail: string;
+  sharedWithUserId: number | null;
+  status: 'pending' | 'accepted' | 'revoked';
+  tempPassword?: string; // Only returned when creating a share
+  expiresAt: Date;
+  acceptedAt: Date | null;
+  revokedAt: Date | null;
+  createdAt: Date;
+}
+
+export interface NotificationDto {
+  id: number;
+  userId: number;
+  type: 'account_shared' | 'share_accepted' | 'share_revoked' | 'general';
+  title: string;
+  message: string;
+  metadata: Record<string, unknown> | null;
+  readAt: Date | null;
+  createdAt: Date;
+}
+
+export interface ShareAccountResultDto {
+  share: SharedAccountDto;
+  message: string;
+}
+
+export interface SharedAccountsListDto {
+  sharedByMe: SharedAccountDto[];
+  sharedWithMe: SharedAccountDto[];
+}
+
+export interface NotificationsListDto {
+  notifications: NotificationDto[];
+  unreadCount: number;
+}
+
+// Database row types for account sharing
+export interface DbSharedAccountDto {
+  id: number;
+  owner_user_id: number;
+  shared_with_email: string;
+  shared_with_user_id: number | null;
+  temp_password_hash: string;
+  status: 'pending' | 'accepted' | 'revoked';
+  expires_at: Date;
+  accepted_at: Date | null;
+  revoked_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface DbNotificationDto {
+  id: number;
+  user_id: number;
+  type: 'account_shared' | 'share_accepted' | 'share_revoked' | 'general';
+  title: string;
+  message: string;
+  metadata: string | null;
+  read_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
 export interface ChangeEmailResultDto {
   token: string;
   message: string;
@@ -167,3 +254,18 @@ export type TwoFactorRequiredResponseDto = ApiResponseDto<TwoFactorRequiredDto>;
 export type DeactivateAccountResponseDto = ApiResponseDto<MessageResponseDto>;
 
 export type DeleteAccountResponseDto = ApiResponseDto<MessageResponseDto>;
+
+// Account sharing response types
+export type ShareAccountResponseDto = ApiResponseDto<ShareAccountResultDto>;
+
+export type SharedAccountsResponseDto = ApiResponseDto<SharedAccountsListDto>;
+
+export type AcceptShareResponseDto = ApiResponseDto<MessageResponseDto>;
+
+export type RevokeShareResponseDto = ApiResponseDto<MessageResponseDto>;
+
+export type SharedLoginResponseDto = ApiResponseDto<TokenResponseDto>;
+
+export type NotificationsResponseDto = ApiResponseDto<NotificationsListDto>;
+
+export type MarkNotificationReadResponseDto = ApiResponseDto<MessageResponseDto>;

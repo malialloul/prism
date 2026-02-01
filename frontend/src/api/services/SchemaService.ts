@@ -179,7 +179,7 @@ export class SchemaService {
         : '';
       return __request(OpenAPI, {
         method: 'GET',
-        url: `/databases/${databaseId}/api/${slugOrId}${queryString}`,
+        url: `/databases/${databaseId}/custom-api/${slugOrId}${queryString}`,
         errors: {
           400: 'Invalid parameters',
           401: 'Unauthorized',
@@ -189,7 +189,7 @@ export class SchemaService {
     } else {
       return __request(OpenAPI, {
         method: 'POST',
-        url: `/databases/${databaseId}/api/${slugOrId}`,
+        url: `/databases/${databaseId}/custom-api/${slugOrId}`,
         body: params,
         mediaType: 'application/json',
         errors: {

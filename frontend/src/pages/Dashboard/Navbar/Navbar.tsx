@@ -15,12 +15,11 @@ import {
   NavTabs,
   NavTab,
 } from './Navbar.styles';
-import { UserAvatar } from '../../../components';
+import { UserAvatar, NotificationBell } from '../../../components';
 import { AppContext } from '../../../App';
 
 // Icons
 import RefreshIcon from '@mui/icons-material/Refresh';
-import NotificationsIcon from '@mui/icons-material/NotificationsOutlined';
 
 interface NavbarProps {
   onRefresh?: () => void;
@@ -67,11 +66,7 @@ export default function Navbar({ onRefresh, activeMainTab = 0, onMainTabChange }
           </ActionButton>
         </Tooltip>
 
-        <Tooltip title="Notifications">
-          <ActionButton>
-            <NotificationsIcon fontSize="small" />
-          </ActionButton>
-        </Tooltip>
+        <NotificationBell />
 
         <UserAvatar variant={darkMode ? 'dark' : 'light'} />
       </RightSection>

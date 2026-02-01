@@ -12,6 +12,7 @@ import {
 import Home from "./pages/Home/Home";
 import SignIn from "./pages/SignIn/SignIn";
 import SignUp from "./pages/SignUp/SignUp";
+import SharedLogin from "./pages/SharedLogin/SharedLogin";
 import ChangePassword from "./pages/ChangePassword/ChangePassword";
 import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
 import DashboardLayout from "./pages/Dashboard/DashboardLayout";
@@ -67,6 +68,7 @@ const App: React.FC = () => {
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/signin" element={<SignIn />} />
+                  <Route path="/shared-login" element={<SharedLogin />} />
                   <Route path="/signup" element={<SignUp />} />
                   <Route path="/change-password" element={<ChangePassword />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />

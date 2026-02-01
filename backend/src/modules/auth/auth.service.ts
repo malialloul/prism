@@ -19,6 +19,9 @@ import type {
   Login2FADto,
   DeactivateAccountDto,
   DeleteAccountDto,
+  ShareAccountDto,
+  RevokeShareDto,
+  SharedLoginDto,
   TokenResponseDto,
   TwoFactorRequiredDto,
   VerifyCodeResultDto,
@@ -27,9 +30,16 @@ import type {
   TwoFactorStatusDto,
   ChangeEmailResultDto,
   MessageResponseDto,
+  ShareAccountResultDto,
+  SharedAccountsListDto,
+  SharedAccountDto,
+  NotificationsListDto,
+  NotificationDto,
   DbUserDto,
   DbPasswordResetTokenDto,
   DbBackupCodeDto,
+  DbSharedAccountDto,
+  DbNotificationDto,
 } from './auth.types';
 import { ConflictError, AuthenticationError, NotFoundError, ValidationError } from '../../utils/errors';
 
@@ -775,4 +785,430 @@ export const deleteAccountService = async (
   await pool.query('DELETE FROM users WHERE id = $1', [userId]);
 
   return { message: 'Account deleted permanently' };
+};
+
+// ============================================================================
+// ACCOUNT SHARING SERVICES
+// ============================================================================
+
+/**
+ * Generate a secure random temporary password
+ */
+const generateTempPassword = (): string => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let password = '';
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+};
+
+/**
+ * Share account with another user
+ */
+export const shareAccountService = async (
+  userId: string,
+  body: ShareAccountDto,
+): Promise<ShareAccountResultDto> => {
+  const { email, expiresInDays = 7 } = body;
+
+  // Find the owner user
+  const ownerResult = await pool.query<DbUserDto>(
+    'SELECT id, email, full_name FROM users WHERE id = $1',
+    [userId],
+  );
+
+  if (!ownerResult.rowCount) {
+    throw new NotFoundError('User not found');
+  }
+
+  const owner = ownerResult.rows[0];
+
+  // Cannot share with yourself
+  if (owner.email.toLowerCase() === email.toLowerCase()) {
+    throw new ValidationError('You cannot share your account with yourself');
+  }
+
+  // Check if target user exists
+  const targetResult = await pool.query<DbUserDto>(
+    'SELECT id, email, full_name FROM users WHERE LOWER(email) = LOWER($1)',
+    [email],
+  );
+
+  const targetUserId = targetResult.rowCount ? targetResult.rows[0].id : null;
+
+  // Check for existing pending/accepted share
+  const existingShare = await pool.query<DbSharedAccountDto>(
+    `SELECT id FROM shared_accounts 
+     WHERE owner_user_id = $1 AND LOWER(shared_with_email) = LOWER($2) 
+     AND status IN ('pending', 'accepted') AND expires_at > NOW()`,
+    [userId, email],
+  );
+
+  if (existingShare.rowCount && existingShare.rowCount > 0) {
+    throw new ConflictError('You already have an active share with this user');
+  }
+
+  // Generate temporary password
+  const tempPassword = generateTempPassword();
+  const tempPasswordHash = await bcrypt.hash(tempPassword, 12);
+
+  // Calculate expiration date
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+
+  // Create the share record
+  const shareResult = await pool.query<DbSharedAccountDto>(
+    `INSERT INTO shared_accounts (owner_user_id, shared_with_email, shared_with_user_id, temp_password_hash, status, expires_at)
+     VALUES ($1, $2, $3, $4, 'pending', $5)
+     RETURNING *`,
+    [userId, email, targetUserId, tempPasswordHash, expiresAt],
+  );
+
+  const share = shareResult.rows[0];
+
+  // Create notification for the target user if they exist
+  if (targetUserId) {
+    await pool.query(
+      `INSERT INTO notifications (user_id, type, title, message, metadata)
+       VALUES ($1, 'account_shared', $2, $3, $4)`,
+      [
+        targetUserId,
+        'Account Shared With You',
+        `${owner.full_name || owner.email} has shared their account with you.`,
+        JSON.stringify({ 
+          shareId: share.id, 
+          ownerEmail: owner.email, 
+          ownerName: owner.full_name,
+          tempPassword, // Include temp password in notification
+        }),
+      ],
+    );
+
+    // Emit real-time notification via WebSocket
+    const { emitNotification } = await import('../../websocket/notificationEmitter');
+    emitNotification(targetUserId.toString(), {
+      id: 0, // Will be updated with actual ID
+      userId: Number(targetUserId),
+      type: 'account_shared',
+      title: 'Account Shared With You',
+      message: `${owner.full_name || owner.email} has shared their account with you.`,
+      metadata: JSON.stringify({ 
+        shareId: share.id, 
+        ownerEmail: owner.email, 
+        ownerName: owner.full_name,
+        tempPassword,
+      }),
+      readAt: null,
+      createdAt: new Date(),
+    });
+  }
+
+  return {
+    share: {
+      id: share.id,
+      ownerUserId: Number(share.owner_user_id),
+      ownerEmail: owner.email,
+      ownerFullName: owner.full_name,
+      sharedWithEmail: share.shared_with_email,
+      sharedWithUserId: share.shared_with_user_id ? Number(share.shared_with_user_id) : null,
+      status: share.status,
+      tempPassword, // Return plain text password only on creation
+      expiresAt: share.expires_at,
+      acceptedAt: share.accepted_at,
+      revokedAt: share.revoked_at,
+      createdAt: share.created_at,
+    },
+    message: `Account shared successfully. Temporary password: ${tempPassword}`,
+  };
+};
+
+/**
+ * Get all shared accounts (both shared by me and shared with me)
+ */
+export const getSharedAccountsService = async (
+  userId: string,
+): Promise<SharedAccountsListDto> => {
+  // Get current user's email
+  const userResult = await pool.query<DbUserDto>(
+    'SELECT email FROM users WHERE id = $1',
+    [userId],
+  );
+
+  if (!userResult.rowCount) {
+    throw new NotFoundError('User not found');
+  }
+
+  const userEmail = userResult.rows[0].email;
+
+  // Get shares where I am the owner
+  const sharedByMeResult = await pool.query<DbSharedAccountDto & { owner_email: string; owner_full_name: string | null }>(
+    `SELECT sa.*, u.email as owner_email, u.full_name as owner_full_name
+     FROM shared_accounts sa
+     JOIN users u ON sa.owner_user_id = u.id
+     WHERE sa.owner_user_id = $1
+     ORDER BY sa.created_at DESC`,
+    [userId],
+  );
+
+  // Get shares where I am the recipient
+  const sharedWithMeResult = await pool.query<DbSharedAccountDto & { owner_email: string; owner_full_name: string | null }>(
+    `SELECT sa.*, u.email as owner_email, u.full_name as owner_full_name
+     FROM shared_accounts sa
+     JOIN users u ON sa.owner_user_id = u.id
+     WHERE LOWER(sa.shared_with_email) = LOWER($1) OR sa.shared_with_user_id = $2
+     ORDER BY sa.created_at DESC`,
+    [userEmail, userId],
+  );
+
+  const mapShare = (row: DbSharedAccountDto & { owner_email: string; owner_full_name: string | null }): SharedAccountDto => ({
+    id: row.id,
+    ownerUserId: Number(row.owner_user_id),
+    ownerEmail: row.owner_email,
+    ownerFullName: row.owner_full_name,
+    sharedWithEmail: row.shared_with_email,
+    sharedWithUserId: row.shared_with_user_id ? Number(row.shared_with_user_id) : null,
+    status: row.status,
+    expiresAt: row.expires_at,
+    acceptedAt: row.accepted_at,
+    revokedAt: row.revoked_at,
+    createdAt: row.created_at,
+  });
+
+  return {
+    sharedByMe: sharedByMeResult.rows.map(mapShare),
+    sharedWithMe: sharedWithMeResult.rows.map(mapShare),
+  };
+};
+
+/**
+ * Revoke a shared account
+ */
+export const revokeShareService = async (
+  userId: string,
+  body: RevokeShareDto,
+): Promise<MessageResponseDto> => {
+  const { shareId } = body;
+
+  // Find the share
+  const shareResult = await pool.query<DbSharedAccountDto>(
+    'SELECT * FROM shared_accounts WHERE id = $1 AND owner_user_id = $2',
+    [shareId, userId],
+  );
+
+  if (!shareResult.rowCount) {
+    throw new NotFoundError('Share not found or you are not the owner');
+  }
+
+  const share = shareResult.rows[0];
+
+  if (share.status === 'revoked') {
+    throw new ValidationError('This share has already been revoked');
+  }
+
+  // Update the share status
+  await pool.query(
+    `UPDATE shared_accounts SET status = 'revoked', revoked_at = NOW(), updated_at = NOW() WHERE id = $1`,
+    [shareId],
+  );
+
+  // Notify the shared user if they exist
+  if (share.shared_with_user_id) {
+    const ownerResult = await pool.query<DbUserDto>(
+      'SELECT email, full_name FROM users WHERE id = $1',
+      [userId],
+    );
+    const owner = ownerResult.rows[0];
+
+    await pool.query(
+      `INSERT INTO notifications (user_id, type, title, message, metadata)
+       VALUES ($1, 'share_revoked', $2, $3, $4)`,
+      [
+        share.shared_with_user_id,
+        'Account Access Revoked',
+        `${owner.full_name || owner.email} has revoked your access to their account.`,
+        JSON.stringify({ shareId, ownerEmail: owner.email }),
+      ],
+    );
+  }
+
+  return { message: 'Account share revoked successfully' };
+};
+
+/**
+ * Login to a shared account using temp password
+ */
+export const sharedLoginService = async (
+  body: SharedLoginDto,
+): Promise<TokenResponseDto> => {
+  const { ownerEmail, tempPassword } = body;
+
+  // Find the owner user
+  const ownerResult = await pool.query<DbUserDto>(
+    'SELECT id, email, full_name, deactivated_at FROM users WHERE LOWER(email) = LOWER($1)',
+    [ownerEmail],
+  );
+
+  if (!ownerResult.rowCount) {
+    throw new AuthenticationError('Invalid credentials');
+  }
+
+  const owner = ownerResult.rows[0];
+
+  if (owner.deactivated_at) {
+    throw new AuthenticationError('This account has been deactivated');
+  }
+
+  // Find a valid share for this owner
+  const shareResult = await pool.query<DbSharedAccountDto>(
+    `SELECT * FROM shared_accounts 
+     WHERE owner_user_id = $1 AND status IN ('pending', 'accepted') AND expires_at > NOW()
+     ORDER BY created_at DESC`,
+    [owner.id],
+  );
+
+  if (!shareResult.rowCount) {
+    throw new AuthenticationError('Invalid credentials');
+  }
+
+  // Try to match the temp password against any active share
+  let validShare: DbSharedAccountDto | null = null;
+  for (const share of shareResult.rows) {
+    const isValid = await bcrypt.compare(tempPassword, share.temp_password_hash);
+    if (isValid) {
+      validShare = share;
+      break;
+    }
+  }
+
+  if (!validShare) {
+    throw new AuthenticationError('Invalid credentials');
+  }
+
+  // Update share status to accepted if pending
+  if (validShare.status === 'pending') {
+    await pool.query(
+      `UPDATE shared_accounts SET status = 'accepted', accepted_at = NOW(), updated_at = NOW() WHERE id = $1`,
+      [validShare.id],
+    );
+
+    // Notify the owner that share was accepted
+    await pool.query(
+      `INSERT INTO notifications (user_id, type, title, message, metadata)
+       VALUES ($1, 'share_accepted', $2, $3, $4)`,
+      [
+        owner.id,
+        'Account Access Accepted',
+        `${validShare.shared_with_email} has accepted access to your account.`,
+        JSON.stringify({ shareId: validShare.id, sharedWithEmail: validShare.shared_with_email }),
+      ],
+    );
+  }
+
+  // Generate token for the owner's account (shared access)
+  const token = jwt.sign(
+    {
+      userId: owner.id,
+      email: owner.email,
+      fullName: owner.full_name ?? undefined,
+      isSharedAccess: true,
+      shareId: validShare.id,
+      sharedWithEmail: validShare.shared_with_email,
+    },
+    config.jwt.secret,
+    { expiresIn: config.jwt.expiresIn },
+  );
+
+  return { token };
+};
+
+// ============================================================================
+// NOTIFICATION SERVICES
+// ============================================================================
+
+/**
+ * Get notifications for a user
+ */
+export const getNotificationsService = async (
+  userId: string,
+): Promise<NotificationsListDto> => {
+  const result = await pool.query<DbNotificationDto>(
+    `SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`,
+    [userId],
+  );
+
+  const unreadResult = await pool.query<{ count: string }>(
+    `SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND read_at IS NULL`,
+    [userId],
+  );
+
+  const notifications: NotificationDto[] = result.rows.map((row) => ({
+    id: row.id,
+    userId: Number(row.user_id),
+    type: row.type,
+    title: row.title,
+    message: row.message,
+    metadata: row.metadata ? JSON.parse(row.metadata) : null,
+    readAt: row.read_at,
+    createdAt: row.created_at,
+  }));
+
+  return {
+    notifications,
+    unreadCount: parseInt(unreadResult.rows[0].count, 10),
+  };
+};
+
+/**
+ * Mark a notification as read
+ */
+export const markNotificationReadService = async (
+  userId: string,
+  notificationId: string,
+): Promise<MessageResponseDto> => {
+  const result = await pool.query(
+    `UPDATE notifications SET read_at = NOW(), updated_at = NOW() 
+     WHERE id = $1 AND user_id = $2 AND read_at IS NULL`,
+    [notificationId, userId],
+  );
+
+  if (!result.rowCount) {
+    throw new NotFoundError('Notification not found or already read');
+  }
+
+  return { message: 'Notification marked as read' };
+};
+
+/**
+ * Mark all notifications as read
+ */
+export const markAllNotificationsReadService = async (
+  userId: string,
+): Promise<MessageResponseDto> => {
+  await pool.query(
+    `UPDATE notifications SET read_at = NOW(), updated_at = NOW() 
+     WHERE user_id = $1 AND read_at IS NULL`,
+    [userId],
+  );
+
+  return { message: 'All notifications marked as read' };
+};
+
+/**
+ * Delete a notification
+ */
+export const deleteNotificationService = async (
+  userId: string,
+  notificationId: string,
+): Promise<MessageResponseDto> => {
+  const result = await pool.query(
+    `DELETE FROM notifications WHERE id = $1 AND user_id = $2`,
+    [notificationId, userId],
+  );
+
+  if (!result.rowCount) {
+    throw new NotFoundError('Notification not found');
+  }
+
+  return { message: 'Notification deleted' };
 };

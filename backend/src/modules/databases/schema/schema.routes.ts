@@ -23,8 +23,8 @@ const router = Router();
 const publicRouter = Router();
 
 // PUBLIC routes (no authentication required) - exported separately
-publicRouter.get('/public/:id/api/:slugOrId', executePublicQuery);
-publicRouter.post('/public/:id/api/:slugOrId', executePublicQuery);
+publicRouter.get('/public/:id/custom-api/:slugOrId', executePublicQuery);
+publicRouter.post('/public/:id/custom-api/:slugOrId', executePublicQuery);
 
 // All routes below require authentication
 router.use(authMiddleware);
@@ -44,8 +44,8 @@ router.delete('/:id/queries/:queryId', deleteSavedQuery);
 router.patch('/:id/queries/:queryId/public', toggleApiPublic);
 
 // Execute saved query with parameters (Custom API endpoint by slug or ID)
-router.get('/:id/api/:slugOrId', executeSavedQuery);
-router.post('/:id/api/:slugOrId', executeSavedQuery);
+router.get('/:id/custom-api/:slugOrId', executeSavedQuery);
+router.post('/:id/custom-api/:slugOrId', executeSavedQuery);
 
 // Table management
 router.post('/:id/tables', createTable);

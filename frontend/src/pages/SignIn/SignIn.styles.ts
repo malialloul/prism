@@ -356,3 +356,10 @@ export const HomeLink = styled(Box)({
     transform: 'translateX(-2px)',
   },
 });
+
+export const BackLinkContainer = styled(Box)({
+  position: 'absolute',
+  top: '2rem',
+  left: '2rem',
+  zIndex: 20,
+});

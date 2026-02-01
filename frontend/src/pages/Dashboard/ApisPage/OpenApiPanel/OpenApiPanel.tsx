@@ -126,7 +126,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
 
   const getPublicEndpoint = (api: SavedQueryDto) => {
     const slug = getSlugFromEndpoint(api.endpoint);
-    return `${window.location.origin}/databases/public/${databaseId}/api/${slug}`;
+    return `${window.location.origin}/databases/public/${databaseId}/custom-api/${slug}`;
   };
 
   if (!connectedDatabase) {

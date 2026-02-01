@@ -13,7 +13,7 @@ const app = express();
 
 // CORS configuration
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
   credentials: true,
 }));
 
@@ -25,8 +25,8 @@ app.use("/logs", logsRoutes);
 app.use("/databases", publicSchemaRoutes);
 // Then authenticated routes
 app.use("/databases", databasesRoutes);
-app.use("/databases", schemaRoutes);
-app.use("/databases", crudRoutes); // Dynamic CRUD API endpoints
+app.use("/databases", crudRoutes); // Dynamic CRUD API endpoints - MUST be before schemaRoutes
+app.use("/databases", schemaRoutes); // Custom query APIs (saved queries) - comes after CRUD
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiDoc));
 app.get("/openapi.json", (_req, res) => {
   res.json(openapiDoc);

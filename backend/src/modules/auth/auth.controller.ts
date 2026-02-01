@@ -15,6 +15,13 @@ import {
   login2FAService,
   deactivateAccountService,
   deleteAccountService,
+  shareAccountService,
+  getSharedAccountsService,
+  revokeShareService,
+  sharedLoginService,
+  getNotificationsService,
+  markNotificationReadService,
+  markAllNotificationsReadService,
 } from './auth.service';
 import { 
   SignupDto, 
@@ -30,6 +37,9 @@ import {
   Login2FADto,
   DeactivateAccountDto,
   DeleteAccountDto,
+  ShareAccountDto,
+  RevokeShareDto,
+  SharedLoginDto,
 } from './auth.types';
 import { asyncHandler } from '../../middleware/errorHandler';
 import type { 
@@ -47,6 +57,12 @@ import type {
   Login2FAResponseDto,
   DeactivateAccountResponseDto,
   DeleteAccountResponseDto,
+  ShareAccountResponseDto,
+  SharedAccountsResponseDto,
+  RevokeShareResponseDto,
+  SharedLoginResponseDto,
+  NotificationsResponseDto,
+  MarkNotificationReadResponseDto,
 } from './auth.types';
 
 export const signupHandler = asyncHandler(async (
@@ -257,6 +273,132 @@ export const deleteAccountHandler = asyncHandler(async (
   const userId = req.user!.userId;
   const data = await deleteAccountService(userId, req.body);
   const result: DeleteAccountResponseDto = {
+    status: 'success',
+    message: data.message,
+  };
+  res.json(result);
+});
+
+// ============================================================================
+// ACCOUNT SHARING HANDLERS
+// ============================================================================
+
+export const shareAccountHandler = asyncHandler(async (
+  req: Request<{}, {}, ShareAccountDto>,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const userId = req.user!.userId;
+  const data = await shareAccountService(userId, req.body);
+  const result: ShareAccountResponseDto = {
+    status: 'success',
+    message: data.message,
+    data,
+  };
+  res.json(result);
+});
+
+export const getSharedAccountsHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const userId = req.user!.userId;
+  const data = await getSharedAccountsService(userId);
+  const result: SharedAccountsResponseDto = {
+    status: 'success',
+    message: 'Shared accounts retrieved',
+    data,
+  };
+  res.json(result);
+});
+
+export const revokeShareHandler = asyncHandler(async (
+  req: Request<{}, {}, RevokeShareDto>,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const userId = req.user!.userId;
+  const data = await revokeShareService(userId, req.body);
+  const result: RevokeShareResponseDto = {
+    status: 'success',
+    message: data.message,
+  };
+  res.json(result);
+});
+
+export const sharedLoginHandler = asyncHandler(async (
+  req: Request<{}, {}, SharedLoginDto>,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const data = await sharedLoginService(req.body);
+  const result: SharedLoginResponseDto = {
+    status: 'success',
+    message: 'Shared login successful',
+    data,
+  };
+  res.json(result);
+});
+
+// ============================================================================
+// NOTIFICATION HANDLERS
+// ============================================================================
+
+export const getNotificationsHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const userId = req.user!.userId;
+  const data = await getNotificationsService(userId);
+  const result: NotificationsResponseDto = {
+    status: 'success',
+    message: 'Notifications retrieved',
+    data,
+  };
+  res.json(result);
+});
+
+export const markNotificationReadHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const userId = req.user!.userId;
+  const notificationId = req.params.id as string;
+  const data = await markNotificationReadService(userId, notificationId);
+  const result: MarkNotificationReadResponseDto = {
+    status: 'success',
+    message: data.message,
+  };
+  res.json(result);
+});
+
+export const markAllNotificationsReadHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const userId = req.user!.userId;
+  const data = await markAllNotificationsReadService(userId);
+  const result: MarkNotificationReadResponseDto = {
+    status: 'success',
+    message: data.message,
+  };
+  res.json(result);
+});
+
+export const deleteNotificationHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const userId = req.user!.userId;
+  const notificationId = req.params.id as string;
+  const { deleteNotificationService } = await import('./auth.service');
+  const data = await deleteNotificationService(userId, notificationId);
+  const result: MarkNotificationReadResponseDto = {
     status: 'success',
     message: data.message,
   };

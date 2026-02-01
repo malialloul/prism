@@ -1,0 +1,214 @@
+import { useState, MouseEvent } from 'react';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
+import InfoIcon from '@mui/icons-material/Info';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { CircularProgress, Tooltip, IconButton } from '@mui/material';
+import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead, useDeleteNotification } from '../../api/entities/auth';
+import type { NotificationDto } from '../../api/models/NotificationDto';
+import {
+  BellButton,
+  UnreadBadge,
+  NotificationPopover,
+  NotificationHeader,
+  NotificationTitle,
+  MarkAllButton,
+  NotificationList,
+  NotificationItem,
+  NotificationIcon,
+  NotificationContent,
+  NotificationItemTitle,
+  NotificationMessage,
+  NotificationTime,
+  EmptyNotifications,
+  TempPasswordBox,
+  NotificationActions,
+} from './NotificationBell.styles';
+
+function getRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function getNotificationIcon(type: NotificationDto['type']) {
+  switch (type) {
+    case 'account_shared':
+      return <PersonAddIcon fontSize="small" />;
+    case 'share_accepted':
+      return <CheckCircleIcon fontSize="small" />;
+    case 'share_revoked':
+      return <CancelIcon fontSize="small" />;
+    default:
+      return <InfoIcon fontSize="small" />;
+  }
+}
+
+interface NotificationItemComponentProps {
+  notification: NotificationDto;
+  onRead: (id: number) => void;
+  onDelete: (id: number) => void;
+}
+
+function NotificationItemComponent({ notification, onRead, onDelete }: NotificationItemComponentProps) {
+  const [copied, setCopied] = useState(false);
+  const isRead = !!notification.readAt;
+
+  // Parse metadata to get temp password for account_shared notifications
+  let tempPassword: string | null = null;
+  let ownerEmail: string | null = null;
+  if (notification.type === 'account_shared' && notification.metadata) {
+    try {
+      const metadata = notification.metadata as Record<string, unknown>;
+      tempPassword = (metadata.tempPassword as string) || null;
+      ownerEmail = (metadata.ownerEmail as string) || null;
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
+  const handleClick = () => {
+    if (!isRead) {
+      onRead(notification.id);
+    }
+  };
+
+  const handleCopyPassword = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (tempPassword) {
+      navigator.clipboard.writeText(tempPassword);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleDelete = (e: MouseEvent) => {
+    e.stopPropagation();
+    onDelete(notification.id);
+  };
+
+  return (
+    <NotificationItem isRead={isRead} onClick={handleClick}>
+      <NotificationIcon type={notification.type}>
+        {getNotificationIcon(notification.type)}
+      </NotificationIcon>
+      <NotificationContent>
+        <NotificationItemTitle>{notification.title}</NotificationItemTitle>
+        <NotificationMessage>{notification.message}</NotificationMessage>
+        {tempPassword && (
+          <TempPasswordBox>
+            <span>Temp password for {ownerEmail}:</span>
+            <code>{tempPassword}</code>
+            <Tooltip title={copied ? 'Copied!' : 'Copy password'}>
+              <IconButton size="small" onClick={handleCopyPassword}>
+                <ContentCopyIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </TempPasswordBox>
+        )}
+        <NotificationTime>{getRelativeTime(notification.createdAt)}</NotificationTime>
+      </NotificationContent>
+      <NotificationActions>
+        <Tooltip title="Delete notification">
+          <IconButton size="small" onClick={handleDelete}>
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </NotificationActions>
+    </NotificationItem>
+  );
+}
+
+export default function NotificationBell() {
+  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
+  const { data, isLoading } = useNotifications();
+  const { markAsRead } = useMarkNotificationRead();
+  const { markAllAsRead, isLoading: markingAll } = useMarkAllNotificationsRead();
+  const { deleteNotification } = useDeleteNotification();
+
+  const notifications = data?.data?.notifications || [];
+  const unreadCount = data?.data?.unreadCount || 0;
+
+  const handleOpen = (event: MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleMarkAllRead = () => {
+    markAllAsRead();
+  };
+
+  const open = Boolean(anchorEl);
+
+  return (
+    <>
+      <BellButton onClick={handleOpen}>
+        {unreadCount > 0 ? <NotificationsIcon /> : <NotificationsNoneIcon />}
+        {unreadCount > 0 && (
+          <UnreadBadge>{unreadCount > 99 ? '99+' : unreadCount}</UnreadBadge>
+        )}
+      </BellButton>
+
+      <NotificationPopover
+        open={open}
+        anchorEl={anchorEl}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        <NotificationHeader>
+          <NotificationTitle>Notifications</NotificationTitle>
+          {unreadCount > 0 && (
+            <MarkAllButton onClick={handleMarkAllRead} disabled={markingAll}>
+              {markingAll ? 'Marking...' : 'Mark all read'}
+            </MarkAllButton>
+          )}
+        </NotificationHeader>
+
+        <NotificationList>
+          {isLoading ? (
+            <EmptyNotifications>
+              <CircularProgress size={24} />
+            </EmptyNotifications>
+          ) : notifications.length === 0 ? (
+            <EmptyNotifications>
+              <NotificationsNoneIcon />
+              <span>No notifications yet</span>
+            </EmptyNotifications>
+          ) : (
+            notifications.map((notification) => (
+              <NotificationItemComponent
+                key={notification.id}
+                notification={notification}
+                onRead={markAsRead}
+                onDelete={deleteNotification}
+              />
+            ))
+          )}
+        </NotificationList>
+      </NotificationPopover>
+    </>
+  );
+}

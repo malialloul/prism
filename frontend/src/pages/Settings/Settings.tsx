@@ -5,11 +5,13 @@ import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import SecurityIcon from '@mui/icons-material/Security';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import ShareIcon from '@mui/icons-material/Share';
 import { ThemeToggleButton } from '../../components/ThemeToggle/ThemeToggle';
 import AccountSettings from './AccountSettings/AccountSettings';
 import SubscriptionUsage from './SubscriptionUsage/SubscriptionUsage';
 import SecuritySettings from './SecuritySettings/SecuritySettings';
 import DangerZone from './DangerZone/DangerZone';
+import AccountSharing from './AccountSharing';
 import {
   SettingsWrapper,
   SettingsHeader,
@@ -28,7 +30,7 @@ import { getDashboardColors } from '../../styles/theme';
 import { useTheme as useMuiTheme } from '@mui/material/styles';
 import { getUserFromToken, clearAuthToken } from '../../api/httpClient';
 
-type SettingsSection = 'account' | 'subscription' | 'security' | 'danger';
+type SettingsSection = 'account' | 'subscription' | 'security' | 'sharing' | 'danger';
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -118,6 +120,10 @@ const Settings = () => {
       title: 'Security',
       subtitle: 'Manage your security preferences and active sessions',
     },
+    sharing: {
+      title: 'Account Sharing',
+      subtitle: 'Share access to your account with other users',
+    },
     danger: {
       title: 'Danger Zone',
       subtitle: 'Irreversible and destructive actions',
@@ -142,6 +148,8 @@ const Settings = () => {
             onLogoutAll={handleLogoutAll}
           />
         );
+      case 'sharing':
+        return <AccountSharing />;
       case 'danger':
         return <DangerZone onDeactivateSuccess={handleDeactivateSuccess} onDeleteSuccess={handleDeleteSuccess} />;
       default:
@@ -215,6 +223,13 @@ const Settings = () => {
           >
             <SecurityIcon sx={{ fontSize: 20 }} />
             Security
+          </SidebarItem>
+          <SidebarItem
+            active={activeSection === 'sharing'}
+            onClick={() => setActiveSection('sharing')}
+          >
+            <ShareIcon sx={{ fontSize: 20 }} />
+            Sharing
           </SidebarItem>
           <SidebarDivider />
           <SidebarItem

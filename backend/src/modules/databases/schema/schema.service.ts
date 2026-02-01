@@ -971,7 +971,7 @@ export const getSavedQueriesService = async (
     parameters: row.parameters ? JSON.parse(row.parameters) : [],
     method: row.method || 'GET',
     isPublic: row.is_public || false,
-    endpoint: `/databases/${row.database_id}/api/${row.slug || row.id}`,
+    endpoint: `/databases/${row.database_id}/custom-api/${row.slug || row.id}`,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));
@@ -1048,7 +1048,7 @@ export const saveQueryService = async (
     parameters: row.parameters ? JSON.parse(row.parameters) : [],
     method: row.method,
     isPublic: row.is_public,
-    endpoint: `/databases/${row.database_id}/api/${row.slug}`,
+    endpoint: `/databases/${row.database_id}/custom-api/${row.slug}`,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

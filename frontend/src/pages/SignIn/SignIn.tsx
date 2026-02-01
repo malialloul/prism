@@ -241,6 +241,15 @@ export default function SignIn() {
                     <StyledLink as="span">Create an account</StyledLink>
                   </RouterLink>
                 </FooterText>
+
+                <Box sx={{ textAlign: 'center', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                  <Typography sx={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.5rem' }}>
+                    Have a shared account?
+                  </Typography>
+                  <RouterLink to="/shared-login" style={{ textDecoration: 'none' }}>
+                    <StyledLink as="span">Sign in with shared access</StyledLink>
+                  </RouterLink>
+                </Box>
               </Form>
             )}
           </Formik>

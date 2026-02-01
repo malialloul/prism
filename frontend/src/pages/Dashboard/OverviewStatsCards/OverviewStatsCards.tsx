@@ -71,7 +71,6 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
       value: databases.length.toString(),
       icon: <StorageIcon />,
       variant: 'primary' as const,
-      trend: { value: 12, positive: true },
       change: 'vs last month',
     }] : []),
     {
@@ -79,7 +78,6 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
       value: stats.totalTables.toString(),
       icon: <TableChartIcon />,
       variant: 'secondary' as const,
-      trend: { value: 8, positive: true },
       change: 'vs last month',
     },
     {
@@ -87,7 +85,6 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
       value: stats.totalApis.toString(),
       icon: <ApiIcon />,
       variant: 'success' as const,
-      trend: { value: 24, positive: true },
       change: 'vs last month',
     },
     {
@@ -97,10 +94,7 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
         : stats.queriesExecuted.toString(),
       icon: <QueryStatsIcon />,
       variant: 'warning' as const,
-      trend: {
-        value: queryStats?.queriesLastHour ?? 0,
-        positive: (queryStats?.queriesLastHour ?? 0) > 0
-      },
+   
       change: 'queries last hour',
     },
     {
@@ -121,10 +115,7 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
             <StatIconBox variant={stat.variant}>
               {stat.icon}
             </StatIconBox>
-            <StatTrend positive={stat.trend.positive}>
-              {stat.trend.positive ? <TrendingUpIcon /> : <TrendingDownIcon />}
-              {stat.trend.value}%
-            </StatTrend>
+          
           </StatHeader>
           <StatContent>
             <StatValue>{stat.value}</StatValue>
