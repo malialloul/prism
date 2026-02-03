@@ -125,7 +125,7 @@ export default function SchemaExplorer({
                     <SectionCount>{items.length}</SectionCount>
                     {onCreateTable && (
                       <SectionActions>
-                        <Tooltip title="Create Table">
+                        <Tooltip title="Create Table" arrow>
                           <ActionButton
                             size="small"
                             onClick={(e) => {

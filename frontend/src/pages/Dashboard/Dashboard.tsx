@@ -31,6 +31,7 @@ import { ApisPage } from "./ApisPage";
 import { useDatabases, useRefreshDatabase, useDisconnectDatabase, useReconnectDatabase } from "../../api/entities/databases";
 import { useSchemaObjects } from "../../api/entities/schema";
 import { toastService } from "../../services";
+import { usePermissions, AccessRestricted } from "../../components";
 
 // Icons
 import AddIcon from "@mui/icons-material/Add";
@@ -42,6 +43,9 @@ import { SchemaObjectType } from "../../api/models/SchemaDto";
 export default function Dashboard() {
   // Main navigation tab (Dashboard / APIs)
   const [mainTab, setMainTab] = useState(0);
+
+  // Permissions
+  const { canRunQuery } = usePermissions();
 
   // Fetch databases from API
   const { data: databasesData, isLoading, refetch: refetchDatabases } = useDatabases();
@@ -422,7 +426,9 @@ export default function Dashboard() {
                         <AddIcon sx={{ fontSize: "1rem" }} />
                         Create Database
                       </QuickActionButton>
-                      <QuickActionButton onClick={handleConnectDatabase}>
+                      <QuickActionButton
+                        onClick={handleConnectDatabase}
+                      >
                         <LinkIcon sx={{ fontSize: "1rem" }} />
                         Connect Existing
                       </QuickActionButton>
@@ -502,12 +508,20 @@ export default function Dashboard() {
               {/* Query Editor Tab */}
               {activeTab === 2 && connectedDatabase && (
                 <TabPanel>
-                  <QueryEditor
-                    key={`query-editor-${connectedDatabase.id}-${schemaVersion}`}
-                    databaseId={connectedDatabase.id}
-                    engine={connectedDatabase.engine}
-                    initialQuery={initialQuery}
-                  />
+                  {canRunQuery ? (
+                    <QueryEditor
+                      key={`query-editor-${connectedDatabase.id}-${schemaVersion}`}
+                      databaseId={connectedDatabase.id}
+                      engine={connectedDatabase.engine}
+                      initialQuery={initialQuery}
+                    />
+                  ) : (
+                    <AccessRestricted
+                      message="Query Access Restricted"
+                      description="You don't have permission to run queries. Please contact the account owner to request access."
+                      permission="runQuery"
+                    />
+                  )}
                 </TabPanel>
               )}
             </>

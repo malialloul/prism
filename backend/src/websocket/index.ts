@@ -7,6 +7,8 @@ interface UserPayload {
   userId: string;
   email: string;
   fullName?: string;
+  isSharedAccess?: boolean;
+  shareId?: number;
 }
 
 // Store connected users: userId -> Set of socket IDs
@@ -43,6 +45,10 @@ export function initializeWebSocket(httpServer: HttpServer): SocketIOServer {
 
   io.on('connection', (socket: Socket) => {
     const userId = socket.data.userId as string;
+    const decoded = socket.handshake.auth.token ? 
+      jwt.verify(socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', ''), config.jwt.secret) as UserPayload :
+      null;
+    
     console.log(`[WebSocket] User ${userId} connected (socket: ${socket.id})`);
 
     // Add socket to user's set
@@ -53,6 +59,12 @@ export function initializeWebSocket(httpServer: HttpServer): SocketIOServer {
 
     // Join user-specific room
     socket.join(`user:${userId}`);
+
+    // If this is a shared session, also join the share-specific room
+    if (decoded?.isSharedAccess && decoded?.shareId) {
+      console.log(`[WebSocket] User ${userId} joined share room share:${decoded.shareId}`);
+      socket.join(`share:${decoded.shareId}`);
+    }
 
     socket.on('disconnect', () => {
       console.log(`[WebSocket] User ${userId} disconnected (socket: ${socket.id})`);

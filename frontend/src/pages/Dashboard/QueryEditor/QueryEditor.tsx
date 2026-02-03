@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { ButtonLoadingSkeleton } from '../../../components';
+import { ButtonLoadingSkeleton, usePermissions } from '../../../components';
 import {
   Tooltip,
   IconButton,
@@ -61,6 +61,7 @@ export default function QueryEditor({
   engine: _engine,
   initialQuery = '',
 }: QueryEditorProps) {
+  const { canRunQuery, canCreateApi } = usePermissions();
   const [sql, setSql] = useState(initialQuery);
   const [result, setResult] = useState<QueryResultDto | null>(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -234,20 +235,30 @@ export default function QueryEditor({
               <BookmarkIcon sx={{ fontSize: '1.125rem' }} />
             </IconButton>
           </Tooltip>
-          <SaveButton
-            onClick={() => setSaveDialogOpen(true)}
-            disabled={!sql.trim() || !databaseId}
-            startIcon={<SaveIcon sx={{ fontSize: '1rem' }} />}
-          >
-            Save
-          </SaveButton>
-          <RunButton
-            onClick={handleRunQuery}
-            disabled={!sql.trim() || !databaseId || isExecuting}
-            startIcon={isExecuting ? <ButtonLoadingSkeleton size="small" /> : <PlayArrowIcon sx={{ fontSize: '1rem' }} />}
-          >
-            {isExecuting ? 'Running...' : 'Run Query'}
-          </RunButton>
+          <Tooltip title={!canCreateApi ? "You're not permitted to do this action" : "Save Query"} arrow>
+            <span>
+              <SaveButton
+                onClick={() => setSaveDialogOpen(true)}
+                disabled={!sql.trim() || !databaseId || !canCreateApi}
+                style={!canCreateApi ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+                startIcon={<SaveIcon sx={{ fontSize: '1rem' }} />}
+              >
+                Save
+              </SaveButton>
+            </span>
+          </Tooltip>
+          <Tooltip title={!canRunQuery ? "You're not permitted to do this action" : "Run Query (Ctrl+Enter)"} arrow>
+            <span>
+              <RunButton
+                onClick={handleRunQuery}
+                disabled={!sql.trim() || !databaseId || isExecuting || !canRunQuery}
+                style={!canRunQuery ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+                startIcon={isExecuting ? <ButtonLoadingSkeleton size="small" /> : <PlayArrowIcon sx={{ fontSize: '1rem' }} />}
+              >
+                {isExecuting ? 'Running...' : 'Run Query'}
+              </RunButton>
+            </span>
+          </Tooltip>
         </EditorActions>
       </EditorHeader>
 

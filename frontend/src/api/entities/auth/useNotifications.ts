@@ -82,10 +82,24 @@ export function useNotifications() {
       });
     });
 
+    // Handle share notifications (for shared users - permission request approved/rejected)
+    const unsubShareNotification = websocketService.onShareNotification(() => {
+      // Invalidate permission requests to update the UI
+      queryClient.invalidateQueries({ queryKey: ['my-permission-requests'] });
+    });
+
+    // Handle permissions updated (for shared users)
+    const unsubPermissionsUpdated = websocketService.onPermissionsUpdated(() => {
+      // Invalidate permission requests to update the UI
+      queryClient.invalidateQueries({ queryKey: ['my-permission-requests'] });
+    });
+
     return () => {
       unsubNotification();
       unsubRead();
       unsubAllRead();
+      unsubShareNotification();
+      unsubPermissionsUpdated();
     };
   }, [queryClient]);
 

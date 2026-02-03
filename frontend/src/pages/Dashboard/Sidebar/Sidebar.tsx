@@ -25,6 +25,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { DatabaseDto } from '../../../api/models/DatabaseDto';
+import { isSharedAccessSession } from '../../../api/httpClient';
 
 interface SidebarProps {
   databases: DatabaseDto[];
@@ -63,8 +64,11 @@ export default function Sidebar({
     <SidebarWrapper>
       <SidebarHeader>
         <HeaderTitle>Databases</HeaderTitle>
-        <Tooltip title="Add Database">
-          <AddButton onClick={() => onAddDatabase()} size="small">
+        <Tooltip title="Add Database" arrow>
+          <AddButton 
+            onClick={() => onAddDatabase()} 
+            size="small"
+          >
             <AddIcon sx={{ fontSize: '1rem' }} />
           </AddButton>
         </Tooltip>
@@ -113,10 +117,12 @@ export default function Sidebar({
       </DatabaseList>
 
       <SidebarFooter>
-        <FooterButton>
-          <SettingsIcon sx={{ fontSize: '1.125rem' }} />
-          Settings
-        </FooterButton>
+        {!isSharedAccessSession() && (
+          <FooterButton>
+            <SettingsIcon sx={{ fontSize: '1.125rem' }} />
+            Settings
+          </FooterButton>
+        )}
         <FooterButton>
           <HelpOutlineIcon sx={{ fontSize: '1.125rem' }} />
           Help & Support

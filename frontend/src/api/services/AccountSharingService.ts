@@ -8,6 +8,7 @@ import type { NotificationsResponseDto } from '../models/NotificationsResponseDt
 import type { SharedLoginDto } from '../models/SharedLoginDto';
 import type { TokenResponseDto } from '../models/TokenResponseDto';
 import type { PasswordActionResponseDto } from '../models/PasswordActionResponseDto';
+import type { SharePermissions, SharedAccountDto, CreatePermissionRequestDto, PermissionRequestsResponseDto, CreatePermissionRequestResponseDto } from '../models/SharedAccountDto';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -67,6 +68,51 @@ export class AccountSharingService {
       errors: {
         401: `Unauthorized`,
         404: `Share not found`,
+      },
+    });
+  }
+
+  /**
+   * Delete a shared account record
+   * @param shareId
+   * @returns PasswordActionResponseDto Share deleted successfully
+   * @throws ApiError
+   */
+  public static deleteShare(
+    shareId: number,
+  ): CancelablePromise<PasswordActionResponseDto> {
+    return __request(OpenAPI, {
+      method: 'DELETE',
+      url: '/auth/account/share/{shareId}',
+      path: { shareId },
+      errors: {
+        401: `Unauthorized`,
+        404: `Share not found`,
+      },
+    });
+  }
+
+  /**
+   * Update share permissions
+   * @param shareId
+   * @param permissions
+   * @returns Updated share data
+   * @throws ApiError
+   */
+  public static updateSharePermissions(
+    shareId: number,
+    permissions: SharePermissions,
+  ): CancelablePromise<{ status: string; message: string; data: { share: SharedAccountDto } }> {
+    return __request(OpenAPI, {
+      method: 'PUT',
+      url: '/auth/account/share/{shareId}/permissions',
+      path: { shareId },
+      body: { permissions },
+      mediaType: 'application/json',
+      errors: {
+        401: `Unauthorized`,
+        404: `Share not found`,
+        400: `Validation error`,
       },
     });
   }
@@ -163,6 +209,109 @@ export class NotificationService {
       errors: {
         401: `Unauthorized`,
         404: `Notification not found`,
+      },
+    });
+  }
+}
+export class PermissionRequestService {
+  /**
+   * Create a permission request
+   * @param shareId
+   * @param requestBody
+   * @returns CreatePermissionRequestResponseDto Permission request created
+   * @throws ApiError
+   */
+  public static createPermissionRequest(
+    shareId: number,
+    requestBody: CreatePermissionRequestDto,
+  ): CancelablePromise<CreatePermissionRequestResponseDto> {
+    return __request(OpenAPI, {
+      method: 'POST',
+      url: '/auth/permission-requests/{shareId}',
+      path: { shareId },
+      body: requestBody,
+      mediaType: 'application/json',
+      errors: {
+        400: `Validation error`,
+        401: `Unauthorized`,
+        404: `Share not found`,
+        409: `Request already pending`,
+      },
+    });
+  }
+
+  /**
+   * Get my permission requests (as shared user)
+   * @returns PermissionRequestsResponseDto Permission requests list
+   * @throws ApiError
+   */
+  public static getMyPermissionRequests(): CancelablePromise<PermissionRequestsResponseDto> {
+    return __request(OpenAPI, {
+      method: 'GET',
+      url: '/auth/permission-requests/my',
+      errors: {
+        401: `Unauthorized`,
+      },
+    });
+  }
+
+  /**
+   * Get permission requests (as owner)
+   * @returns PermissionRequestsResponseDto Permission requests list
+   * @throws ApiError
+   */
+  public static getPermissionRequests(): CancelablePromise<PermissionRequestsResponseDto> {
+    return __request(OpenAPI, {
+      method: 'GET',
+      url: '/auth/permission-requests',
+      errors: {
+        401: `Unauthorized`,
+      },
+    });
+  }
+
+  /**
+   * Respond to a permission request (approve or reject)
+   * @param requestId
+   * @param action
+   * @param message
+   * @returns PasswordActionResponseDto Response recorded
+   * @throws ApiError
+   */
+  public static respondPermissionRequest(
+    requestId: number,
+    action: 'approve' | 'reject',
+    message?: string,
+  ): CancelablePromise<PasswordActionResponseDto> {
+    return __request(OpenAPI, {
+      method: 'POST',
+      url: '/auth/permission-requests/respond',
+      body: { requestId, action, message },
+      mediaType: 'application/json',
+      errors: {
+        401: `Unauthorized`,
+        404: `Request not found`,
+        400: `Validation error`,
+      },
+    });
+  }
+
+  /**
+   * Cancel a permission request
+   * @param requestId
+   * @returns PasswordActionResponseDto Request cancelled
+   * @throws ApiError
+   */
+  public static cancelPermissionRequest(
+    requestId: number,
+  ): CancelablePromise<PasswordActionResponseDto> {
+    return __request(OpenAPI, {
+      method: 'DELETE',
+      url: '/auth/permission-requests/{requestId}',
+      path: { requestId },
+      errors: {
+        401: `Unauthorized`,
+        404: `Request not found`,
       },
     });
   }

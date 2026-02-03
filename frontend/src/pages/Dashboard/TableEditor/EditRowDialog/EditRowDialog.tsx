@@ -10,7 +10,7 @@ import {
     SubmitButton,
 } from '../shared.styles';
 import { DialogContent } from './EditRowDialog.styles';
-import { ButtonLoadingSkeleton } from '../../../../components';
+import { ButtonLoadingSkeleton, usePermissions, AccessRestricted } from '../../../../components';
 
 interface EditRowDialogProps {
     open: boolean;
@@ -31,6 +31,7 @@ export default function EditRowDialog({
     onSave,
     isSaving,
 }: EditRowDialogProps) {
+    const { canEditTableData } = usePermissions();
     const [editedRow, setEditedRow] = React.useState<RowData | null>(null);
 
     React.useEffect(() => {
@@ -59,36 +60,53 @@ export default function EditRowDialog({
     return (
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
             <MuiDialogTitle>Edit Row</MuiDialogTitle>
-            <DialogContent>
-                {columns
-                    .filter((col) => !primaryKeyColumns.includes(col))
-                    .map((column) => (
-                        <FormGroup key={column}>
-                            <FormLabel>{column}</FormLabel>
-                            <StyledTextField
-                                fullWidth
-                                value={editedRow[column] ?? ''}
-                                onChange={(e) => handleChange(column, e.target.value || null)}
-                                placeholder="NULL"
-                                disabled={primaryKeyColumns.includes(column)}
-                            />
-                        </FormGroup>
-                    ))}
-            </DialogContent>
-            <DialogActions sx={{ p: 2 }}>
-                <CancelButton onClick={onClose} disabled={isSaving}>
-                    Cancel
-                </CancelButton>
-                <SubmitButton
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    startIcon={
-                        isSaving ? <ButtonLoadingSkeleton size="small" /> : <SaveIcon />
-                    }
-                >
-                    Save
-                </SubmitButton>
-            </DialogActions>
+            {canEditTableData ? (
+                <>
+                    <DialogContent>
+                        {columns
+                            .filter((col) => !primaryKeyColumns.includes(col))
+                            .map((column) => (
+                                <FormGroup key={column}>
+                                    <FormLabel>{column}</FormLabel>
+                                    <StyledTextField
+                                        fullWidth
+                                        value={editedRow[column] ?? ''}
+                                        onChange={(e) => handleChange(column, e.target.value || null)}
+                                        placeholder="NULL"
+                                        disabled={primaryKeyColumns.includes(column)}
+                                    />
+                                </FormGroup>
+                            ))}
+                    </DialogContent>
+                    <DialogActions sx={{ p: 2 }}>
+                        <CancelButton onClick={onClose} disabled={isSaving}>
+                            Cancel
+                        </CancelButton>
+                        <SubmitButton
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            startIcon={
+                                isSaving ? <ButtonLoadingSkeleton size="small" /> : <SaveIcon />
+                            }
+                        >
+                            Save
+                        </SubmitButton>
+                    </DialogActions>
+                </>
+            ) : (
+                <>
+                    <AccessRestricted
+                        message="Edit Access Restricted"
+                        description="You don't have permission to edit table data. Please contact the account owner to request access."
+                        permission="editTableData"
+                    />
+                    <DialogActions sx={{ p: 2 }}>
+                        <CancelButton onClick={onClose}>
+                            Close
+                        </CancelButton>
+                    </DialogActions>
+                </>
+            )}
         </Dialog>
     );
 }

@@ -4,6 +4,7 @@ import {
   getSchemaObjectsService,
   getTableDetailsService,
   executeQueryService,
+  getTableDataService,
   getSavedQueriesService,
   saveQueryService,
   deleteQueryService,
@@ -78,6 +79,39 @@ export const executeQuery = async (
     }
 
     const result = await executeQueryService(userId, databaseId, sql);
+
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /databases/:id/tables/:tableName/data
+ * Get table data (for Data tab - uses viewTableData permission)
+ */
+export const getTableData = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const databaseId = req.params.id as string;
+    const tableName = req.params.tableName as string;
+    const page = parseInt(req.query.page as string) || 0;
+    const pageSize = Math.min(parseInt(req.query.pageSize as string) || 50, 1000);
+    const sortColumn = req.query.sortColumn as string | undefined;
+    const sortDirection = (req.query.sortDirection as 'ASC' | 'DESC') || 'ASC';
+    const search = req.query.search as string | undefined;
+
+    const result = await getTableDataService(userId, databaseId, tableName, {
+      page,
+      pageSize,
+      sortColumn,
+      sortDirection,
+      search,
+    });
 
     res.status(200).json(result);
   } catch (error) {

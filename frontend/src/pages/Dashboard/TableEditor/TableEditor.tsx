@@ -8,12 +8,14 @@ import StorageIcon from '@mui/icons-material/Storage';
 import {
   useTableDetails,
   useExecuteQuery,
+  useTableData,
   useModifyColumn,
   useDropColumn,
 } from '../../../api/entities/schema';
 import type { ColumnDetailsDto, ModifyColumnDto } from '../../../api/models/SchemaDto';
 import { POSTGRES_DATA_TYPES, MYSQL_DATA_TYPES } from '../../../api/models/SchemaDto';
 import { toastService } from '../../../services';
+import { Dialog, DialogTitle as MuiDialogTitle, DialogActions } from '@mui/material';
 import {
   CancelButton,
   SubmitButton,
@@ -42,7 +44,7 @@ import ConfirmDeleteRowsDialog from './ConfirmDeleteRowsDialog';
 import EditColumnDialog from './EditColumnDialog';
 import DeleteColumnDialog from './DeleteColumnDialog';
 import ConfirmCloseDialog from './ConfirmCloseDialog';
-import { ButtonLoadingSkeleton } from '../../../components';
+import { ButtonLoadingSkeleton, usePermissions, AccessRestricted } from '../../../components';
 import EditRowDialog from './EditRowDialog/EditRowDialog';
 
 export default function TableEditor({
@@ -53,6 +55,9 @@ export default function TableEditor({
   engine,
   onDataChanged,
 }: TableEditorProps) {
+  // Permissions
+  const { canViewTableData, canEditTableData } = usePermissions();
+
   // Tab state
   const [activeTab, setActiveTab] = useState(0);
 
@@ -66,6 +71,7 @@ export default function TableEditor({
   const [editRowOpen, setEditRowOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<RowData | null>(null);
   const [isSavingRow, setIsSavingRow] = useState(false);
+  const [addRowDialogOpen, setAddRowDialogOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalRows, setTotalRows] = useState(0);
@@ -91,6 +97,7 @@ export default function TableEditor({
   // Prevent double loading
   const hasLoadedRef = useRef(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   // Fetch table details for column info
   const { data: tableDetailsData, refetch: refetchTableDetails } = useTableDetails(
@@ -99,93 +106,54 @@ export default function TableEditor({
   );
   const tableDetails = tableDetailsData?.table;
 
-  // Query execution
+  // Fetch table data using dedicated endpoint (viewTableData permission)
+  const { 
+    data: tableDataResult, 
+    isLoading: isLoadingTableData,
+    refetch: refetchTableData 
+  } = useTableData(
+    open ? databaseId : undefined,
+    open ? tableName : undefined,
+    {
+      page,
+      pageSize,
+      sortColumn: sortColumn || undefined,
+      sortDirection,
+      search: debouncedSearch || undefined,
+      enabled: open && !!tableName && canViewTableData,
+    }
+  );
+
+  // Query execution - used for DML operations (INSERT, UPDATE, DELETE)
   const { mutateAsync: executeQueryAsync } = useExecuteQuery(databaseId, {
     onError: (error) => {
       toastService.error(error.message || 'Query execution failed');
     },
   });
 
-  // Build SQL query with search, sort, and pagination
-  const buildQuery = useCallback(
-    (countOnly: boolean = false, searchCols?: string[]) => {
-      const quote = engine === 'postgres' ? '"' : '`';
+  // Update rows/columns/totalRows when tableDataResult changes
+  useEffect(() => {
+    if (tableDataResult?.success && tableDataResult.rows && tableDataResult.columns) {
       const offset = page * pageSize;
-
-      let sql = countOnly
-        ? `SELECT COUNT(*) as count FROM ${quote}${tableName}${quote}`
-        : `SELECT * FROM ${quote}${tableName}${quote}`;
-
-      // Add WHERE clause for global search across all columns
-      if (searchValue && searchCols && searchCols.length > 0) {
-        const searchTerm = searchValue.replace(/'/g, "''");
-        const conditions = searchCols.map((col) => {
-          if (engine === 'postgres') {
-            return `${quote}${col}${quote}::text ILIKE '%${searchTerm}%'`;
-          } else {
-            return `CAST(${quote}${col}${quote} AS CHAR) LIKE '%${searchTerm}%'`;
-          }
-        });
-        sql += ` WHERE (${conditions.join(' OR ')})`;
+      const loadedRows: RowData[] = tableDataResult.rows.map((row, idx) => ({
+        ...row,
+        _rowId: `existing-${offset + idx}`,
+        _originalData: { ...row },
+      }));
+      setRows(loadedRows);
+      setColumns(tableDataResult.columns);
+      if (tableDataResult.totalCount !== undefined) {
+        setTotalRows(tableDataResult.totalCount);
+      } else if (tableDataResult.rowCount !== undefined) {
+        setTotalRows(tableDataResult.rowCount);
       }
-
-      if (!countOnly) {
-        // Add ORDER BY clause
-        if (sortColumn) {
-          sql += ` ORDER BY ${quote}${sortColumn}${quote} ${sortDirection}`;
-        }
-
-        // Add pagination
-        sql += ` LIMIT ${pageSize} OFFSET ${offset}`;
-      }
-
-      return sql;
-    },
-    [engine, tableName, page, pageSize, searchValue, sortColumn, sortDirection]
-  );
-
-  // Load data function
-  const loadData = useCallback(async (searchColumns?: string[]) => {
-    if (!tableName) return;
-
-    setIsLoading(true);
-    const offset = page * pageSize;
-    const sql = buildQuery(false, searchColumns);
-
-    try {
-      const result = await executeQueryAsync(sql);
-      if (result.success && result.rows && result.columns) {
-        const loadedRows: RowData[] = result.rows.map((row, idx) => ({
-          ...row,
-          _rowId: `existing-${offset + idx}`,
-          _originalData: { ...row },
-        }));
-        setRows(loadedRows);
-        setColumns(result.columns);
-      }
-    } catch {
-      // Error handled by mutation onError
-    } finally {
-      setIsLoading(false);
     }
-  }, [tableName, page, pageSize, buildQuery, executeQueryAsync]);
+  }, [tableDataResult, page, pageSize]);
 
-  // Load total count
-  const loadTotalCount = useCallback(async (searchColumns?: string[]) => {
-    if (!tableName) return;
-
-    const sql = buildQuery(true, searchColumns);
-
-    try {
-      const result = await executeQueryAsync(sql);
-      if (result.success && result.rows && result.rows.length > 0) {
-        const count = Number(result.rows[0].count);
-        setTotalRows(count);
-      }
-    } catch {
-      // Error handled by mutation onError
-    }
-  }, [tableName, buildQuery, executeQueryAsync]);
+  // Update isLoading state
+  useEffect(() => {
+    setIsLoading(isLoadingTableData);
+  }, [isLoadingTableData]);
 
   // Column mutations
   const { mutate: modifyColumn, isPending: isModifying } = useModifyColumn(databaseId, tableName, {
@@ -224,45 +192,35 @@ export default function TableEditor({
     }
   }, [tableDetails]);
 
-  // Initial load when dialog opens
+  // Reset state when dialog closes
   useEffect(() => {
-    if (open && !hasLoadedRef.current && tableName) {
-      hasLoadedRef.current = true;
-      loadData();
-      loadTotalCount();
-    }
     if (!open) {
       hasLoadedRef.current = false;
       // Reset search/sort state when closing
       setSearchValue('');
+      setDebouncedSearch('');
       setSortColumn('');
       setSortDirection('ASC');
       setPage(0);
       setPageSize(DEFAULT_PAGE_SIZE);
+      setRows([]);
+      setColumns([]);
+    } else {
+      hasLoadedRef.current = true;
     }
-  }, [open, tableName, loadData, loadTotalCount]);
+  }, [open]);
 
-  // Reload when page, pageSize, sort changes
+  // Debounced search - update debouncedSearch after delay
   useEffect(() => {
-    if (open && hasLoadedRef.current) {
-      loadData(columns);
-    }
-  }, [page, pageSize, sortColumn, sortDirection]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Debounced search
-  useEffect(() => {
-    if (!open || !hasLoadedRef.current) return;
+    if (!open) return;
 
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
 
-    searchTimeoutRef.current = setTimeout(async () => {
-      // Reset to first page on search without triggering the page change effect
-      setPage(0);
-      // Load both data and count in sequence to avoid race conditions
-      await loadData(columns);
-      await loadTotalCount(columns);
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(searchValue);
+      setPage(0); // Reset to first page on search
     }, 300);
 
     return () => {
@@ -270,7 +228,7 @@ export default function TableEditor({
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchValue]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchValue, open]);
 
   // Calculate pending changes
   useEffect(() => {
@@ -387,7 +345,27 @@ export default function TableEditor({
     }
   };
 
+  // Close add row dialog and actually add the row when permission is granted
+  useEffect(() => {
+    if (canEditTableData && addRowDialogOpen) {
+      setAddRowDialogOpen(false);
+      // Actually add the row now that we have permission
+      const newRow: RowData = {
+        _rowId: `new-${Date.now()}`,
+        _isNew: true,
+      };
+      columns.forEach((col) => {
+        newRow[col] = null;
+      });
+      setRows((prev) => [...prev, newRow]);
+    }
+  }, [canEditTableData, addRowDialogOpen, columns]);
+
   const handleAddRow = () => {
+    if (!canEditTableData) {
+      setAddRowDialogOpen(true);
+      return;
+    }
     const newRow: RowData = {
       _rowId: `new-${Date.now()}`,
       _isNew: true,
@@ -455,8 +433,7 @@ export default function TableEditor({
 
   const handleRefresh = () => {
     setSelectedRows(new Set());
-    loadData();
-    loadTotalCount();
+    refetchTableData();
   };
 
   const generateSaveQueries = useCallback((): string[] => {
@@ -678,43 +655,51 @@ export default function TableEditor({
 
       {/* Data Tab */}
       {activeTab === 0 && (
-        <DataTab
-          rows={rows}
-          columns={columns}
-          primaryKeyColumns={primaryKeyColumns}
-          selectedRows={selectedRows}
-          visibleRows={visibleRows}
-          page={page}
-          pageSize={pageSize}
-          totalRows={totalRows}
-          totalPages={totalPages}
-          startRow={startRow}
-          endRow={endRow}
-          searchValue={searchValue}
-          sortColumn={sortColumn}
-          sortDirection={sortDirection}
-          editingCell={editingCell}
-          editValue={editValue}
-          pendingChanges={pendingChanges}
-          isLoading={isLoading}
-          onSearchValueChange={setSearchValue}
-          onSortColumnChange={setSortColumn}
-          onSortDirectionToggle={() => setSortDirection(sortDirection === 'ASC' ? 'DESC' : 'ASC')}
-          onSortClick={handleSortClick}
-          onPageChange={setPage}
-          onPageSizeChange={handlePageSizeChange}
-          onCellClick={handleCellClick}
-          onCellChange={handleCellChange}
-          onCellBlur={handleCellBlur}
-          onKeyDown={handleKeyDown}
-          onRowEdit={handleRowEdit}
-          onSelectRow={handleSelectRow}
-          onSelectAll={handleSelectAll}
-          onAddRow={handleAddRow}
-          onDeleteSelected={handleDeleteSelected}
-          onRevertChanges={handleRevertChanges}
-          onRefresh={handleRefresh}
-        />
+        canViewTableData ? (
+          <DataTab
+            rows={rows}
+            columns={columns}
+            primaryKeyColumns={primaryKeyColumns}
+            selectedRows={selectedRows}
+            visibleRows={visibleRows}
+            page={page}
+            pageSize={pageSize}
+            totalRows={totalRows}
+            totalPages={totalPages}
+            startRow={startRow}
+            endRow={endRow}
+            searchValue={searchValue}
+            sortColumn={sortColumn}
+            sortDirection={sortDirection}
+            editingCell={editingCell}
+            editValue={editValue}
+            pendingChanges={pendingChanges}
+            isLoading={isLoading}
+            onSearchValueChange={setSearchValue}
+            onSortColumnChange={setSortColumn}
+            onSortDirectionToggle={() => setSortDirection(sortDirection === 'ASC' ? 'DESC' : 'ASC')}
+            onSortClick={handleSortClick}
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+            onCellClick={handleCellClick}
+            onCellChange={handleCellChange}
+            onCellBlur={handleCellBlur}
+            onKeyDown={handleKeyDown}
+            onRowEdit={handleRowEdit}
+            onSelectRow={handleSelectRow}
+            onSelectAll={handleSelectAll}
+            onAddRow={handleAddRow}
+            onDeleteSelected={handleDeleteSelected}
+            onRevertChanges={handleRevertChanges}
+            onRefresh={handleRefresh}
+          />
+        ) : (
+          <AccessRestricted
+            message="Data Access Restricted"
+            description="You don't have permission to view table data. Please contact the account owner to request access."
+            permission="viewTableData"
+          />
+        )
       )}
 
       {/* Columns Tab */}
@@ -792,6 +777,21 @@ export default function TableEditor({
         onSave={handleRowSave}
         isSaving={isSavingRow}
       />
+
+      {/* Add Row Permission Dialog */}
+      <Dialog open={addRowDialogOpen} onClose={() => setAddRowDialogOpen(false)} maxWidth="sm" fullWidth>
+        <MuiDialogTitle>Add Row</MuiDialogTitle>
+        <AccessRestricted
+          message="Add Row Access Restricted"
+          description="You don't have permission to add table data. Please contact the account owner to request access."
+          permission="editTableData"
+        />
+        <DialogActions sx={{ p: 2 }}>
+          <CancelButton onClick={() => setAddRowDialogOpen(false)}>
+            Close
+          </CancelButton>
+        </DialogActions>
+      </Dialog>
     </TableEditorDialog>
   );
 }

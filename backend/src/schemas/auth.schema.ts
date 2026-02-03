@@ -66,6 +66,7 @@ export const SharedAccountSchema = registerTable(
     sharedWithUserId: z.number().int().optional(),
     tempPasswordHash: z.string(),
     status: z.enum(['pending', 'accepted', 'revoked']).default('pending'),
+    permissions: z.string().default('{}'), // JSONB stored as string
     expiresAt: z.date(),
     acceptedAt: z.date().optional(),
     revokedAt: z.date().optional(),
@@ -76,6 +77,7 @@ export const SharedAccountSchema = registerTable(
     columnOverrides: {
       ownerUserId: { references: { table: "users", column: "id" } },
       sharedWithUserId: { references: { table: "users", column: "id" } },
+      permissions: { type: 'JSONB' },
     },
   }
 );
@@ -85,7 +87,7 @@ export const NotificationSchema = registerTable(
   "notifications",
   z.object({
     userId: z.number().int(),
-    type: z.enum(['account_shared', 'share_accepted', 'share_revoked', 'general']),
+    type: z.enum(['account_shared', 'share_accepted', 'share_revoked', 'permissions_updated', 'permission_request', 'request_approved', 'request_rejected', 'general']),
     title: z.string(),
     message: z.string(),
     metadata: z.string().optional(), // JSON string for additional data
@@ -96,6 +98,30 @@ export const NotificationSchema = registerTable(
     withTimestamps: true,
     columnOverrides: {
       userId: { references: { table: "users", column: "id" } },
+    },
+  }
+);
+
+// Permission requests table - stores requests from shared users for additional permissions
+export const PermissionRequestSchema = registerTable(
+  "permission_requests",
+  z.object({
+    shareId: z.number().int(),
+    requestedBy: z.number().int(), // The shared user requesting the permission
+    ownerUserId: z.number().int(), // The account owner who can approve/reject
+    permission: z.string(), // The permission key being requested (e.g., 'createDatabase')
+    status: z.enum(['pending', 'approved', 'rejected']).default('pending'),
+    message: z.string().optional(), // Optional message from requester
+    responseMessage: z.string().optional(), // Optional message from owner when responding
+    respondedAt: z.date().optional(),
+  }),
+  {
+    withId: true,
+    withTimestamps: true,
+    columnOverrides: {
+      shareId: { references: { table: "shared_accounts", column: "id" } },
+      requestedBy: { references: { table: "users", column: "id" } },
+      ownerUserId: { references: { table: "users", column: "id" } },
     },
   }
 );

@@ -948,6 +948,113 @@ export const executeQueryService = async (
 };
 
 /**
+ * Get table data (for Data tab - uses viewTableData permission, not runQuery)
+ * This is a restricted query that only allows SELECT on a specific table
+ */
+export const getTableDataService = async (
+  userId: string,
+  databaseId: string,
+  tableName: string,
+  options: {
+    page?: number;
+    pageSize?: number;
+    sortColumn?: string;
+    sortDirection?: 'ASC' | 'DESC';
+    search?: string;
+  } = {}
+): Promise<QueryResultDto> => {
+  const conn = await getDatabaseConnection(userId, databaseId);
+  const startTime = Date.now();
+  const { page = 0, pageSize = 50, sortColumn, sortDirection = 'ASC', search } = options;
+  const offset = page * pageSize;
+  const quote = conn.engine === 'postgres' ? '"' : '`';
+
+  // Validate table name to prevent SQL injection (alphanumeric and underscore only)
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tableName)) {
+    throw new ValidationError('Invalid table name');
+  }
+
+  // Build the query
+  let sql = `SELECT * FROM ${quote}${tableName}${quote}`;
+  let countSql = `SELECT COUNT(*) as count FROM ${quote}${tableName}${quote}`;
+
+  // Add search if provided (search across all text columns)
+  if (search) {
+    const searchTerm = search.replace(/'/g, "''");
+    // We'll need to get columns first to build proper search
+    // For now, skip search in the service - frontend handles display filtering
+  }
+
+  // Add ORDER BY
+  if (sortColumn && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(sortColumn)) {
+    sql += ` ORDER BY ${quote}${sortColumn}${quote} ${sortDirection === 'DESC' ? 'DESC' : 'ASC'}`;
+  }
+
+  // Add pagination
+  sql += ` LIMIT ${pageSize} OFFSET ${offset}`;
+
+  if (conn.engine === 'postgres') {
+    const pgPool = createPgPool(conn);
+    try {
+      // Get total count
+      const countResult = await pgPool.query(countSql);
+      const totalCount = parseInt(countResult.rows[0]?.count || '0', 10);
+
+      // Get data
+      const result = await pgPool.query(sql);
+      const executionTimeMs = Date.now() - startTime;
+      await pgPool.end();
+
+      return {
+        success: true,
+        columns: result.fields.map(f => f.name),
+        rows: result.rows,
+        rowCount: result.rowCount || 0,
+        totalCount,
+        executionTimeMs,
+      };
+    } catch (error) {
+      await pgPool.end();
+      const message = error instanceof Error ? error.message : 'Failed to fetch table data';
+      return {
+        success: false,
+        message,
+        executionTimeMs: Date.now() - startTime,
+      };
+    }
+  } else {
+    const mysqlConn = await createMysqlConnection(conn);
+    try {
+      // Get total count
+      const [countRows] = await mysqlConn.execute(countSql);
+      const totalCount = (countRows as Array<{ count: number }>)[0]?.count || 0;
+
+      // Get data
+      const [rows, fields] = await mysqlConn.execute(sql);
+      const executionTimeMs = Date.now() - startTime;
+      await mysqlConn.end();
+
+      return {
+        success: true,
+        columns: (fields as Array<{ name: string }>).map(f => f.name),
+        rows: rows as Record<string, unknown>[],
+        rowCount: (rows as Array<unknown>).length,
+        totalCount,
+        executionTimeMs,
+      };
+    } catch (error) {
+      await mysqlConn.end();
+      const message = error instanceof Error ? error.message : 'Failed to fetch table data';
+      return {
+        success: false,
+        message,
+        executionTimeMs: Date.now() - startTime,
+      };
+    }
+  }
+};
+
+/**
  * Get saved queries for a database
  */
 export const getSavedQueriesService = async (

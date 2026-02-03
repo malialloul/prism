@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useDashboard } from "./DashboardLayout";
+import { usePermissions, AccessRestricted } from "../../components";
 import {
   ContentHeader,
   ContentTitle,
@@ -17,6 +18,7 @@ export default function DashboardQuery() {
     schemaVersion,
     initialQuery,
   } = useDashboard();
+  const { canRunQuery } = usePermissions();
 
   // Redirect if no database connected
   if (!connectedDatabase) {
@@ -62,12 +64,20 @@ export default function DashboardQuery() {
       </TabsContainer>
 
       <TabPanel>
-        <QueryEditor
-          key={`query-editor-${connectedDatabase.id}-${schemaVersion}`}
-          databaseId={connectedDatabase.id}
-          engine={connectedDatabase.engine}
-          initialQuery={initialQuery}
-        />
+        {canRunQuery ? (
+          <QueryEditor
+            key={`query-editor-${connectedDatabase.id}-${schemaVersion}`}
+            databaseId={connectedDatabase.id}
+            engine={connectedDatabase.engine}
+            initialQuery={initialQuery}
+          />
+        ) : (
+          <AccessRestricted
+            message="Query Access Restricted"
+            description="You don't have permission to run queries. Please contact the account owner to request access."
+            permission="runQuery"
+          />
+        )}
       </TabPanel>
     </>
   );

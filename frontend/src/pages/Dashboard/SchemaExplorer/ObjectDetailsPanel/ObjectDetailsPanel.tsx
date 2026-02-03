@@ -98,20 +98,27 @@ export default function ObjectDetailsPanel({
 
       {objectType === 'table' && (
         <TableActionsBar>
-          <Tooltip title="Add a new column to this table">
-            <TableActionButton onClick={() => onAddColumn?.(objectName)}>
+          <Tooltip title="Add a new column to this table" arrow>
+            <TableActionButton 
+              onClick={() => onAddColumn?.(objectName)}
+            >
               <AddIcon />
               Add Column
             </TableActionButton>
           </Tooltip>
-          <Tooltip title="Edit table data and structure">
-            <TableActionButton onClick={() => onEditTable?.(objectName)}>
+          <Tooltip title="Edit table data and structure" arrow>
+            <TableActionButton 
+              onClick={() => onEditTable?.(objectName)}
+            >
               <EditIcon />
               Edit Table
             </TableActionButton>
           </Tooltip>
-          <Tooltip title="Permanently delete this table">
-            <TableActionButton variant="danger" onClick={() => onDeleteTable?.(objectName)}>
+          <Tooltip title="Permanently delete this table" arrow>
+            <TableActionButton 
+              variant="danger" 
+              onClick={() => onDeleteTable?.(objectName)}
+            >
               <DeleteIcon />
               Delete Table
             </TableActionButton>

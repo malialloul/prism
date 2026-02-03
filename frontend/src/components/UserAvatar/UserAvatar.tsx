@@ -4,7 +4,7 @@ import { Menu, MenuItem, ListItemIcon, ListItemText, Divider, Box, Typography } 
 import { styled } from '@mui/material/styles';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
-import { clearAuthToken, getUserFromToken } from '../../api/httpClient';
+import { clearAuthToken, getUserFromToken, isSharedAccessSession } from '../../api/httpClient';
 
 const AvatarButton = styled('button')<{ variant?: 'light' | 'dark' }>(({ variant = 'dark' }) => ({
   width: '2rem',
@@ -156,12 +156,14 @@ export default function UserAvatar({ variant = 'dark', initial = 'D' }: UserAvat
           </Box>
         </Box>
         <Divider sx={{ borderColor: dividerColor }} />
-        <MenuItem onClick={() => { handleMenuClose(); navigate('/settings'); }}>
-          <ListItemIcon>
-            <SettingsIcon fontSize="small" sx={{ color: iconColor }} />
-          </ListItemIcon>
-          <ListItemText>Settings</ListItemText>
-        </MenuItem>
+        {!isSharedAccessSession() && (
+          <MenuItem onClick={() => { handleMenuClose(); navigate('/settings'); }}>
+            <ListItemIcon>
+              <SettingsIcon fontSize="small" sx={{ color: iconColor }} />
+            </ListItemIcon>
+            <ListItemText>Settings</ListItemText>
+          </MenuItem>
+        )}
         <Divider sx={{ borderColor: dividerColor }} />
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>

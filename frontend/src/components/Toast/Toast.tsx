@@ -2,17 +2,22 @@ import { createContext, useContext, useState, useCallback, useEffect, ReactNode 
 import { Snackbar, Alert, AlertColor } from '@mui/material';
 import { toastService } from '../../services/toastService';
 
+interface ToastOptions {
+  duration?: number;
+}
+
 interface ToastMessage {
   id: number;
   message: string;
   severity: AlertColor;
+  duration?: number;
 }
 
 interface ToastContextType {
-  showError: (message: string) => void;
-  showSuccess: (message: string) => void;
-  showWarning: (message: string) => void;
-  showInfo: (message: string) => void;
+  showError: (message: string, options?: ToastOptions) => void;
+  showSuccess: (message: string, options?: ToastOptions) => void;
+  showWarning: (message: string, options?: ToastOptions) => void;
+  showInfo: (message: string, options?: ToastOptions) => void;
 }
 
 const ToastContext = createContext<ToastContextType | null>(null);
@@ -22,24 +27,24 @@ let toastId = 0;
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const showToast = useCallback((message: string, severity: AlertColor) => {
+  const showToast = useCallback((message: string, severity: AlertColor, options?: ToastOptions) => {
     const id = ++toastId;
-    setToasts((prev) => [...prev, { id, message, severity }]);
+    setToasts((prev) => [...prev, { id, message, severity, duration: options?.duration }]);
   }, []);
 
   const hideToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const showError = useCallback((message: string) => showToast(message, 'error'), [showToast]);
-  const showSuccess = useCallback((message: string) => showToast(message, 'success'), [showToast]);
-  const showWarning = useCallback((message: string) => showToast(message, 'warning'), [showToast]);
-  const showInfo = useCallback((message: string) => showToast(message, 'info'), [showToast]);
+  const showError = useCallback((message: string, options?: ToastOptions) => showToast(message, 'error', options), [showToast]);
+  const showSuccess = useCallback((message: string, options?: ToastOptions) => showToast(message, 'success', options), [showToast]);
+  const showWarning = useCallback((message: string, options?: ToastOptions) => showToast(message, 'warning', options), [showToast]);
+  const showInfo = useCallback((message: string, options?: ToastOptions) => showToast(message, 'info', options), [showToast]);
 
   // Register with toastService for global access (axios interceptors, etc.)
   useEffect(() => {
-    toastService.setHandler((message, type) => {
-      showToast(message, type);
+    toastService.setHandler((message, type, options) => {
+      showToast(message, type, options);
     });
   }, [showToast]);
 
@@ -50,7 +55,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         <Snackbar
           key={toast.id}
           open
-          autoHideDuration={6000}
+          autoHideDuration={toast.duration ?? 6000}
           onClose={() => hideToast(toast.id)}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
           sx={{ 

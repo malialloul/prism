@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MenuItem } from '@mui/material';
-import { ButtonLoadingSkeleton } from '../../../../components';
+import { ButtonLoadingSkeleton, usePermissions, AccessRestricted } from '../../../../components';
 import { useAddColumn } from '../../../../api/entities/schema';
 import type { AddColumnDto } from '../../../../api/models/SchemaDto';
 import { POSTGRES_DATA_TYPES, MYSQL_DATA_TYPES } from '../../../../api/models/SchemaDto';
@@ -38,6 +38,7 @@ export default function AddColumnDialog({
   engine,
   onSuccess,
 }: AddColumnDialogProps) {
+  const { canAddColumn } = usePermissions();
   const [column, setColumn] = useState<AddColumnDto>({
     name: '',
     type: 'VARCHAR(255)',
@@ -76,66 +77,86 @@ export default function AddColumnDialog({
 
   return (
     <StyledDialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogHeader>
-        <DialogTitle>Add Column to {tableName}</DialogTitle>
-        <DialogSubtitle>Define a new column for the table</DialogSubtitle>
-      </DialogHeader>
+      {canAddColumn ? (
+        <>
+          <DialogHeader>
+            <DialogTitle>Add Column to {tableName}</DialogTitle>
+            <DialogSubtitle>Define a new column for the table</DialogSubtitle>
+          </DialogHeader>
 
-      <DialogContent>
-        <FormGroup>
-          <FormLabel>Column Name</FormLabel>
-          <StyledTextField
-            fullWidth
-            placeholder="email"
-            value={column.name}
-            onChange={(e) => setColumn({ ...column, name: e.target.value })}
-            autoFocus
-          />
-        </FormGroup>
+          <DialogContent>
+            <FormGroup>
+              <FormLabel>Column Name</FormLabel>
+              <StyledTextField
+                fullWidth
+                placeholder="email"
+                value={column.name}
+                onChange={(e) => setColumn({ ...column, name: e.target.value })}
+                autoFocus
+              />
+            </FormGroup>
 
-        <FormRow>
-          <FormGroup>
-            <FormLabel>Data Type</FormLabel>
-            <StyledSelect
-              fullWidth
-              value={column.type}
-              onChange={(e) => setColumn({ ...column, type: e.target.value as string })}
-            >
-              {types.map((type) => (
-                <MenuItem key={type} value={type}>{type}</MenuItem>
-              ))}
-            </StyledSelect>
-          </FormGroup>
+            <FormRow>
+              <FormGroup>
+                <FormLabel>Data Type</FormLabel>
+                <StyledSelect
+                  fullWidth
+                  value={column.type}
+                  onChange={(e) => setColumn({ ...column, type: e.target.value as string })}
+                >
+                  {types.map((type) => (
+                    <MenuItem key={type} value={type}>{type}</MenuItem>
+                  ))}
+                </StyledSelect>
+              </FormGroup>
 
-          <FormGroup>
-            <FormLabel>Default Value</FormLabel>
-            <StyledTextField
-              fullWidth
-              placeholder="NULL"
-              value={column.defaultValue || ''}
-              onChange={(e) => setColumn({ ...column, defaultValue: e.target.value || undefined })}
+              <FormGroup>
+                <FormLabel>Default Value</FormLabel>
+                <StyledTextField
+                  fullWidth
+                  placeholder="NULL"
+                  value={column.defaultValue || ''}
+                  onChange={(e) => setColumn({ ...column, defaultValue: e.target.value || undefined })}
+                />
+              </FormGroup>
+            </FormRow>
+
+            <FormGroup>
+              <CheckboxLabel>
+                <input
+                  type="checkbox"
+                  checked={column.nullable}
+                  onChange={(e) => setColumn({ ...column, nullable: e.target.checked })}
+                />
+                Allow NULL values
+              </CheckboxLabel>
+            </FormGroup>
+          </DialogContent>
+
+          <DialogFooter>
+            <CancelButton onClick={handleClose}>Cancel</CancelButton>
+            <SubmitButton onClick={handleSubmit} disabled={!isValid || isPending}>
+              {isPending ? <ButtonLoadingSkeleton size="small" /> : 'Add Column'}
+            </SubmitButton>
+          </DialogFooter>
+        </>
+      ) : (
+        <>
+          <DialogHeader>
+            <DialogTitle>Add Column to {tableName}</DialogTitle>
+          </DialogHeader>
+          <DialogContent>
+            <AccessRestricted
+              message="Add Column Restricted"
+              description="You don't have permission to add columns. Please contact the account owner to request access."
+              permission="addColumn"
             />
-          </FormGroup>
-        </FormRow>
-
-        <FormGroup>
-          <CheckboxLabel>
-            <input
-              type="checkbox"
-              checked={column.nullable}
-              onChange={(e) => setColumn({ ...column, nullable: e.target.checked })}
-            />
-            Allow NULL values
-          </CheckboxLabel>
-        </FormGroup>
-      </DialogContent>
-
-      <DialogFooter>
-        <CancelButton onClick={handleClose}>Cancel</CancelButton>
-        <SubmitButton onClick={handleSubmit} disabled={!isValid || isPending}>
-          {isPending ? <ButtonLoadingSkeleton size="small" /> : 'Add Column'}
-        </SubmitButton>
-      </DialogFooter>
+          </DialogContent>
+          <DialogFooter>
+            <CancelButton onClick={handleClose}>Close</CancelButton>
+          </DialogFooter>
+        </>
+      )}
     </StyledDialog>
   );
 }

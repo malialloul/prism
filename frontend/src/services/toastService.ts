@@ -1,6 +1,10 @@
 type ToastType = 'error' | 'success' | 'warning' | 'info';
 
-type ToastHandler = (message: string, type: ToastType) => void;
+interface ToastOptions {
+  duration?: number; // Duration in milliseconds
+}
+
+type ToastHandler = (message: string, type: ToastType, options?: ToastOptions) => void;
 
 let toastHandler: ToastHandler | null = null;
 
@@ -9,25 +13,25 @@ export const toastService = {
     toastHandler = handler;
   },
 
-  show(message: string, type: ToastType) {
+  show(message: string, type: ToastType, options?: ToastOptions) {
     if (toastHandler) {
-      toastHandler(message, type);
+      toastHandler(message, type, options);
     }
   },
 
-  error(message: string) {
-    this.show(message, 'error');
+  error(message: string, options?: ToastOptions) {
+    this.show(message, 'error', options);
   },
 
-  success(message: string) {
-    this.show(message, 'success');
+  success(message: string, options?: ToastOptions) {
+    this.show(message, 'success', options);
   },
 
-  warning(message: string) {
-    this.show(message, 'warning');
+  warning(message: string, options?: ToastOptions) {
+    this.show(message, 'warning', options);
   },
 
-  info(message: string) {
-    this.show(message, 'info');
+  info(message: string, options?: ToastOptions) {
+    this.show(message, 'info', options);
   },
 };

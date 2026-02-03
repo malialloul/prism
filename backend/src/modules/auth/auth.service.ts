@@ -40,8 +40,15 @@ import type {
   DbBackupCodeDto,
   DbSharedAccountDto,
   DbNotificationDto,
+  SharePermissions,
+  CreatePermissionRequestDto,
+  RespondPermissionRequestDto,
+  PermissionRequestDto,
+  PermissionRequestsListDto,
+  DbPermissionRequestDto,
 } from './auth.types';
-import { ConflictError, AuthenticationError, NotFoundError, ValidationError } from '../../utils/errors';
+import { DEFAULT_SHARE_PERMISSIONS } from './auth.types';
+import { ConflictError, AuthenticationError, AuthorizationError, NotFoundError, ValidationError } from '../../utils/errors';
 
 export const signupService = async (
   body: SignupDto,
@@ -810,7 +817,13 @@ export const shareAccountService = async (
   userId: string,
   body: ShareAccountDto,
 ): Promise<ShareAccountResultDto> => {
-  const { email, expiresInDays = 7 } = body;
+  const { email, expiresInDays = 7, permissions: inputPermissions } = body;
+
+  // Merge provided permissions with defaults
+  const permissions: SharePermissions = {
+    ...DEFAULT_SHARE_PERMISSIONS,
+    ...inputPermissions,
+  };
 
   // Find the owner user
   const ownerResult = await pool.query<DbUserDto>(
@@ -857,12 +870,12 @@ export const shareAccountService = async (
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
-  // Create the share record
+  // Create the share record with permissions
   const shareResult = await pool.query<DbSharedAccountDto>(
-    `INSERT INTO shared_accounts (owner_user_id, shared_with_email, shared_with_user_id, temp_password_hash, status, expires_at)
-     VALUES ($1, $2, $3, $4, 'pending', $5)
+    `INSERT INTO shared_accounts (owner_user_id, shared_with_email, shared_with_user_id, temp_password_hash, status, permissions, expires_at)
+     VALUES ($1, $2, $3, $4, 'pending', $5, $6)
      RETURNING *`,
-    [userId, email, targetUserId, tempPasswordHash, expiresAt],
+    [userId, email, targetUserId, tempPasswordHash, JSON.stringify(permissions), expiresAt],
   );
 
   const share = shareResult.rows[0];
@@ -913,6 +926,7 @@ export const shareAccountService = async (
       sharedWithEmail: share.shared_with_email,
       sharedWithUserId: share.shared_with_user_id ? Number(share.shared_with_user_id) : null,
       status: share.status,
+      permissions,
       tempPassword, // Return plain text password only on creation
       expiresAt: share.expires_at,
       acceptedAt: share.accepted_at,
@@ -969,6 +983,7 @@ export const getSharedAccountsService = async (
     sharedWithEmail: row.shared_with_email,
     sharedWithUserId: row.shared_with_user_id ? Number(row.shared_with_user_id) : null,
     status: row.status,
+    permissions: typeof row.permissions === 'string' ? JSON.parse(row.permissions) : (row.permissions || DEFAULT_SHARE_PERMISSIONS),
     expiresAt: row.expires_at,
     acceptedAt: row.accepted_at,
     revokedAt: row.revoked_at,
@@ -1030,9 +1045,174 @@ export const revokeShareService = async (
         JSON.stringify({ shareId, ownerEmail: owner.email }),
       ],
     );
+
+    // Emit force logout event via WebSocket to immediately log out the shared user
+    // NOTE: Shared users are connected to the OWNER's WebSocket room (because their JWT has userId: owner.id)
+    // So we emit to owner_user_id (which is the current userId), not shared_with_user_id
+    const { emitForceLogout } = await import('../../websocket/notificationEmitter');
+    emitForceLogout(userId, {
+      reason: 'share_revoked',
+      message: `${owner.full_name || owner.email} has revoked your access to their account. You have been logged out.`,
+      shareId: share.id, // Include shareId so frontend can check if this session should be logged out
+    });
   }
 
   return { message: 'Account share revoked successfully' };
+};
+
+/**
+ * Update permissions for a shared account
+ */
+export const updateSharePermissionsService = async (
+  userId: string,
+  body: { shareId: number; permissions: SharePermissions },
+): Promise<{ share: SharedAccountDto; message: string }> => {
+  const { shareId, permissions } = body;
+
+  // Find the share
+  const shareResult = await pool.query<DbSharedAccountDto>(
+    'SELECT * FROM shared_accounts WHERE id = $1 AND owner_user_id = $2',
+    [shareId, userId],
+  );
+
+  if (!shareResult.rowCount) {
+    throw new NotFoundError('Share not found or you are not the owner');
+  }
+
+  const share = shareResult.rows[0];
+
+  if (share.status === 'revoked') {
+    throw new ValidationError('Cannot update permissions for a revoked share');
+  }
+
+  // Check if share is expired
+  if (new Date(share.expires_at) < new Date()) {
+    throw new ValidationError('Cannot update permissions for an expired share');
+  }
+
+  // Update permissions
+  await pool.query(
+    `UPDATE shared_accounts SET permissions = $1, updated_at = NOW() WHERE id = $2`,
+    [JSON.stringify(permissions), shareId],
+  );
+
+  // Get updated share data
+  const updatedShareResult = await pool.query<DbSharedAccountDto>(
+    'SELECT * FROM shared_accounts WHERE id = $1',
+    [shareId],
+  );
+  const updatedShare = updatedShareResult.rows[0];
+
+  // Get owner info
+  const ownerResult = await pool.query<DbUserDto>(
+    'SELECT email, full_name FROM users WHERE id = $1',
+    [userId],
+  );
+  const owner = ownerResult.rows[0];
+
+  // Notify the shared user if they have accepted the share
+  if (share.shared_with_user_id && share.status === 'accepted') {
+    // Insert notification into database
+    const notificationResult = await pool.query<DbNotificationDto>(
+      `INSERT INTO notifications (user_id, type, title, message, metadata)
+       VALUES ($1, 'permissions_updated', $2, $3, $4)
+       RETURNING *`,
+      [
+        share.shared_with_user_id,
+        'Permissions Updated',
+        `${owner.full_name || owner.email} has updated your access permissions.`,
+        JSON.stringify({ shareId, ownerEmail: owner.email, permissions }),
+      ],
+    );
+    const notification = notificationResult.rows[0];
+
+    // Emit real-time notification for the bell icon
+    const { emitNotification, emitPermissionsUpdated } = await import('../../websocket/notificationEmitter');
+    
+    // Emit notification for the bell
+    emitNotification(String(share.shared_with_user_id), {
+      id: notification.id,
+      userId: notification.user_id,
+      type: notification.type as 'account_shared' | 'share_accepted' | 'share_revoked' | 'permissions_updated' | 'general',
+      title: notification.title,
+      message: notification.message,
+      metadata: notification.metadata,
+      readAt: notification.read_at,
+      createdAt: notification.created_at,
+    });
+
+    // Emit permissions update for auto-refresh of UI
+    emitPermissionsUpdated(String(share.shared_with_user_id), {
+      shareId: share.id,
+      permissions: permissions as unknown as Record<string, boolean>,
+      message: `${owner.full_name || owner.email} has updated your access permissions.`,
+    });
+  }
+
+  // Map the updated share to DTO
+  const shareDto: SharedAccountDto = {
+    id: updatedShare.id,
+    ownerUserId: Number(updatedShare.owner_user_id),
+    ownerEmail: owner.email,
+    ownerFullName: owner.full_name,
+    sharedWithEmail: updatedShare.shared_with_email,
+    sharedWithUserId: updatedShare.shared_with_user_id ? Number(updatedShare.shared_with_user_id) : null,
+    status: updatedShare.status,
+    permissions: typeof updatedShare.permissions === 'string' 
+      ? JSON.parse(updatedShare.permissions) 
+      : (updatedShare.permissions || DEFAULT_SHARE_PERMISSIONS),
+    expiresAt: updatedShare.expires_at,
+    acceptedAt: updatedShare.accepted_at,
+    revokedAt: updatedShare.revoked_at,
+    createdAt: updatedShare.created_at,
+  };
+
+  return {
+    share: shareDto,
+    message: 'Permissions updated successfully',
+  };
+};
+
+/**
+ * Delete a shared account record (removes it completely from database)
+ */
+export const deleteShareService = async (
+  userId: string,
+  shareId: number,
+): Promise<MessageResponseDto> => {
+  // Find the share
+  const shareResult = await pool.query<DbSharedAccountDto>(
+    'SELECT * FROM shared_accounts WHERE id = $1 AND owner_user_id = $2',
+    [shareId, userId],
+  );
+
+  if (!shareResult.rowCount) {
+    throw new NotFoundError('Share not found or you are not the owner');
+  }
+
+  const share = shareResult.rows[0];
+
+  // If share is still active, force logout the user first
+  if (share.status !== 'revoked' && share.shared_with_user_id) {
+    const ownerResult = await pool.query<DbUserDto>(
+      'SELECT email, full_name FROM users WHERE id = $1',
+      [userId],
+    );
+    const owner = ownerResult.rows[0];
+
+    // Emit force logout event
+    const { emitForceLogout } = await import('../../websocket/notificationEmitter');
+    emitForceLogout(userId, {
+      reason: 'share_revoked',
+      message: `${owner.full_name || owner.email} has revoked your access to their account. You have been logged out.`,
+      shareId: share.id,
+    });
+  }
+
+  // Delete the share record
+  await pool.query('DELETE FROM shared_accounts WHERE id = $1', [shareId]);
+
+  return { message: 'Share record deleted successfully' };
 };
 
 /**
@@ -1105,6 +1285,11 @@ export const sharedLoginService = async (
     );
   }
 
+  // Parse permissions from the share
+  const sharePermissions: SharePermissions = typeof validShare.permissions === 'string' 
+    ? JSON.parse(validShare.permissions) 
+    : (validShare.permissions || DEFAULT_SHARE_PERMISSIONS);
+
   // Generate token for the owner's account (shared access)
   const token = jwt.sign(
     {
@@ -1114,6 +1299,7 @@ export const sharedLoginService = async (
       isSharedAccess: true,
       shareId: validShare.id,
       sharedWithEmail: validShare.shared_with_email,
+      permissions: sharePermissions,
     },
     config.jwt.secret,
     { expiresIn: config.jwt.expiresIn },
@@ -1131,16 +1317,47 @@ export const sharedLoginService = async (
  */
 export const getNotificationsService = async (
   userId: string,
+  isSharedAccess: boolean = false,
+  shareId?: number,
 ): Promise<NotificationsListDto> => {
-  const result = await pool.query<DbNotificationDto>(
-    `SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`,
-    [userId],
-  );
+  let result;
+  let unreadResult;
 
-  const unreadResult = await pool.query<{ count: string }>(
-    `SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND read_at IS NULL`,
-    [userId],
-  );
+  if (isSharedAccess && shareId) {
+    // For shared users, only show notifications related to their share
+    // This includes: request_approved, request_rejected, and permissions_updated for their shareId
+    result = await pool.query<DbNotificationDto>(
+      `SELECT * FROM notifications 
+       WHERE user_id = $1 
+       AND (
+         (type IN ('request_approved', 'request_rejected', 'permissions_updated') 
+          AND metadata::jsonb->>'shareId' = $2)
+       )
+       ORDER BY created_at DESC LIMIT 50`,
+      [userId, String(shareId)],
+    );
+
+    unreadResult = await pool.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM notifications 
+       WHERE user_id = $1 AND read_at IS NULL
+       AND (
+         (type IN ('request_approved', 'request_rejected', 'permissions_updated') 
+          AND metadata::jsonb->>'shareId' = $2)
+       )`,
+      [userId, String(shareId)],
+    );
+  } else {
+    // For account owners, show all their notifications
+    result = await pool.query<DbNotificationDto>(
+      `SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`,
+      [userId],
+    );
+
+    unreadResult = await pool.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND read_at IS NULL`,
+      [userId],
+    );
+  }
 
   const notifications: NotificationDto[] = result.rows.map((row) => ({
     id: row.id,
@@ -1211,4 +1428,359 @@ export const deleteNotificationService = async (
   }
 
   return { message: 'Notification deleted' };
+};
+
+// ============================================================================
+// PERMISSION REQUEST SERVICES
+// ============================================================================
+
+const formatPermissionName = (permission: string): string => {
+  const names: Record<string, string> = {
+    createDatabase: 'create databases',
+    connectDatabase: 'connect databases',
+    createTable: 'create tables',
+    addColumn: 'add columns',
+    editColumn: 'edit columns',
+    deleteColumn: 'delete columns',
+    deleteTable: 'delete tables',
+    viewTableData: 'view table data',
+    editTableData: 'edit table data',
+    runQuery: 'run queries',
+    createApiInQueryBuilder: 'create APIs in query builder',
+    tryAutoGeneratedApis: 'try auto-generated APIs',
+    tryOpenApi: 'try OpenAPI',
+  };
+  return names[permission] || permission;
+};
+
+/**
+ * Create a permission request from a shared user
+ */
+export const createPermissionRequestService = async (
+  userId: string,
+  shareId: number,
+  body: CreatePermissionRequestDto,
+): Promise<{ request: PermissionRequestDto }> => {
+  const { permission, message } = body;
+
+  // Get the share record to verify the user and get owner info
+  const shareResult = await pool.query<DbSharedAccountDto>(
+    'SELECT * FROM shared_accounts WHERE id = $1',
+    [shareId],
+  );
+
+  if (!shareResult.rowCount) {
+    throw new NotFoundError('Share not found');
+  }
+
+  const share = shareResult.rows[0];
+
+  // Verify the share belongs to the owner account being accessed (userId is the owner's ID for shared access)
+  // Use loose comparison to handle both string and number types
+  if (String(share.owner_user_id) !== String(userId)) {
+    throw new AuthorizationError('Not authorized to make this request');
+  }
+
+  // Check if share is still active
+  if (share.status === 'revoked' || new Date(share.expires_at) < new Date()) {
+    throw new ValidationError('This share is no longer active');
+  }
+
+  // Parse permissions if it's a string (JSONB from postgres)
+  const permissions: SharePermissions = typeof share.permissions === 'string' 
+    ? JSON.parse(share.permissions) 
+    : share.permissions;
+
+  // Check if already has this permission
+  if (permissions[permission as keyof SharePermissions]) {
+    throw new ValidationError('You already have this permission');
+  }
+
+  // Check for existing pending request for the same permission
+  const existingRequest = await pool.query<DbPermissionRequestDto>(
+    `SELECT * FROM permission_requests 
+     WHERE share_id = $1 AND permission = $2 AND status = 'pending'`,
+    [shareId, permission],
+  );
+
+  if (existingRequest.rowCount && existingRequest.rowCount > 0) {
+    throw new ConflictError('A request for this permission is already pending');
+  }
+
+  // Delete any rejected requests for this permission (to allow re-requesting)
+  await pool.query(
+    `DELETE FROM permission_requests 
+     WHERE share_id = $1 AND permission = $2 AND status = 'rejected'`,
+    [shareId, permission],
+  );
+
+  // Create the permission request (requested_by stores the owner user id since shared users access the owner's account)
+  // The actual requester info comes from the share record
+  const requestResult = await pool.query<DbPermissionRequestDto>(
+    `INSERT INTO permission_requests (share_id, requested_by, owner_user_id, permission, status, message)
+     VALUES ($1, $2, $3, $4, 'pending', $5)
+     RETURNING *`,
+    [shareId, share.owner_user_id, share.owner_user_id, permission, message || null],
+  );
+
+  const request = requestResult.rows[0];
+
+  // Use the shared user's email from the share record
+  const requesterEmail = share.shared_with_email;
+
+  // Create notification for the owner
+  const notificationResult = await pool.query<DbNotificationDto>(
+    `INSERT INTO notifications (user_id, type, title, message, metadata)
+     VALUES ($1, 'permission_request', $2, $3, $4)
+     RETURNING *`,
+    [
+      share.owner_user_id,
+      'Permission Request',
+      `${requesterEmail} is requesting permission to ${formatPermissionName(permission)}.`,
+      JSON.stringify({
+        requestId: request.id,
+        shareId,
+        permission,
+        requesterEmail,
+        message: message || null,
+      }),
+    ],
+  );
+  const notification = notificationResult.rows[0];
+
+  // Emit real-time notification to owner
+  const { emitNotification } = await import('../../websocket/notificationEmitter');
+  emitNotification(String(share.owner_user_id), {
+    id: notification.id,
+    userId: notification.user_id,
+    type: notification.type as 'permission_request',
+    title: notification.title,
+    message: notification.message,
+    metadata: notification.metadata,
+    readAt: notification.read_at,
+    createdAt: notification.created_at,
+  });
+
+  return {
+    request: {
+      id: request.id,
+      shareId: request.share_id,
+      requestedBy: request.requested_by,
+      requestedByEmail: requesterEmail,
+      requestedByName: null, // Shared users don't have accounts, so no name
+      ownerUserId: request.owner_user_id,
+      permission: request.permission as keyof SharePermissions,
+      status: request.status,
+      message: request.message,
+      responseMessage: request.response_message,
+      createdAt: request.created_at,
+      respondedAt: request.responded_at,
+    },
+  };
+};
+
+/**
+ * Get pending permission requests for the current user (as owner)
+ */
+export const getPermissionRequestsService = async (
+  userId: string,
+): Promise<PermissionRequestsListDto> => {
+  const result = await pool.query<DbPermissionRequestDto & { requester_email: string }>(
+    `SELECT pr.*, sa.shared_with_email as requester_email
+     FROM permission_requests pr
+     JOIN shared_accounts sa ON sa.id = pr.share_id
+     WHERE pr.owner_user_id = $1
+     ORDER BY pr.created_at DESC`,
+    [userId],
+  );
+
+  const requests: PermissionRequestDto[] = result.rows.map((row) => ({
+    id: row.id,
+    shareId: row.share_id,
+    requestedBy: row.requested_by,
+    requestedByEmail: row.requester_email,
+    requestedByName: null, // Shared users don't have accounts
+    ownerUserId: row.owner_user_id,
+    permission: row.permission as keyof SharePermissions,
+    status: row.status,
+    message: row.message,
+    responseMessage: row.response_message,
+    createdAt: row.created_at,
+    respondedAt: row.responded_at,
+  }));
+
+  return { requests };
+};
+
+/**
+ * Get permission requests made by the current user (as shared user)
+ * Note: userId here is actually the owner's user ID since shared users access the owner's account
+ */
+export const getMyPermissionRequestsService = async (
+  userId: string,
+  shareId?: number,
+): Promise<PermissionRequestsListDto> => {
+  // For shared users, we need to get requests by share_id since requested_by is the owner's user id
+  // The shareId should be passed from the controller when available
+  const result = await pool.query<DbPermissionRequestDto & { requester_email: string }>(
+    `SELECT pr.*, sa.shared_with_email as requester_email
+     FROM permission_requests pr
+     JOIN shared_accounts sa ON sa.id = pr.share_id
+     WHERE pr.owner_user_id = $1${shareId ? ' AND pr.share_id = $2' : ''}
+     ORDER BY pr.created_at DESC`,
+    shareId ? [userId, shareId] : [userId],
+  );
+
+  const requests: PermissionRequestDto[] = result.rows.map((row) => ({
+    id: row.id,
+    shareId: row.share_id,
+    requestedBy: row.requested_by,
+    requestedByEmail: row.requester_email,
+    requestedByName: null,
+    ownerUserId: row.owner_user_id,
+    permission: row.permission as keyof SharePermissions,
+    status: row.status,
+    message: row.message,
+    responseMessage: row.response_message,
+    createdAt: row.created_at,
+    respondedAt: row.responded_at,
+  }));
+
+  return { requests };
+};
+
+/**
+ * Respond to a permission request (approve or reject)
+ */
+export const respondPermissionRequestService = async (
+  userId: string,
+  body: RespondPermissionRequestDto,
+): Promise<MessageResponseDto> => {
+  const { requestId, action, message } = body;
+
+  // Get the permission request
+  const requestResult = await pool.query<DbPermissionRequestDto>(
+    'SELECT * FROM permission_requests WHERE id = $1',
+    [requestId],
+  );
+
+  if (!requestResult.rowCount) {
+    throw new NotFoundError('Permission request not found');
+  }
+
+  const request = requestResult.rows[0];
+
+  // Verify the current user is the owner
+  if (String(request.owner_user_id) !== String(userId)) {
+    throw new AuthorizationError('Not authorized to respond to this request');
+  }
+
+  // Check if already responded
+  if (request.status !== 'pending') {
+    throw new ValidationError('This request has already been responded to');
+  }
+
+  const newStatus = action === 'approve' ? 'approved' : 'rejected';
+
+  // Update the request
+  await pool.query(
+    `UPDATE permission_requests 
+     SET status = $1, response_message = $2, responded_at = NOW(), updated_at = NOW()
+     WHERE id = $3`,
+    [newStatus, message || null, requestId],
+  );
+
+  // Get share and requester info
+  const shareResult = await pool.query<DbSharedAccountDto>(
+    'SELECT * FROM shared_accounts WHERE id = $1',
+    [request.share_id],
+  );
+  const share = shareResult.rows[0];
+
+  const ownerResult = await pool.query<DbUserDto>(
+    'SELECT email, full_name FROM users WHERE id = $1',
+    [userId],
+  );
+  const owner = ownerResult.rows[0];
+
+  // If approved, update the share permissions
+  if (action === 'approve') {
+    const updatedPermissions = {
+      ...share.permissions,
+      [request.permission]: true,
+    };
+
+    await pool.query(
+      `UPDATE shared_accounts SET permissions = $1, updated_at = NOW() WHERE id = $2`,
+      [JSON.stringify(updatedPermissions), request.share_id],
+    );
+
+    // Emit permissions update to the shared user via share room
+    const { emitPermissionsUpdated } = await import('../../websocket/notificationEmitter');
+    emitPermissionsUpdated(String(share.owner_user_id), {
+      shareId: share.id,
+      permissions: updatedPermissions as unknown as Record<string, boolean>,
+      message: `Your permission request for "${formatPermissionName(request.permission)}" has been approved.`,
+    });
+  }
+
+  // Emit real-time notification to the shared user via share room
+  // (Shared users don't have user accounts, so we emit to the share room instead of storing in DB)
+  const notificationType = action === 'approve' ? 'request_approved' : 'request_rejected';
+  const notificationTitle = action === 'approve' ? 'Permission Request Approved' : 'Permission Request Rejected';
+  const notificationMessage = action === 'approve'
+    ? `${owner.full_name || owner.email} approved your request to ${formatPermissionName(request.permission)}.`
+    : `${owner.full_name || owner.email} rejected your request to ${formatPermissionName(request.permission)}.${message ? ` Reason: ${message}` : ''}`;
+
+  // Emit notification to the share room
+  const { emitNotificationToShare } = await import('../../websocket/notificationEmitter');
+  emitNotificationToShare(request.share_id, {
+    type: notificationType,
+    title: notificationTitle,
+    message: notificationMessage,
+    metadata: JSON.stringify({
+      requestId,
+      shareId: request.share_id,
+      permission: request.permission,
+      action,
+      responseMessage: message || null,
+    }),
+  });
+
+  // Delete the original permission_request notification from owner's notifications
+  await pool.query(
+    `DELETE FROM notifications 
+     WHERE user_id = $1 
+     AND type = 'permission_request' 
+     AND (metadata::jsonb)->>'requestId' = $2`,
+    [userId, String(requestId)],
+  );
+
+  return {
+    message: action === 'approve'
+      ? 'Permission request approved successfully'
+      : 'Permission request rejected',
+  };
+};
+
+/**
+ * Cancel a pending permission request (by the requester)
+ */
+export const cancelPermissionRequestService = async (
+  userId: string,
+  requestId: string,
+  shareId: number,
+): Promise<MessageResponseDto> => {
+  // Verify the request exists and belongs to this share
+  const result = await pool.query(
+    `DELETE FROM permission_requests 
+     WHERE id = $1 AND share_id = $2 AND status = 'pending'`,
+    [requestId, shareId],
+  );
+
+  if (!result.rowCount) {
+    throw new NotFoundError('Permission request not found or already responded to');
+  }
+
+  return { message: 'Permission request cancelled' };
 };

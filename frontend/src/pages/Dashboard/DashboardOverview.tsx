@@ -49,7 +49,9 @@ export default function DashboardOverview() {
             <AddIcon sx={{ fontSize: "1rem" }} />
             Create Database
           </QuickActionButton>
-          <QuickActionButton onClick={handleConnectDatabase}>
+          <QuickActionButton
+            onClick={handleConnectDatabase}
+          >
             <LinkIcon sx={{ fontSize: "1rem" }} />
             Connect Existing
           </QuickActionButton>

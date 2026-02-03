@@ -94,6 +94,44 @@ export class SchemaService {
   }
 
   /**
+   * Get table data (for Data tab - uses viewTableData permission)
+   * @param databaseId Database ID
+   * @param tableName Table name
+   * @param options Pagination and sorting options
+   * @returns QueryResultDto Table data
+   * @throws ApiError
+   */
+  public static getTableData(
+    databaseId: number,
+    tableName: string,
+    options?: {
+      page?: number;
+      pageSize?: number;
+      sortColumn?: string;
+      sortDirection?: 'ASC' | 'DESC';
+      search?: string;
+    }
+  ): CancelablePromise<QueryResultDto> {
+    const queryParams = new URLSearchParams();
+    if (options?.page !== undefined) queryParams.append('page', String(options.page));
+    if (options?.pageSize !== undefined) queryParams.append('pageSize', String(options.pageSize));
+    if (options?.sortColumn) queryParams.append('sortColumn', options.sortColumn);
+    if (options?.sortDirection) queryParams.append('sortDirection', options.sortDirection);
+    if (options?.search) queryParams.append('search', options.search);
+    
+    const queryString = queryParams.toString();
+    return __request(OpenAPI, {
+      method: 'GET',
+      url: `/databases/${databaseId}/tables/${encodeURIComponent(tableName)}/data${queryString ? `?${queryString}` : ''}`,
+      errors: {
+        401: 'Unauthorized',
+        403: 'Forbidden',
+        404: 'Not found',
+      },
+    });
+  }
+
+  /**
    * Get saved queries for a database
    * @param databaseId Database ID
    * @returns SavedQueryDto[] List of saved queries

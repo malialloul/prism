@@ -54,6 +54,7 @@ export interface QueryResultDto {
   columns?: string[];
   rows?: Record<string, unknown>[];
   rowCount?: number;
+  totalCount?: number;
   affectedRows?: number;
   executionTimeMs?: number;
 }

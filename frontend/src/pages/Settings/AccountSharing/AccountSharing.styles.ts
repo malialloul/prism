@@ -180,6 +180,30 @@ export const SectionSubtitle = styled('h4')(({ theme }) => {
   };
 });
 
+export const SectionHeader = styled(Box)(({ theme }) => {
+  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  return {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '1rem',
+    gap: '1rem',
+  };
+});
+
+export const ClearAllButton = styled(Button)(({ theme }) => {
+  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  return {
+    color: colors.error || '#ef5350',
+    textTransform: 'none',
+    fontSize: '0.875rem',
+    padding: '0.4rem 0.8rem',
+    '&:hover': {
+      backgroundColor: colors.mode === 'dark' ? 'rgba(239, 83, 80, 0.1)' : 'rgba(239, 83, 80, 0.05)',
+    },
+  };
+});
+
 export const EmptyState = styled(Box)(({ theme }) => {
   const colors = getDashboardColors(theme.palette.mode === 'dark');
   return {

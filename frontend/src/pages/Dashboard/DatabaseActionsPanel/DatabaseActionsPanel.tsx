@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Switch } from '@mui/material';
-import { ButtonLoadingSkeleton } from '../../../components';
+import { ButtonLoadingSkeleton, usePermissions, AccessRestricted } from '../../../components';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useCreateDatabase, useConnectDatabase, useTestConnection } from '../../../api/entities/databases';
@@ -78,6 +78,8 @@ export default function DatabaseActionsPanel({
   onCloseConnectDialog,
   onDatabaseConnected,
 }: DatabaseActionsPanelProps) {
+  // Permissions
+  const { canCreateDatabase, canConnectDatabase } = usePermissions();
   const [connectionTestStatus, setConnectionTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [connectionTestMessage, setConnectionTestMessage] = useState('');
 
@@ -221,33 +223,34 @@ export default function DatabaseActionsPanel({
     <>
       {/* Create Database Dialog */}
       <StyledDialog open={isCreateDialogOpen} onClose={handleCloseCreateDialog}>
-        <form onSubmit={createFormik.handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Create New Database</DialogTitle>
-            <DialogSubtitle>Provision a managed database instance</DialogSubtitle>
-          </DialogHeader>
-          <DialogContent>
-            <FormGroup>
-              <FormLabel>Database Engine</FormLabel>
-              <EngineToggleGroup
-                value={createFormik.values.engine}
-                exclusive
-                onChange={(_, value) => value && createFormik.setFieldValue('engine', value)}
-              >
-                <EngineToggleButton value="postgres">
-                  <EngineIcon engine="postgres">P</EngineIcon>
-                  <EngineName>PostgreSQL</EngineName>
-                </EngineToggleButton>
-                <EngineToggleButton value="mysql">
-                  <EngineIcon engine="mysql">M</EngineIcon>
-                  <EngineName>MySQL</EngineName>
-                </EngineToggleButton>
-              </EngineToggleGroup>
-            </FormGroup>
+        {canCreateDatabase ? (
+          <form onSubmit={createFormik.handleSubmit}>
+            <DialogHeader>
+              <DialogTitle>Create New Database</DialogTitle>
+              <DialogSubtitle>Provision a managed database instance</DialogSubtitle>
+            </DialogHeader>
+            <DialogContent>
+              <FormGroup>
+                <FormLabel>Database Engine</FormLabel>
+                <EngineToggleGroup
+                  value={createFormik.values.engine}
+                  exclusive
+                  onChange={(_, value) => value && createFormik.setFieldValue('engine', value)}
+                >
+                  <EngineToggleButton value="postgres">
+                    <EngineIcon engine="postgres">P</EngineIcon>
+                    <EngineName>PostgreSQL</EngineName>
+                  </EngineToggleButton>
+                  <EngineToggleButton value="mysql">
+                    <EngineIcon engine="mysql">M</EngineIcon>
+                    <EngineName>MySQL</EngineName>
+                  </EngineToggleButton>
+                </EngineToggleGroup>
+              </FormGroup>
 
-            <FormGroup>
-              <FormLabel>Database Name</FormLabel>
-              <StyledTextField
+              <FormGroup>
+                <FormLabel>Database Name</FormLabel>
+                <StyledTextField
                 name="name"
                 placeholder="my-production-db"
                 value={createFormik.values.name}
@@ -289,32 +292,50 @@ export default function DatabaseActionsPanel({
                 />
               </FormGroup>
             </FormRow>
-          </DialogContent>
-          <DialogFooter>
-            <CancelButton type="button" onClick={handleCloseCreateDialog} disabled={isCreating}>Cancel</CancelButton>
-            <SubmitButton type="submit" disabled={!createFormik.isValid || !createFormik.dirty || isCreating}>
-              {isCreating ? <ButtonLoadingSkeleton size="small" /> : 'Create Database'}
-            </SubmitButton>
-          </DialogFooter>
-        </form>
+            </DialogContent>
+            <DialogFooter>
+              <CancelButton type="button" onClick={handleCloseCreateDialog} disabled={isCreating}>Cancel</CancelButton>
+              <SubmitButton type="submit" disabled={!createFormik.isValid || !createFormik.dirty || isCreating}>
+                {isCreating ? <ButtonLoadingSkeleton size="small" /> : 'Create Database'}
+              </SubmitButton>
+            </DialogFooter>
+          </form>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Create New Database</DialogTitle>
+            </DialogHeader>
+            <DialogContent>
+              <AccessRestricted
+                message="Create Database Restricted"
+                description="You don't have permission to create databases. Please contact the account owner to request access."
+                permission="createDatabase"
+              />
+            </DialogContent>
+            <DialogFooter>
+              <CancelButton type="button" onClick={handleCloseCreateDialog}>Close</CancelButton>
+            </DialogFooter>
+          </>
+        )}
       </StyledDialog>
 
       {/* Connect Database Dialog */}
       <StyledDialog open={isConnectDialogOpen} onClose={handleCloseConnectDialog}>
-        <form onSubmit={connectFormik.handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Connect Existing Database</DialogTitle>
-            <DialogSubtitle>Enter your database connection details</DialogSubtitle>
-          </DialogHeader>
-          <DialogContent>
-            <FormGroup>
-              <FormLabel>Database Engine</FormLabel>
-              <EngineToggleGroup
-                value={connectFormik.values.engine}
-                exclusive
-                onChange={(_, value) => value && connectFormik.setFieldValue('engine', value)}
-              >
-                <EngineToggleButton value="postgres">
+        {canConnectDatabase ? (
+          <form onSubmit={connectFormik.handleSubmit}>
+            <DialogHeader>
+              <DialogTitle>Connect Existing Database</DialogTitle>
+              <DialogSubtitle>Enter your database connection details</DialogSubtitle>
+            </DialogHeader>
+            <DialogContent>
+              <FormGroup>
+                <FormLabel>Database Engine</FormLabel>
+                <EngineToggleGroup
+                  value={connectFormik.values.engine}
+                  exclusive
+                  onChange={(_, value) => value && connectFormik.setFieldValue('engine', value)}
+                >
+                  <EngineToggleButton value="postgres">
                   <EngineIcon engine="postgres">P</EngineIcon>
                   <EngineName>PostgreSQL</EngineName>
                 </EngineToggleButton>
@@ -433,24 +454,41 @@ export default function DatabaseActionsPanel({
                 {connectionTestMessage || 'Testing connection...'}
               </ConnectionStatus>
             )}
-          </DialogContent>
-          <DialogFooter>
-            <TestConnectionButton
-              type="button"
-              onClick={handleTestConnection}
-              disabled={isTestDisabled}
-            >
-              {isTesting ? <ButtonLoadingSkeleton size="small" /> : 'Test Connection'}
-            </TestConnectionButton>
-            <CancelButton type="button" onClick={handleCloseConnectDialog}>Cancel</CancelButton>
-            <SubmitButton
-              type="submit"
-              disabled={!connectFormik.isValid || !connectFormik.dirty || isConnecting}
-            >
-              {isConnecting ? <ButtonLoadingSkeleton size="small" /> : 'Connect Database'}
-            </SubmitButton>
-          </DialogFooter>
-        </form>
+            </DialogContent>
+            <DialogFooter>
+              <TestConnectionButton
+                type="button"
+                onClick={handleTestConnection}
+                disabled={isTestDisabled}
+              >
+                {isTesting ? <ButtonLoadingSkeleton size="small" /> : 'Test Connection'}
+              </TestConnectionButton>
+              <CancelButton type="button" onClick={handleCloseConnectDialog}>Cancel</CancelButton>
+              <SubmitButton
+                type="submit"
+                disabled={!connectFormik.isValid || !connectFormik.dirty || isConnecting}
+              >
+                {isConnecting ? <ButtonLoadingSkeleton size="small" /> : 'Connect Database'}
+              </SubmitButton>
+            </DialogFooter>
+          </form>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Connect Existing Database</DialogTitle>
+            </DialogHeader>
+            <DialogContent>
+              <AccessRestricted
+                message="Connect Database Restricted"
+                description="You don't have permission to connect databases. Please contact the account owner to request access."
+                permission="connectDatabase"
+              />
+            </DialogContent>
+            <DialogFooter>
+              <CancelButton type="button" onClick={handleCloseConnectDialog}>Close</CancelButton>
+            </DialogFooter>
+          </>
+        )}
       </StyledDialog>
     </>
   );

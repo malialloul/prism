@@ -18,10 +18,17 @@ import {
   shareAccountService,
   getSharedAccountsService,
   revokeShareService,
+  updateSharePermissionsService,
+  deleteShareService,
   sharedLoginService,
   getNotificationsService,
   markNotificationReadService,
   markAllNotificationsReadService,
+  createPermissionRequestService,
+  getPermissionRequestsService,
+  getMyPermissionRequestsService,
+  respondPermissionRequestService,
+  cancelPermissionRequestService,
 } from './auth.service';
 import { 
   SignupDto, 
@@ -39,9 +46,13 @@ import {
   DeleteAccountDto,
   ShareAccountDto,
   RevokeShareDto,
+  UpdateSharePermissionsDto,
   SharedLoginDto,
+  CreatePermissionRequestDto,
+  RespondPermissionRequestDto,
 } from './auth.types';
 import { asyncHandler } from '../../middleware/errorHandler';
+import { AuthorizationError } from '../../utils/errors';
 import type { 
   LoginResponseDto, 
   SignupResponseDto, 
@@ -63,6 +74,9 @@ import type {
   SharedLoginResponseDto,
   NotificationsResponseDto,
   MarkNotificationReadResponseDto,
+  PermissionRequestsResponseDto,
+  CreatePermissionRequestResponseDto,
+  RespondPermissionRequestResponseDto,
 } from './auth.types';
 
 export const signupHandler = asyncHandler(async (
@@ -327,6 +341,36 @@ export const revokeShareHandler = asyncHandler(async (
   res.json(result);
 });
 
+export const updateSharePermissionsHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const userId = req.user!.userId;
+  const shareId = parseInt(req.params.shareId as string, 10);
+  const { permissions } = req.body as { permissions: UpdateSharePermissionsDto['permissions'] };
+  const data = await updateSharePermissionsService(userId, { shareId, permissions });
+  res.json({
+    status: 'success',
+    message: data.message,
+    data: { share: data.share },
+  });
+});
+
+export const deleteShareHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const userId = req.user!.userId;
+  const shareId = parseInt(req.params.shareId as string, 10);
+  const data = await deleteShareService(userId, shareId);
+  res.json({
+    status: 'success',
+    message: data.message,
+  });
+});
+
 export const sharedLoginHandler = asyncHandler(async (
   req: Request<{}, {}, SharedLoginDto>,
   res: Response,
@@ -351,7 +395,9 @@ export const getNotificationsHandler = asyncHandler(async (
   _next: NextFunction,
 ) => {
   const userId = req.user!.userId;
-  const data = await getNotificationsService(userId);
+  const isSharedAccess = req.user!.isSharedAccess || false;
+  const shareId = req.user!.shareId;
+  const data = await getNotificationsService(userId, isSharedAccess, shareId);
   const result: NotificationsResponseDto = {
     status: 'success',
     message: 'Notifications retrieved',
@@ -399,6 +445,100 @@ export const deleteNotificationHandler = asyncHandler(async (
   const { deleteNotificationService } = await import('./auth.service');
   const data = await deleteNotificationService(userId, notificationId);
   const result: MarkNotificationReadResponseDto = {
+    status: 'success',
+    message: data.message,
+  };
+  res.json(result);
+});
+
+// ============================================================================
+// PERMISSION REQUEST HANDLERS
+// ============================================================================
+
+export const createPermissionRequestHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const userId = req.user!.userId;
+  const tokenShareId = req.user!.shareId; // Share ID from the token
+  const shareId = parseInt(req.params.shareId as string, 10);
+  
+  // Verify the share ID in the URL matches the one in the token
+  if (!tokenShareId || tokenShareId !== shareId) {
+    throw new AuthorizationError('You can only request permissions for your own share');
+  }
+  
+  const body = req.body as CreatePermissionRequestDto;
+  const data = await createPermissionRequestService(userId, shareId, body);
+  const result: CreatePermissionRequestResponseDto = {
+    status: 'success',
+    message: 'Permission request created successfully',
+    data,
+  };
+  res.status(201).json(result);
+});
+
+export const getPermissionRequestsHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const userId = req.user!.userId;
+  const data = await getPermissionRequestsService(userId);
+  const result: PermissionRequestsResponseDto = {
+    status: 'success',
+    message: 'Permission requests retrieved',
+    data,
+  };
+  res.json(result);
+});
+
+export const getMyPermissionRequestsHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const userId = req.user!.userId;
+  const shareId = req.user!.shareId; // Pass shareId for shared users
+  const data = await getMyPermissionRequestsService(userId, shareId);
+  const result: PermissionRequestsResponseDto = {
+    status: 'success',
+    message: 'Your permission requests retrieved',
+    data,
+  };
+  res.json(result);
+});
+
+export const respondPermissionRequestHandler = asyncHandler(async (
+  req: Request<{}, {}, RespondPermissionRequestDto>,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const userId = req.user!.userId;
+  const data = await respondPermissionRequestService(userId, req.body);
+  const result: RespondPermissionRequestResponseDto = {
+    status: 'success',
+    message: data.message,
+  };
+  res.json(result);
+});
+
+export const cancelPermissionRequestHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const userId = req.user!.userId;
+  const shareId = req.user!.shareId;
+  const requestId = req.params.requestId as string;
+  
+  if (!shareId) {
+    throw new AuthorizationError('Share ID not found in token');
+  }
+  
+  const data = await cancelPermissionRequestService(userId, requestId, shareId);
+  const result: RespondPermissionRequestResponseDto = {
     status: 'success',
     message: data.message,
   };

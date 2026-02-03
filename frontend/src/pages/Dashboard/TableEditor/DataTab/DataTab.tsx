@@ -128,12 +128,17 @@ export default function DataTab({
           />
         </ToolbarLeft>
         <ToolbarRight>
-          <Tooltip title="Add Row">
-            <IconButton onClick={onAddRow} size="small">
-              <AddIcon />
-            </IconButton>
+          <Tooltip title="Add Row" arrow>
+            <span>
+              <IconButton 
+                onClick={onAddRow} 
+                size="small"
+              >
+                <AddIcon />
+              </IconButton>
+            </span>
           </Tooltip>
-          <Tooltip title="Delete Selected">
+          <Tooltip title="Delete Selected" arrow>
             <span>
               <IconButton
                 onClick={onDeleteSelected}
@@ -292,14 +297,16 @@ export default function DataTab({
                     </EditableCell>
                   ))}
                   <td style={{ textAlign: 'center' }}>
-                    <Tooltip title="Edit Row">
-                      <IconButton
-                        size="small"
-                        onClick={() => !row._isDeleted && onRowEdit(row)}
-                        disabled={row._isDeleted}
-                      >
-                        <EditIcon sx={{ fontSize: '1rem' }} />
-                      </IconButton>
+                    <Tooltip title="Edit Row" arrow>
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={() => !row._isDeleted && onRowEdit(row)}
+                          disabled={row._isDeleted}
+                        >
+                          <EditIcon sx={{ fontSize: '1rem' }} />
+                        </IconButton>
+                      </span>
                     </Tooltip>
                   </td>
                 </tr>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MenuItem } from '@mui/material';
-import { ButtonLoadingSkeleton } from '../../../../components';
+import { ButtonLoadingSkeleton, usePermissions, AccessRestricted } from '../../../../components';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useCreateTable } from '../../../../api/entities/schema';
@@ -51,6 +51,7 @@ export default function CreateTableDialog({
   engine,
   onSuccess,
 }: CreateTableDialogProps) {
+  const { canCreateTable } = usePermissions();
   const [tableName, setTableName] = useState('');
   const [columns, setColumns] = useState<CreateColumnDto[]>([
     { name: 'id', type: engine === 'postgres' ? 'SERIAL' : 'INT', nullable: false, isPrimaryKey: true, autoIncrement: engine === 'mysql' },
@@ -111,91 +112,111 @@ export default function CreateTableDialog({
 
   return (
     <StyledDialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogHeader>
-        <DialogTitle>Create New Table</DialogTitle>
-        <DialogSubtitle>Define the structure for your new table</DialogSubtitle>
-      </DialogHeader>
+      {canCreateTable ? (
+        <>
+          <DialogHeader>
+            <DialogTitle>Create New Table</DialogTitle>
+            <DialogSubtitle>Define the structure for your new table</DialogSubtitle>
+          </DialogHeader>
 
-      <DialogContent>
-        <FormGroup>
-          <FormLabel>Table Name</FormLabel>
-          <StyledTextField
-            fullWidth
-            placeholder="users"
-            value={tableName}
-            onChange={(e) => setTableName(e.target.value)}
-            autoFocus
-          />
-        </FormGroup>
+          <DialogContent>
+            <FormGroup>
+              <FormLabel>Table Name</FormLabel>
+              <StyledTextField
+                fullWidth
+                placeholder="users"
+                value={tableName}
+                onChange={(e) => setTableName(e.target.value)}
+                autoFocus
+              />
+            </FormGroup>
 
-        <FormGroup>
-          <FormLabel>Columns</FormLabel>
-          <ColumnsHeader>
-            <span>Name</span>
-            <span>Type</span>
-            <span>Nullable</span>
-            <span>Primary</span>
-            <span></span>
-          </ColumnsHeader>
+            <FormGroup>
+              <FormLabel>Columns</FormLabel>
+              <ColumnsHeader>
+                <span>Name</span>
+                <span>Type</span>
+                <span>Nullable</span>
+                <span>Primary</span>
+                <span></span>
+              </ColumnsHeader>
 
-          {columns.map((column, index) => (
-            <ColumnDefinitionCard key={index}>
-              <ColumnRow>
-                <ColumnInput
-                  placeholder="column_name"
-                  value={column.name}
-                  onChange={(e) => handleColumnChange(index, 'name', e.target.value)}
-                  size="small"
-                />
-                <TypeSelect
-                  size="small"
-                  value={column.type}
-                  onChange={(e) => handleColumnChange(index, 'type', e.target.value as string)}
-                >
-                  {types.map((type) => (
-                    <MenuItem key={type} value={type}>{type}</MenuItem>
-                  ))}
-                </TypeSelect>
-                <CheckboxLabel>
-                  <input
-                    type="checkbox"
-                    checked={column.nullable}
-                    onChange={(e) => handleColumnChange(index, 'nullable', e.target.checked)}
-                    disabled={column.isPrimaryKey}
-                  />
-                  NULL
-                </CheckboxLabel>
-                <CheckboxLabel>
-                  <input
-                    type="checkbox"
-                    checked={column.isPrimaryKey}
-                    onChange={(e) => handleColumnChange(index, 'isPrimaryKey', e.target.checked)}
-                  />
-                  PK
-                </CheckboxLabel>
-                <RemoveColumnButton
-                  size="small"
-                  onClick={() => handleRemoveColumn(index)}
-                  disabled={columns.length === 1}
-                >
-                  <DeleteIcon sx={{ fontSize: '1rem' }} />
-                </RemoveColumnButton>
-              </ColumnRow>
-            </ColumnDefinitionCard>
-          ))}
+              {columns.map((column, index) => (
+                <ColumnDefinitionCard key={index}>
+                  <ColumnRow>
+                    <ColumnInput
+                      placeholder="column_name"
+                      value={column.name}
+                      onChange={(e) => handleColumnChange(index, 'name', e.target.value)}
+                      size="small"
+                    />
+                    <TypeSelect
+                      size="small"
+                      value={column.type}
+                      onChange={(e) => handleColumnChange(index, 'type', e.target.value as string)}
+                    >
+                      {types.map((type) => (
+                        <MenuItem key={type} value={type}>{type}</MenuItem>
+                      ))}
+                    </TypeSelect>
+                    <CheckboxLabel>
+                      <input
+                        type="checkbox"
+                        checked={column.nullable}
+                        onChange={(e) => handleColumnChange(index, 'nullable', e.target.checked)}
+                        disabled={column.isPrimaryKey}
+                      />
+                      NULL
+                    </CheckboxLabel>
+                    <CheckboxLabel>
+                      <input
+                        type="checkbox"
+                        checked={column.isPrimaryKey}
+                        onChange={(e) => handleColumnChange(index, 'isPrimaryKey', e.target.checked)}
+                      />
+                      PK
+                    </CheckboxLabel>
+                    <RemoveColumnButton
+                      size="small"
+                      onClick={() => handleRemoveColumn(index)}
+                      disabled={columns.length === 1}
+                    >
+                      <DeleteIcon sx={{ fontSize: '1rem' }} />
+                    </RemoveColumnButton>
+                  </ColumnRow>
+                </ColumnDefinitionCard>
+              ))}
 
-          <AddColumnButton onClick={handleAddColumn} startIcon={<AddIcon />}>
-            Add Column
-          </AddColumnButton>
-        </FormGroup>
-      </DialogContent>
+              <AddColumnButton onClick={handleAddColumn} startIcon={<AddIcon />}>
+                Add Column
+              </AddColumnButton>
+            </FormGroup>
+          </DialogContent>
 
-      <DialogFooter>
-        <CancelButton onClick={onClose}>Cancel</CancelButton>
-        <SubmitButton onClick={handleSubmit} disabled={!isValid || isPending}>
-          {isPending ? <ButtonLoadingSkeleton size="small" /> : 'Create Table'}
-        </SubmitButton>
-      </DialogFooter>
+          <DialogFooter>
+            <CancelButton onClick={onClose}>Cancel</CancelButton>
+            <SubmitButton onClick={handleSubmit} disabled={!isValid || isPending}>
+              {isPending ? <ButtonLoadingSkeleton size="small" /> : 'Create Table'}
+            </SubmitButton>
+          </DialogFooter>
+        </>
+      ) : (
+        <>
+          <DialogHeader>
+            <DialogTitle>Create New Table</DialogTitle>
+          </DialogHeader>
+          <DialogContent>
+            <AccessRestricted
+              message="Create Table Restricted"
+              description="You don't have permission to create tables. Please contact the account owner to request access."
+              permission="createTable"
+            />
+          </DialogContent>
+          <DialogFooter>
+            <CancelButton onClick={onClose}>Close</CancelButton>
+          </DialogFooter>
+        </>
+      )}
     </StyledDialog>
   );
 }

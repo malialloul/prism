@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import { Box, Typography, InputAdornment, IconButton } from '@mui/material';
@@ -8,6 +8,7 @@ import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
 import { useSignIn } from '../../api/entities/auth';
 import { hashPassword } from '../../utils/crypto';
+import { toastService } from '../../services';
 import TwoFactorDialog from './TwoFactorDialog';
 import {
   AuthWrapper,
@@ -62,6 +63,15 @@ export default function SignIn() {
     },
   });
 
+  // Check for force logout message from previous session
+  useEffect(() => {
+    const forceLogoutMessage = sessionStorage.getItem('forceLogoutMessage');
+    if (forceLogoutMessage) {
+      toastService.error(forceLogoutMessage);
+      sessionStorage.removeItem('forceLogoutMessage');
+    }
+  }, []);
+
   const handleSubmit = async (
     values: { email: string; password: string },
   ): Promise<void> => {
@@ -85,7 +95,7 @@ export default function SignIn() {
             Build APIs Without Writing Code
           </LeftPanelTitle>
           <LeftPanelText>
-            Connect your database, design schemas visually, and generate 
+            Connect your database, design schemas visually, and generate
             production-ready APIs in minutes — not months.
           </LeftPanelText>
           <FeatureList>

@@ -31,3 +31,18 @@ export type { VerifyResetCodeDto } from './models/VerifyResetCodeDto';
 
 export { AuthenticationService } from './services/AuthenticationService';
 export { TwoFactorAuthenticationService } from './services/TwoFactorAuthenticationService';
+
+// HTTP Client utilities
+export {
+  setAuthToken,
+  getAuthToken,
+  clearAuthToken,
+  getUserFromToken,
+  isSharedAccessSession,
+  getSharedAccessInfo,
+  hasPermission,
+} from './httpClient';
+
+// Share permissions
+export type { SharePermissions } from './models/SharedAccountDto';
+export { DEFAULT_SHARE_PERMISSIONS } from './models/SharedAccountDto';

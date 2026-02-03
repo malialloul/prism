@@ -12,7 +12,7 @@ import {
   CheckboxLabel,
 } from '../shared.styles';
 import { DialogTitle, DialogContent } from './EditColumnDialog.styles';
-import { ButtonLoadingSkeleton } from '../../../../components';
+import { ButtonLoadingSkeleton, usePermissions, AccessRestricted } from '../../../../components';
 
 interface EditColumnDialogProps {
   open: boolean;
@@ -35,90 +35,109 @@ export default function EditColumnDialog({
   onSave,
   isModifying,
 }: EditColumnDialogProps) {
+  const { canEditColumn } = usePermissions();
+  
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Edit Column: {selectedColumn?.name}</DialogTitle>
-      <DialogContent>
-        <FormGroup>
-          <FormLabel>Column Name</FormLabel>
-          <StyledTextField
-            fullWidth
-            value={columnModifications.newName || ''}
-            onChange={(e) =>
-              onColumnModificationsChange({
-                ...columnModifications,
-                newName: e.target.value,
-              })
-            }
-          />
-        </FormGroup>
-        <FormGroup>
-          <FormLabel>Data Type</FormLabel>
-          <StyledSelect
-            fullWidth
-            value={columnModifications.type || selectedColumn?.type || ''}
-            onChange={(e) =>
-              onColumnModificationsChange({
-                ...columnModifications,
-                type: e.target.value as string,
-              })
-            }
-          >
-            {dataTypes.map((type) => (
-              <MenuItem key={type} value={type}>
-                {type}
-              </MenuItem>
-            ))}
-            {/* Include current type if not in list */}
-            {selectedColumn?.type &&
-              !([...dataTypes] as string[]).includes(selectedColumn.type) && (
-                <MenuItem value={selectedColumn.type}>{selectedColumn.type}</MenuItem>
-              )}
-          </StyledSelect>
-        </FormGroup>
-        <FormRow>
-          <FormGroup>
-            <FormLabel>Default Value</FormLabel>
-            <StyledTextField
-              fullWidth
-              value={columnModifications.defaultValue || ''}
-              onChange={(e) =>
-                onColumnModificationsChange({
-                  ...columnModifications,
-                  defaultValue: e.target.value,
-                })
-              }
-              placeholder="NULL"
-            />
-          </FormGroup>
-          <FormGroup>
-            <CheckboxLabel>
-              <Checkbox
-                checked={columnModifications.nullable ?? selectedColumn?.nullable ?? true}
+      {canEditColumn ? (
+        <>
+          <DialogContent>
+            <FormGroup>
+              <FormLabel>Column Name</FormLabel>
+              <StyledTextField
+                fullWidth
+                value={columnModifications.newName || ''}
                 onChange={(e) =>
                   onColumnModificationsChange({
                     ...columnModifications,
-                    nullable: e.target.checked,
+                    newName: e.target.value,
                   })
                 }
               />
-              <span>Nullable</span>
-            </CheckboxLabel>
-          </FormGroup>
-        </FormRow>
-      </DialogContent>
-      <DialogActions sx={{ p: 2 }}>
-        <CancelButton onClick={onClose}>Cancel</CancelButton>
-        <SubmitButton
-          onClick={onSave}
-          disabled={isModifying}
-          startIcon={
-            isModifying ? <ButtonLoadingSkeleton size="small" /> : <SaveIcon />
-          }
-        >
-          Save Changes
-        </SubmitButton>
-      </DialogActions>
+            </FormGroup>
+            <FormGroup>
+              <FormLabel>Data Type</FormLabel>
+              <StyledSelect
+                fullWidth
+                value={columnModifications.type || selectedColumn?.type || ''}
+                onChange={(e) =>
+                  onColumnModificationsChange({
+                    ...columnModifications,
+                    type: e.target.value as string,
+                  })
+                }
+              >
+                {dataTypes.map((type) => (
+                  <MenuItem key={type} value={type}>
+                    {type}
+                  </MenuItem>
+                ))}
+                {/* Include current type if not in list */}
+                {selectedColumn?.type &&
+                  !([...dataTypes] as string[]).includes(selectedColumn.type) && (
+                    <MenuItem value={selectedColumn.type}>{selectedColumn.type}</MenuItem>
+                  )}
+              </StyledSelect>
+            </FormGroup>
+            <FormRow>
+              <FormGroup>
+                <FormLabel>Default Value</FormLabel>
+                <StyledTextField
+                  fullWidth
+                  value={columnModifications.defaultValue || ''}
+                  onChange={(e) =>
+                    onColumnModificationsChange({
+                      ...columnModifications,
+                      defaultValue: e.target.value,
+                    })
+                  }
+                  placeholder="NULL"
+                />
+              </FormGroup>
+              <FormGroup>
+                <CheckboxLabel>
+                  <Checkbox
+                    checked={columnModifications.nullable ?? selectedColumn?.nullable ?? true}
+                    onChange={(e) =>
+                      onColumnModificationsChange({
+                        ...columnModifications,
+                        nullable: e.target.checked,
+                      })
+                    }
+                  />
+                  <span>Nullable</span>
+                </CheckboxLabel>
+              </FormGroup>
+            </FormRow>
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <CancelButton onClick={onClose}>Cancel</CancelButton>
+            <SubmitButton
+              onClick={onSave}
+              disabled={isModifying}
+              startIcon={
+                isModifying ? <ButtonLoadingSkeleton size="small" /> : <SaveIcon />
+              }
+            >
+              Save Changes
+            </SubmitButton>
+          </DialogActions>
+        </>
+      ) : (
+        <>
+          <DialogContent>
+            <AccessRestricted
+              message="Edit Column Restricted"
+              description="You don't have permission to edit columns. Please contact the account owner to request access."
+              permission="editColumn"
+            />
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <CancelButton onClick={onClose}>Close</CancelButton>
+          </DialogActions>
+        </>
+      )}
     </Dialog>
   );
 }

@@ -21,7 +21,7 @@ import {
   AllDatabasesIcon,
   UserAvatar,
 } from './GlobalDatabaseSelector.styles';
-import { clearAuthToken } from '../../../api/httpClient';
+import { clearAuthToken, isSharedAccessSession } from '../../../api/httpClient';
 
 // Icons
 import DatabaseIcon from '@mui/icons-material/Storage';
@@ -48,6 +48,7 @@ export default function GlobalDatabaseSelector({
   onAddDatabase,
 }: GlobalDatabaseSelectorProps) {
   const navigate = useNavigate();
+  const isShared = isSharedAccessSession();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const menuOpen = Boolean(anchorEl);
 
@@ -150,14 +151,18 @@ export default function GlobalDatabaseSelector({
           </ActionButton>
         </Tooltip>
 
-        <Tooltip title="Settings">
-          <ActionButton>
-            <SettingsIcon fontSize="small" />
-          </ActionButton>
-        </Tooltip>
+        {!isShared && (
+          <Tooltip title="Settings">
+            <ActionButton onClick={() => navigate('/settings')}>
+              <SettingsIcon fontSize="small" />
+            </ActionButton>
+          </Tooltip>
+        )}
 
-        <Tooltip title="Add Database">
-          <AddDatabaseButton onClick={onAddDatabase}>
+        <Tooltip title="Add Database" arrow>
+          <AddDatabaseButton 
+            onClick={onAddDatabase}
+          >
             <AddIcon fontSize="small" />
           </AddDatabaseButton>
         </Tooltip>
