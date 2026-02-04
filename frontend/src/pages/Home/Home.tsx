@@ -1,4 +1,3 @@
-import ComparisonTable from "./ComparisonTable/ComparisonTable";
 import FeaturesGrid from "./FeaturesGrid/FeaturesGrid";
 import Footer from "./Footer/Footer";
 import Hero from "./Hero/Hero";
@@ -13,7 +12,6 @@ export default function Home() {
       <Hero />
       <FeaturesGrid />
       <HowItWorks />
-      <ComparisonTable />
       <Pricing />
       <Footer />
     </>

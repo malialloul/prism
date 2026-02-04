@@ -67,7 +67,7 @@ const allFeatures = [
   "Instant CRUD API generation",
   "Multi-language code generation",
   "Interactive ER diagrams",
-  "Auto-generated Swagger docs",
+  "Auto-generated APIs docs",
   "Privacy-first architecture",
   "No infrastructure setup",
   "Relationship endpoint support",

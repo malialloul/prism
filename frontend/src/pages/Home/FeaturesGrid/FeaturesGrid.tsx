@@ -24,7 +24,7 @@ const features = [
   {
     icon: Language,
     title: 'Multi-Language Code',
-    description: 'Get production-ready code in JavaScript, Python, Go, PHP, Ruby, Java, Rust, C#, and Swift.',
+    description: 'Get production-ready code in Java (Spring Boot), JavaScript (Express), or .NET (C#).',
     gradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
   },
   {
@@ -36,13 +36,13 @@ const features = [
   {
     icon: Description,
     title: 'Auto Swagger Docs',
-    description: 'Interactive API documentation generated automatically. Test endpoints right in your browser.',
+    description: 'Interactive API Panel generated automatically. Test endpoints right in your browser.',
     gradient: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
   },
   {
     icon: Lock,
     title: 'Privacy First',
-    description: 'All database credentials stay in your browser. Zero data sent to our servers. Open source.',
+    description: 'All databases sensitive data are encrypted.',
     gradient: 'linear-gradient(135deg, #ec4899 0%, #d946ef 100%)',
   },
 ];
