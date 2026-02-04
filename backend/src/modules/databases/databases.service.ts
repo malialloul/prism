@@ -283,11 +283,11 @@ async function createNeonProject(projectName: string): Promise<{ host: string; d
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+    const error = await response.json().catch(() => ({ message: 'Unknown error' })) as { message?: string };
     throw new ValidationError(`Failed to create Neon project: ${error.message || response.statusText}`);
   }
 
-  const data = await response.json();
+  const data = await response.json() as { connection_uris?: Array<{ connection_uri?: string }> };
   
   // Extract connection details from response
   const connectionUri = data.connection_uris?.[0]?.connection_uri;
