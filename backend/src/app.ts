@@ -5,6 +5,9 @@ import logsRoutes from "./modules/logs/logs.routes";
 import databasesRoutes from "./modules/databases/databases.routes";
 import schemaRoutes, { publicSchemaRoutes } from "./modules/databases/schema/schema.routes";
 import { crudRoutes } from "./modules/databases/crud";
+import { springBootRoutes } from "./modules/databases/springboot";
+import { expressRoutes } from "./modules/databases/express";
+import { dotnetRoutes } from "./modules/databases/dotnet";
 import swaggerUi from "swagger-ui-express";
 import { openapiDoc } from "./openapi";
 import { errorHandler } from "./middleware/errorHandler";
@@ -27,6 +30,9 @@ app.use("/databases", publicSchemaRoutes);
 app.use("/databases", databasesRoutes);
 app.use("/databases", crudRoutes); // Dynamic CRUD API endpoints - MUST be before schemaRoutes
 app.use("/databases", schemaRoutes); // Custom query APIs (saved queries) - comes after CRUD
+app.use("/databases", springBootRoutes); // Spring Boot project generation
+app.use("/databases", expressRoutes); // Express.js project generation
+app.use("/databases", dotnetRoutes); // .NET project generation
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiDoc));
 app.get("/openapi.json", (_req, res) => {
   res.json(openapiDoc);

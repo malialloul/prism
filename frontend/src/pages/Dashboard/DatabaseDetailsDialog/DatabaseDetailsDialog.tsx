@@ -146,7 +146,7 @@ export default function DatabaseDetailsDialog({ open, onClose, database }: Datab
                             </DetailIcon>
                             <DetailContent>
                                 <DetailLabel>Database Name</DetailLabel>
-                                <DetailValue>{database.database}</DetailValue>
+                                <DetailValue>{database.name}</DetailValue>
                             </DetailContent>
                         </DetailRow>
 

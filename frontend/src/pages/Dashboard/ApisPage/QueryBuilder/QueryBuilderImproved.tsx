@@ -429,10 +429,10 @@ const FieldRow: React.FC<FieldRowProps> = ({
             ? (isDark ? 'rgba(124, 77, 255, 0.15)' : '#f3f0ff')
             : (isDark ? '#1a1f35' : '#fff'),
         border: `2px solid ${isConnectSource
-            ? connectionMode === 'join' ? '#2196F3'
-              : connectionMode === 'include' ? '#4CAF50'
-                : '#f44336'
-            : isSelected ? '#7c4dff' : (isDark ? '#334155' : '#e0e0e0')
+          ? connectionMode === 'join' ? '#2196F3'
+            : connectionMode === 'include' ? '#4CAF50'
+              : '#f44336'
+          : isSelected ? '#7c4dff' : (isDark ? '#334155' : '#e0e0e0')
           }`,
         cursor: 'pointer',
         transition: 'all 0.2s ease',
@@ -1835,6 +1835,32 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
 
         testSql = testSql.replace(`:${f.parameterName}`, formattedValue);
       });
+
+      // Handle pagination parameters - only apply if user provides values
+      const userPagesize = testParamValues['pagesize']?.trim();
+      const userPagecount = testParamValues['pagecount']?.trim();
+
+      if (testSql.includes(':pagesize')) {
+        if (userPagesize) {
+          const pagesize = parseInt(userPagesize) || 100;
+          testSql = testSql.split(':pagesize').join(String(pagesize));
+        } else {
+          // Remove LIMIT clause if no pagesize provided
+          testSql = testSql.replace(/\nLIMIT\s+:pagesize/i, '').replace(/LIMIT\s+:pagesize/i, '');
+        }
+      }
+
+      if (testSql.includes(':offset')) {
+        if (userPagecount && userPagesize) {
+          const pagesize = parseInt(userPagesize) || 100;
+          const pagecount = parseInt(userPagecount) || 1;
+          const offset = (pagecount - 1) * pagesize;
+          testSql = testSql.split(':offset').join(String(offset));
+        } else {
+          // Remove OFFSET clause if no pagecount provided
+          testSql = testSql.replace(/\nOFFSET\s+:offset/i, '').replace(/OFFSET\s+:offset/i, '');
+        }
+      }
 
       // Add LIMIT to prevent fetching too many rows for preview
       const previewSql = testSql.includes('LIMIT')

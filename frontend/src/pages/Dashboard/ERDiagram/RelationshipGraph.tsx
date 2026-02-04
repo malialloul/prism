@@ -303,7 +303,7 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
 
     const handleExportImage = async () => {
         if (!containerRef.current || nodes.length === 0) return;
-        
+
         try {
             // Get the viewport element that contains all nodes
             const viewportEl = containerRef.current.querySelector('.react-flow__viewport') as HTMLElement;
@@ -335,7 +335,7 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
                     transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
                 },
             });
-            
+
             const link = document.createElement('a');
             link.download = 'er-diagram.png';
             link.href = dataUrl;
@@ -388,7 +388,7 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
             const container = containerRef.current;
             canvas.width = container.clientWidth;
             canvas.height = container.clientHeight;
-            
+
             // Restore drawing if there's history
             if (historyIndex >= 0 && drawingHistory[historyIndex]) {
                 const ctx = canvas.getContext('2d');
@@ -404,7 +404,7 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
         if (!canvasRef.current) return;
         const ctx = canvasRef.current.getContext('2d');
         if (!ctx) return;
-        
+
         const imageData = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
         const newHistory = drawingHistory.slice(0, historyIndex + 1);
         newHistory.push(imageData);
@@ -415,15 +415,15 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
     // Drawing handlers
     const startDrawing = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
         if (!canvasRef.current || isTextMode) return;
-        
+
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        
+
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
-        
+
         setIsDrawing(true);
         ctx.beginPath();
         ctx.moveTo(x, y);
@@ -435,15 +435,15 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
 
     const draw = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
         if (!isDrawing || !canvasRef.current || isTextMode) return;
-        
+
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        
+
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
-        
+
         ctx.lineTo(x, y);
         ctx.stroke();
     }, [isDrawing, isTextMode]);
@@ -458,12 +458,12 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
     // Handle canvas click for text mode
     const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
         if (!isTextMode || !canvasRef.current) return;
-        
+
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        
+
         if (textInput) {
             // Draw the text
             const ctx = canvas.getContext('2d');
@@ -638,7 +638,7 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
                     {isDrawingMode && (
                         <>
                             <Divider orientation="vertical" flexItem />
-                            
+
                             {/* Pen / Text Toggle */}
                             <ToggleButtonGroup
                                 size="small"
@@ -673,9 +673,9 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
                                                 bgcolor: color,
                                                 cursor: 'pointer',
                                                 border: '2px solid',
-                                                borderColor: drawingColor === color 
-                                                    ? 'primary.main' 
-                                                    : theme.palette.mode === 'light' 
+                                                borderColor: drawingColor === color
+                                                    ? 'primary.main'
+                                                    : theme.palette.mode === 'light'
                                                         ? alpha('#000', 0.2)
                                                         : (color === '#FFFFFF' ? '#ddd' : alpha('#fff', 0.2)),
                                                 boxShadow: drawingColor === color ? `0 0 0 2px ${alpha(theme.palette.primary.main, 0.3)}` : 'none',
@@ -697,7 +697,7 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
                                         height: Math.max(6, brushSize),
                                         borderRadius: '50%',
                                         bgcolor: drawingColor,
-                                        border: theme.palette.mode === 'light' 
+                                        border: theme.palette.mode === 'light'
                                             ? `1px solid ${alpha('#000', 0.2)}`
                                             : (drawingColor === '#FFFFFF' ? '1px solid #ddd' : 'none'),
                                         maxWidth: 20,
