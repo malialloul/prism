@@ -1,11 +1,13 @@
 // src/config/db.ts
 import { Pool } from 'pg';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 export const pool = new Pool({
-  host: 'ep-cold-feather-aj032r0a-pooler.c-3.us-east-2.aws.neon.tech',
-  user: 'neondb_owner',
-  database: 'neondb',
-  password: 'npg_5IaQoezjlW0N',
-  port: 5432,
-  ssl: { rejectUnauthorized: false },
+  host: process.env.PG_HOST || 'localhost',
+  user: process.env.PG_USER || 'postgres',
+  database: process.env.PG_DATABASE || 'prism',
+  password: process.env.PG_PASSWORD || 'your_password',
+  port: parseInt(process.env.PG_PORT || '5432'),
+  ssl: process.env.PG_SSL === 'true' ? { rejectUnauthorized: false } : false,
 });
