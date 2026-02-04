@@ -19,6 +19,7 @@ import {
   exportSchemaService,
   importSqlService,
   generateSchemaDocService,
+  generateSchemaExcelService,
 } from './schema.service';
 
 /**
@@ -525,6 +526,35 @@ export const generateSchemaDoc = async (
     }
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.status(200).end(buffer);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /databases/:id/schema/excel
+ * Generate Excel workbook with schema data - each table in a sheet
+ */
+export const generateSchemaExcel = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const databaseId = req.params.id as string;
+
+    const { buffer, filename } = await generateSchemaExcelService(userId, databaseId);
+
+    if (!buffer || buffer.length === 0) {
+      res.status(500).json({ message: 'Failed to generate Excel file' });
+      return;
+    }
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
     res.setHeader('Content-Length', buffer.length);
     res.status(200).end(buffer);

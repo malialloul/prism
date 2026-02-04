@@ -48,10 +48,12 @@ export default function DashboardSchema() {
           <StyledTabs value={1} onChange={(_e, newValue) => {
             if (newValue === 0) navigate('/dashboard/overview');
             if (newValue === 2) navigate('/dashboard/query');
+            if (newValue === 3) navigate('/dashboard/er-diagram');
           }}>
             <StyledTab label="Overview" />
             <StyledTab label="Schema" />
             <StyledTab label="Query" disabled />
+            <StyledTab label="ER Diagram" disabled />
           </StyledTabs>
         </TabsContainer>
         <TabPanel>
@@ -132,10 +134,12 @@ export default function DashboardSchema() {
         <StyledTabs value={1} onChange={(_e, newValue) => {
           if (newValue === 0) navigate('/dashboard/overview');
           if (newValue === 2) navigate('/dashboard/query');
+          if (newValue === 3) navigate('/dashboard/er-diagram');
         }}>
           <StyledTab label="Overview" />
           <StyledTab label="Schema" />
           <StyledTab label="Query" />
+          <StyledTab label="ER Diagram" />
         </StyledTabs>
       </TabsContainer>
 

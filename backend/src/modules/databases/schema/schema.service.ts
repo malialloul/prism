@@ -2,6 +2,7 @@
 import { Pool } from 'pg';
 import mysql from 'mysql2/promise';
 import crypto from 'crypto';
+import ExcelJS from 'exceljs';
 import {
   Document,
   Packer,
@@ -3078,6 +3079,332 @@ export const generateSchemaDocService = async (
 
   const buffer = await Packer.toBuffer(doc);
   const filename = `${dbName.replace(/[^a-zA-Z0-9]/g, '_')}_schema.docx`;
+
+  return { buffer, filename };
+};
+
+/**
+ * Generate an Excel workbook with table data - each table's data in a separate sheet
+ */
+export const generateSchemaExcelService = async (
+  userId: string,
+  databaseId: string
+): Promise<{ buffer: Buffer; filename: string }> => {
+  const conn = await getDatabaseConnection(userId, databaseId);
+
+  const dbResult = await pool.query(
+    `SELECT name FROM database_connections WHERE id = $1 AND user_id = $2`,
+    [databaseId, userId]
+  );
+  const dbName = dbResult.rows[0]?.name || 'Database';
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Prism Database Management';
+  workbook.created = new Date();
+
+  // Style definitions
+  const headerFill: ExcelJS.Fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF4472C4' },
+  };
+  const headerFont: Partial<ExcelJS.Font> = {
+    bold: true,
+    color: { argb: 'FFFFFFFF' },
+    size: 11,
+  };
+  const borderStyle: Partial<ExcelJS.Borders> = {
+    top: { style: 'thin', color: { argb: 'FF999999' } },
+    left: { style: 'thin', color: { argb: 'FF999999' } },
+    bottom: { style: 'thin', color: { argb: 'FF999999' } },
+    right: { style: 'thin', color: { argb: 'FF999999' } },
+  };
+
+  // Helper to sanitize sheet names (max 31 chars, no special chars)
+  const sanitizeSheetName = (name: string): string => {
+    return name
+      .replace(/[\[\]\*\?\/\\:]/g, '_')
+      .substring(0, 31);
+  };
+
+  // Track table info for summary
+  const tableInfo: Array<{ name: string; sheetName: string; rowCount: number; columnCount: number }> = [];
+
+  if (conn.engine === 'postgres') {
+    const pgPool = createPgPool(conn);
+
+    try {
+      const tablesResult = await pgPool.query(`
+        SELECT tablename FROM pg_tables
+        WHERE schemaname = 'public'
+        ORDER BY tablename
+      `);
+
+      for (const { tablename } of tablesResult.rows) {
+        // Get all data from the table
+        const dataResult = await pgPool.query(`SELECT * FROM "${tablename}" LIMIT 50000`);
+        
+        if (dataResult.rows.length === 0 && dataResult.fields.length === 0) {
+          continue; // Skip empty tables with no columns
+        }
+
+        const sheetName = sanitizeSheetName(tablename);
+        const sheet = workbook.addWorksheet(sheetName);
+
+        // Get column names from the result fields
+        const columnNames = dataResult.fields.map(f => f.name);
+
+        // Header row
+        const headerRow = sheet.getRow(1);
+        headerRow.values = columnNames;
+        headerRow.eachCell((cell: ExcelJS.Cell) => {
+          cell.fill = headerFill;
+          cell.font = headerFont;
+          cell.border = borderStyle;
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        });
+        headerRow.height = 22;
+
+        // Data rows
+        dataResult.rows.forEach((row, rowIndex) => {
+          const excelRow = sheet.getRow(rowIndex + 2);
+          const values = columnNames.map(col => {
+            const value = row[col];
+            // Handle special types
+            if (value === null || value === undefined) {
+              return '';
+            }
+            if (value instanceof Date) {
+              return value.toISOString();
+            }
+            if (typeof value === 'object') {
+              return JSON.stringify(value);
+            }
+            return value;
+          });
+          excelRow.values = values;
+
+          // Apply styles
+          excelRow.eachCell((cell: ExcelJS.Cell) => {
+            cell.border = borderStyle;
+            cell.alignment = { vertical: 'middle' };
+            
+            // Alternate row colors
+            if (rowIndex % 2 === 1) {
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFF2F2F2' },
+              };
+            }
+          });
+        });
+
+        // Auto-fit column widths (estimate based on content)
+        columnNames.forEach((colName, index) => {
+          let maxLength = colName.length;
+          dataResult.rows.slice(0, 100).forEach(row => {
+            const value = row[colName];
+            const len = value ? String(value).length : 0;
+            if (len > maxLength) maxLength = len;
+          });
+          sheet.getColumn(index + 1).width = Math.min(Math.max(maxLength + 2, 10), 50);
+        });
+
+        // Enable auto-filter for sorting on each column
+        if (columnNames.length > 0) {
+          const lastColumn = String.fromCharCode(64 + Math.min(columnNames.length, 26));
+          const lastRow = dataResult.rows.length + 1;
+          sheet.autoFilter = {
+            from: 'A1',
+            to: `${lastColumn}${lastRow}`,
+          };
+        }
+
+        tableInfo.push({
+          name: tablename,
+          sheetName,
+          rowCount: dataResult.rows.length,
+          columnCount: columnNames.length,
+        });
+      }
+    } finally {
+      await pgPool.end();
+    }
+  } else {
+    const mysqlConn = await createMysqlConnection(conn);
+
+    try {
+      const [rows] = await mysqlConn.query(`SHOW TABLES`);
+      const mysqlTableNames: string[] = (rows as any[]).map(
+        r => String(Object.values(r)[0])
+      );
+
+      for (const tableName of mysqlTableNames) {
+        // Get all data from the table
+        const [dataRows, fields] = await mysqlConn.query(`SELECT * FROM \`${tableName}\` LIMIT 50000`);
+        
+        const data = dataRows as any[];
+        const fieldDefs = fields as any[];
+
+        if (data.length === 0 && fieldDefs.length === 0) {
+          continue; // Skip empty tables with no columns
+        }
+
+        const sheetName = sanitizeSheetName(tableName);
+        const sheet = workbook.addWorksheet(sheetName);
+
+        // Get column names
+        const columnNames = fieldDefs.map((f: any) => f.name);
+
+        // Header row
+        const headerRow = sheet.getRow(1);
+        headerRow.values = columnNames;
+        headerRow.eachCell((cell: ExcelJS.Cell) => {
+          cell.fill = headerFill;
+          cell.font = headerFont;
+          cell.border = borderStyle;
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        });
+        headerRow.height = 22;
+
+        // Data rows
+        data.forEach((row, rowIndex) => {
+          const excelRow = sheet.getRow(rowIndex + 2);
+          const values = columnNames.map(col => {
+            const value = row[col];
+            // Handle special types
+            if (value === null || value === undefined) {
+              return '';
+            }
+            if (value instanceof Date) {
+              return value.toISOString();
+            }
+            if (typeof value === 'object') {
+              return JSON.stringify(value);
+            }
+            return value;
+          });
+          excelRow.values = values;
+
+          // Apply styles
+          excelRow.eachCell((cell: ExcelJS.Cell) => {
+            cell.border = borderStyle;
+            cell.alignment = { vertical: 'middle' };
+            
+            // Alternate row colors
+            if (rowIndex % 2 === 1) {
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFF2F2F2' },
+              };
+            }
+          });
+        });
+
+        // Auto-fit column widths (estimate based on content)
+        columnNames.forEach((colName, index) => {
+          let maxLength = colName.length;
+          data.slice(0, 100).forEach(row => {
+            const value = row[colName];
+            const len = value ? String(value).length : 0;
+            if (len > maxLength) maxLength = len;
+          });
+          sheet.getColumn(index + 1).width = Math.min(Math.max(maxLength + 2, 10), 50);
+        });
+
+        // Enable auto-filter for sorting on each column
+        if (columnNames.length > 0) {
+          const lastColumn = String.fromCharCode(64 + Math.min(columnNames.length, 26));
+          const lastRow = data.length + 1;
+          sheet.autoFilter = {
+            from: 'A1',
+            to: `${lastColumn}${lastRow}`,
+          };
+        }
+
+        tableInfo.push({
+          name: tableName,
+          sheetName,
+          rowCount: data.length,
+          columnCount: columnNames.length,
+        });
+      }
+    } finally {
+      await mysqlConn.end();
+    }
+  }
+
+  // Add Summary sheet at the beginning
+  const summarySheet = workbook.addWorksheet('Summary', {
+    properties: { tabColor: { argb: 'FF4472C4' } },
+  });
+  
+  // Move summary to first position by removing and re-adding other sheets
+  // Actually exceljs doesn't support moving, so we need to recreate
+  // For now, Summary will be at the end - that's fine
+
+  // Summary title
+  summarySheet.mergeCells('A1:D1');
+  const summaryTitle = summarySheet.getCell('A1');
+  summaryTitle.value = 'Database Data Export Summary';
+  summaryTitle.font = { bold: true, size: 16 };
+  summarySheet.getCell('A1').alignment = { horizontal: 'center' };
+
+  // Metadata
+  summarySheet.getCell('A3').value = 'Database:';
+  summarySheet.getCell('A3').font = { bold: true };
+  summarySheet.getCell('B3').value = dbName;
+
+  summarySheet.getCell('A4').value = 'Engine:';
+  summarySheet.getCell('A4').font = { bold: true };
+  summarySheet.getCell('B4').value = conn.engine === 'postgres' ? 'PostgreSQL' : 'MySQL';
+
+  summarySheet.getCell('A5').value = 'Exported:';
+  summarySheet.getCell('A5').font = { bold: true };
+  summarySheet.getCell('B5').value = new Date().toLocaleString();
+
+  summarySheet.getCell('A6').value = 'Total Tables:';
+  summarySheet.getCell('A6').font = { bold: true };
+  summarySheet.getCell('B6').value = tableInfo.length;
+
+  // Table list header
+  summarySheet.getRow(8).values = ['#', 'Table Name', 'Rows', 'Columns', 'Go to Sheet'];
+  summarySheet.getRow(8).eachCell((cell: ExcelJS.Cell) => {
+    cell.fill = headerFill;
+    cell.font = headerFont;
+    cell.border = borderStyle;
+    cell.alignment = { horizontal: 'center' };
+  });
+
+  // List all tables with hyperlinks
+  tableInfo.forEach((info, index) => {
+    const row = summarySheet.getRow(9 + index);
+    row.getCell(1).value = index + 1;
+    row.getCell(2).value = info.name;
+    row.getCell(3).value = info.rowCount;
+    row.getCell(4).value = info.columnCount;
+    row.getCell(5).value = { text: 'View →', hyperlink: `#'${info.sheetName}'!A1` };
+    row.getCell(5).font = { color: { argb: 'FF0066CC' }, underline: true };
+    
+    row.eachCell((cell: ExcelJS.Cell) => {
+      cell.border = borderStyle;
+    });
+  });
+
+  // Set column widths for summary
+  summarySheet.columns = [
+    { width: 6 },  // #
+    { width: 30 }, // Table Name
+    { width: 10 }, // Rows
+    { width: 10 }, // Columns
+    { width: 12 }, // Link
+  ];
+
+  // Generate buffer
+  const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+  const filename = `${dbName.replace(/[^a-zA-Z0-9]/g, '_')}_data_export.xlsx`;
 
   return { buffer, filename };
 };

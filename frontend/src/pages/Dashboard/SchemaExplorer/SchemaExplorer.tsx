@@ -8,6 +8,7 @@ import FileUploadIcon from '@mui/icons-material/FileUpload';
 import CodeIcon from '@mui/icons-material/Code';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import DescriptionIcon from '@mui/icons-material/Description';
+import GridOnIcon from '@mui/icons-material/GridOn';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useSchemaObjects } from '../../../api/entities/schema';
 import { SchemaService } from '../../../api/services/SchemaService';
@@ -61,6 +62,7 @@ export default function SchemaExplorer({
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isGeneratingDoc, setIsGeneratingDoc] = useState(false);
+  const [isGeneratingExcel, setIsGeneratingExcel] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleGenerateDoc = async () => {
@@ -86,6 +88,32 @@ export default function SchemaExplorer({
       toastService.error(error?.body?.message || 'Failed to generate documentation');
     } finally {
       setIsGeneratingDoc(false);
+    }
+  };
+
+  const handleGenerateExcel = async () => {
+    if (!databaseId) return;
+    setMenuAnchor(null);
+    setIsGeneratingExcel(true);
+
+    try {
+      const blob = await SchemaService.generateSchemaExcel(databaseId);
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `schema_export.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toastService.success('Excel schema exported successfully');
+    } catch (error: any) {
+      toastService.error(error?.body?.message || 'Failed to generate Excel file');
+    } finally {
+      setIsGeneratingExcel(false);
     }
   };
 
@@ -232,7 +260,13 @@ export default function SchemaExplorer({
             <ListItemIcon>
               <DescriptionIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>Generate Word Document</ListItemText>
+            <ListItemText>Export Word Document</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={handleGenerateExcel} disabled={isGeneratingExcel}>
+            <ListItemIcon>
+              <GridOnIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Export Excel Spreadsheet</ListItemText>
           </MenuItem>
           <Divider />
           <MenuItem onClick={handleImportClick} disabled={isImporting}>

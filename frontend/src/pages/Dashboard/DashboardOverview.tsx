@@ -62,10 +62,12 @@ export default function DashboardOverview() {
         <StyledTabs value={0} onChange={(_e, newValue) => {
           if (newValue === 1) navigate('/dashboard/schema');
           if (newValue === 2) navigate('/dashboard/query');
+          if (newValue === 3) navigate('/dashboard/er-diagram');
         }}>
           <StyledTab label="Overview" />
           <StyledTab label="Schema" disabled={!connectedDatabase} />
           <StyledTab label="Query" disabled={!connectedDatabase} />
+          <StyledTab label="ER Diagram" disabled={!connectedDatabase} />
         </StyledTabs>
       </TabsContainer>
 

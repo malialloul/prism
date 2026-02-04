@@ -21,6 +21,7 @@ import {
   exportSchema,
   importSql,
   generateSchemaDoc,
+  generateSchemaExcel,
 } from './schema.controller';
 
 const router = Router();
@@ -67,6 +68,7 @@ router.delete('/:id/tables/:tableName/columns/:columnName', requirePermission('d
 router.get('/:id/export', requirePermission('runQuery'), exportSchema);
 router.post('/:id/import', requirePermission('runQuery'), importSql);
 router.get('/:id/schema/documentation', requirePermission('runQuery'), generateSchemaDoc);
+router.get('/:id/schema/excel', requirePermission('runQuery'), generateSchemaExcel);
 
 export const publicSchemaRoutes = publicRouter;
 export default router;

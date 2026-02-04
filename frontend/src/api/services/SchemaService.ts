@@ -484,4 +484,29 @@ export class SchemaService {
     
     return response.blob();
   }
+
+  /**
+   * Generate Excel workbook with schema data - each table in a sheet
+   * @param databaseId Database ID
+   * @returns Excel file as blob
+   * @throws ApiError
+   */
+  public static async generateSchemaExcel(
+    databaseId: number
+  ): Promise<Blob> {
+    const token = getAuthToken();
+    
+    const response = await fetch(`${OpenAPI.BASE}/databases/${databaseId}/schema/excel`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to generate Excel file');
+    }
+    
+    return response.blob();
+  }
 }
