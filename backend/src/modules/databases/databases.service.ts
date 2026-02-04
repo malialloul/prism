@@ -258,6 +258,56 @@ export const connectDatabaseService = async (
 };
 
 /**
+ * Create a Neon PostgreSQL project via API
+ */
+async function createNeonProject(projectName: string): Promise<{ host: string; database: string; username: string; password: string; port: number }> {
+  const { apiKey, orgId } = config.neon;
+  
+  if (!apiKey || !orgId) {
+    throw new ValidationError('Neon API is not configured. Please set NEON_API_KEY and NEON_ORG_ID environment variables.');
+  }
+
+  const response = await fetch('https://console.neon.tech/api/v2/projects', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      project: {
+        name: projectName,
+        org_id: orgId,
+        pg_version: 16,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+    throw new ValidationError(`Failed to create Neon project: ${error.message || response.statusText}`);
+  }
+
+  const data = await response.json();
+  
+  // Extract connection details from response
+  const connectionUri = data.connection_uris?.[0]?.connection_uri;
+  if (!connectionUri) {
+    throw new ValidationError('Failed to get connection URI from Neon');
+  }
+
+  // Parse the connection URI: postgresql://user:password@host/database
+  const url = new URL(connectionUri);
+  
+  return {
+    host: url.hostname,
+    port: parseInt(url.port || '5432'),
+    username: url.username,
+    password: decodeURIComponent(url.password),
+    database: url.pathname.slice(1), // Remove leading /
+  };
+}
+
+/**
  * Create a new hosted database for a user
  */
 export const createDatabaseService = async (
@@ -276,77 +326,42 @@ export const createDatabaseService = async (
     throw new ValidationError(`You already have a database named "${name}"`);
   }
 
-  // Decrypt the password sent from frontend
+  // Decrypt the password sent from frontend (not used for Neon, but kept for MySQL)
   const decryptedPassword = decryptTransmission(password);
 
-  // For hosted databases, we generate unique connection details using user ID
-  const userIdShort = String(userId).padStart(8, '0').substring(0, 8); // Pad and take first 8 chars of integer ID
+  // For hosted databases, we generate unique connection details
+  const userIdShort = String(userId).padStart(8, '0').substring(0, 8);
   const sanitizedName = name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-  const host = 'localhost';
-  const port = engine === 'postgres' ? 5432 : 3306;
-  const username = `u_${userIdShort}_${sanitizedName}`.substring(0, 32); // Max 32 chars for username
-  const database = `db_${userIdShort}_${sanitizedName}`.substring(0, 63); // Max 63 chars for PG, 64 for MySQL
+  const projectName = `prism_${userIdShort}_${sanitizedName}`;
+
+  let host: string;
+  let port: number;
+  let username: string;
+  let database: string;
+  let finalPassword: string;
 
   // Provision the database on the hosted infrastructure
   if (engine === 'postgres') {
-    // Connect to PostgreSQL admin server
-    const adminPool = new Pool({
-      host: 'localhost',
-      port: 5432,
-      user: 'postgres',
-      password: 'postgres',
-      database: 'postgres',
-    });
-
-    try {
-      // Check if database already exists
-      const dbExists = await adminPool.query(
-        `SELECT 1 FROM pg_database WHERE datname = $1`,
-        [database]
-      );
-      
-      if (dbExists.rowCount === 0) {
-        // Create the database
-        await adminPool.query(`CREATE DATABASE "${database}"`);
-      }
-      
-      // Check if user already exists
-      const userExists = await adminPool.query(
-        `SELECT 1 FROM pg_roles WHERE rolname = $1`,
-        [username]
-      );
-      
-      if (userExists.rowCount === 0) {
-        // Create the user with the provided password
-        await adminPool.query(`CREATE USER "${username}" WITH PASSWORD '${decryptedPassword.replace(/'/g, "''")}'`);
-      } else {
-        // Update the password for existing user
-        await adminPool.query(`ALTER USER "${username}" WITH PASSWORD '${decryptedPassword.replace(/'/g, "''")}'`);
-      }
-      
-      // Grant all privileges on the database to the user
-      await adminPool.query(`GRANT ALL PRIVILEGES ON DATABASE "${database}" TO "${username}"`);
-      
-      // Connect to the new database to grant schema permissions
-      const dbPool = new Pool({
-        host: 'localhost',
-        port: 5432,
-        user: 'postgres',
-        password: 'postgres',
-        database: database,
-      });
-      
-      await dbPool.query(`GRANT ALL ON SCHEMA public TO "${username}"`);
-      await dbPool.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO "${username}"`);
-      await dbPool.end();
-      
-      await adminPool.end();
-    } catch (error) {
-      await adminPool.end();
-      const message = error instanceof Error ? error.message : 'Failed to create database';
-      throw new ValidationError(`Failed to provision PostgreSQL database: ${message}`);
-    }
+    // Use Neon API to create a new project
+    const neonProject = await createNeonProject(projectName);
+    host = neonProject.host;
+    port = neonProject.port;
+    username = neonProject.username;
+    database = neonProject.database;
+    finalPassword = neonProject.password;
   } else {
+    // MySQL - check if we have MySQL configured
+    if (!config.mysql.host || config.mysql.host === 'localhost') {
+      throw new ValidationError('MySQL hosted databases are not available. Please use "Connect Existing Database" to connect your own MySQL database.');
+    }
+    
+    // Set MySQL variables
+    host = config.mysql.host;
+    port = config.mysql.port;
+    username = `u_${userIdShort}_${sanitizedName}`.substring(0, 32);
+    database = `db_${userIdShort}_${sanitizedName}`.substring(0, 64);
+    finalPassword = decryptedPassword;
+    
     // Connect to MySQL admin server
     let adminConnection;
     try {
@@ -374,12 +389,12 @@ export const createDatabaseService = async (
       if ((users as Array<unknown>).length === 0) {
         // Create the user with the provided password
         await adminConnection.execute(
-          `CREATE USER '${username}'@'%' IDENTIFIED BY '${decryptedPassword.replace(/'/g, "''")}'`
+          `CREATE USER '${username}'@'%' IDENTIFIED BY '${finalPassword.replace(/'/g, "''")}'`
         );
       } else {
         // Update the password for existing user
         await adminConnection.execute(
-          `ALTER USER '${username}'@'%' IDENTIFIED BY '${decryptedPassword.replace(/'/g, "''")}'`
+          `ALTER USER '${username}'@'%' IDENTIFIED BY '${finalPassword.replace(/'/g, "''")}'`
         );
       }
       
@@ -406,15 +421,16 @@ export const createDatabaseService = async (
   );
 
   // Encrypt the password for storage (so we can connect to it later)
-  const passwordEncrypted = encrypt(decryptedPassword);
+  const passwordEncrypted = encrypt(finalPassword);
 
-  // Insert into database
+  // Insert into database - use SSL for Neon PostgreSQL
+  const useSSL = engine === 'postgres';
   const result = await pool.query<DbDatabaseConnectionDto>(
     `INSERT INTO database_connections 
      (user_id, name, engine, host, port, username, password_encrypted, database, ssl, status, last_connected_at, tables, storage_bytes, is_hosted)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, 'connected', NOW(), 0, 0, true)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'connected', NOW(), 0, 0, true)
      RETURNING *`,
-    [userId, name, engine, host, port, username, passwordEncrypted, database]
+    [userId, name, engine, host, port, username, passwordEncrypted, database, useSSL]
   );
 
   return mapToDto(result.rows[0]);

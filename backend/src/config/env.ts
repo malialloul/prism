@@ -38,4 +38,8 @@ export const config = {
     nodeEnv: process.env.NODE_ENV || 'development',
   },
   transmissionKey: process.env.TRANSMISSION_KEY || 'default-transmission-key-change-in-production',
+  neon: {
+    apiKey: process.env.NEON_API_KEY || '',
+    orgId: process.env.NEON_ORG_ID || '',
+  },
 };
