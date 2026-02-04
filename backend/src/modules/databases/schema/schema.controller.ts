@@ -16,6 +16,9 @@ import {
   modifyColumnService,
   dropColumnService,
   dropTableService,
+  exportSchemaService,
+  importSqlService,
+  generateSchemaDocService,
 } from './schema.service';
 
 /**
@@ -442,6 +445,89 @@ export const getFullSchema = async (
       tables: tablesWithDetails,
       count: tablesWithDetails.length 
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /databases/:id/export
+ * Export database schema (and optionally data) as SQL
+ */
+export const exportSchema = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const databaseId = req.params.id as string;
+    const includeData = req.query.includeData === 'true';
+    const tables = req.query.tables ? (req.query.tables as string).split(',') : undefined;
+
+    const result = await exportSchemaService(userId, databaseId, { includeData, tables });
+
+    // Set headers for file download
+    res.setHeader('Content-Type', 'application/sql');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.status(200).send(result.sql);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /databases/:id/import
+ * Import SQL file to database
+ */
+export const importSql = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const databaseId = req.params.id as string;
+    const { sql } = req.body;
+
+    if (!sql || typeof sql !== 'string') {
+      res.status(400).json({ message: 'SQL content is required' });
+      return;
+    }
+
+    const result = await importSqlService(userId, databaseId, sql);
+
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /databases/:id/schema/documentation
+ * Generate Word document with schema documentation
+ */
+export const generateSchemaDoc = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const databaseId = req.params.id as string;
+
+    const { buffer, filename } = await generateSchemaDocService(userId, databaseId);
+
+    // Ensure buffer is valid
+    if (!buffer || buffer.length === 0) {
+      res.status(500).json({ message: 'Failed to generate document' });
+      return;
+    }
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.status(200).end(buffer);
   } catch (error) {
     next(error);
   }

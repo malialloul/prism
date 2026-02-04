@@ -2,6 +2,20 @@
 import { Pool } from 'pg';
 import mysql from 'mysql2/promise';
 import crypto from 'crypto';
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  Table,
+  TableRow,
+  TableCell,
+  AlignmentType,
+  WidthType,
+  HeadingLevel,
+  BorderStyle,
+} from 'docx';
+
 import { pool } from '../../../config/db';
 import { config } from '../../../config/env';
 import { NotFoundError, ValidationError } from '../../../utils/errors';
@@ -2090,4 +2104,980 @@ export const dropProcedureService = async (
       throw new ValidationError(message);
     }
   }
+};
+
+// ============================================
+// Export Schema Service
+// ============================================
+export const exportSchemaService = async (
+  userId: string,
+  databaseId: string,
+  options: { includeData?: boolean; tables?: string[] } = {}
+): Promise<{ sql: string; filename: string }> => {
+  const conn = await getDatabaseConnection(userId, databaseId);
+  const { includeData = false, tables } = options;
+  let sql = '';
+  
+  // Get database name for filename
+  const dbResult = await pool.query(
+    `SELECT name FROM database_connections WHERE id = $1 AND user_id = $2`,
+    [databaseId, userId]
+  );
+  const dbName = dbResult.rows[0]?.name || 'database';
+
+  if (conn.engine === 'postgres') {
+    const pgPool = createPgPool(conn);
+    try {
+      // Add header comment
+      sql += `-- PostgreSQL Database Export\n`;
+      sql += `-- Database: ${dbName}\n`;
+      sql += `-- Generated: ${new Date().toISOString()}\n`;
+      sql += `-- Prism Database Management\n\n`;
+
+      // Get all tables or filter by specified tables
+      let tableQuery = `
+        SELECT tablename FROM pg_tables 
+        WHERE schemaname = 'public'
+      `;
+      if (tables && tables.length > 0) {
+        tableQuery += ` AND tablename = ANY($1)`;
+      }
+      tableQuery += ` ORDER BY tablename`;
+      
+      const tablesResult = tables && tables.length > 0 
+        ? await pgPool.query(tableQuery, [tables])
+        : await pgPool.query(tableQuery);
+
+      // Collect all sequences needed for the tables
+      const sequencesToCreate = new Set<string>();
+      
+      // First pass: identify sequences used by tables
+      for (const row of tablesResult.rows) {
+        const tableName = row.tablename;
+        const seqResult = await pgPool.query(`
+          SELECT column_default
+          FROM information_schema.columns
+          WHERE table_schema = 'public' 
+            AND table_name = $1 
+            AND column_default LIKE 'nextval(%'
+        `, [tableName]);
+        
+        for (const seqRow of seqResult.rows) {
+          // Extract sequence name from nextval('sequence_name'::regclass)
+          const match = seqRow.column_default.match(/nextval\('([^']+)'::regclass\)/);
+          if (match) {
+            sequencesToCreate.add(match[1]);
+          }
+        }
+      }
+
+      // Create sequences first
+      if (sequencesToCreate.size > 0) {
+        sql += `-- Sequences\n`;
+        for (const seqName of sequencesToCreate) {
+          try {
+            // Get sequence details
+            const seqDetails = await pgPool.query(`
+              SELECT start_value, increment_by, max_value, min_value, cache_size, cycle
+              FROM pg_sequences
+              WHERE schemaname = 'public' AND sequencename = $1
+            `, [seqName]);
+            
+            sql += `DROP SEQUENCE IF EXISTS "${seqName}" CASCADE;\n`;
+            if (seqDetails.rowCount && seqDetails.rowCount > 0) {
+              const seq = seqDetails.rows[0];
+              sql += `CREATE SEQUENCE "${seqName}" INCREMENT ${seq.increment_by} START ${seq.start_value} MINVALUE ${seq.min_value} MAXVALUE ${seq.max_value} CACHE ${seq.cache_size}${seq.cycle ? ' CYCLE' : ''};\n`;
+            } else {
+              // Fallback if sequence details not found
+              sql += `CREATE SEQUENCE "${seqName}";\n`;
+            }
+          } catch {
+            // If we can't get details, create with defaults
+            sql += `DROP SEQUENCE IF EXISTS "${seqName}" CASCADE;\n`;
+            sql += `CREATE SEQUENCE "${seqName}";\n`;
+          }
+        }
+        sql += `\n`;
+      }
+
+      for (const row of tablesResult.rows) {
+        const tableName = row.tablename;
+        
+        // Get CREATE TABLE statement
+        const columnsResult = await pgPool.query(`
+          SELECT 
+            column_name,
+            data_type,
+            character_maximum_length,
+            numeric_precision,
+            numeric_scale,
+            is_nullable,
+            column_default,
+            udt_name
+          FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = $1
+          ORDER BY ordinal_position
+        `, [tableName]);
+
+        sql += `-- Table: ${tableName}\n`;
+        sql += `DROP TABLE IF EXISTS "${tableName}" CASCADE;\n`;
+        sql += `CREATE TABLE "${tableName}" (\n`;
+
+        const columnDefs: string[] = [];
+        for (const col of columnsResult.rows) {
+          let colDef = `  "${col.column_name}" `;
+          
+          // Build data type
+          if (col.udt_name === 'int4') {
+            colDef += 'INTEGER';
+          } else if (col.udt_name === 'int8') {
+            colDef += 'BIGINT';
+          } else if (col.udt_name === 'int2') {
+            colDef += 'SMALLINT';
+          } else if (col.udt_name === 'float4') {
+            colDef += 'REAL';
+          } else if (col.udt_name === 'float8') {
+            colDef += 'DOUBLE PRECISION';
+          } else if (col.udt_name === 'bool') {
+            colDef += 'BOOLEAN';
+          } else if (col.udt_name === 'varchar') {
+            colDef += col.character_maximum_length 
+              ? `VARCHAR(${col.character_maximum_length})`
+              : 'VARCHAR';
+          } else if (col.udt_name === 'text') {
+            colDef += 'TEXT';
+          } else if (col.udt_name === 'timestamp') {
+            colDef += 'TIMESTAMP';
+          } else if (col.udt_name === 'timestamptz') {
+            colDef += 'TIMESTAMP WITH TIME ZONE';
+          } else if (col.udt_name === 'date') {
+            colDef += 'DATE';
+          } else if (col.udt_name === 'numeric') {
+            colDef += col.numeric_precision 
+              ? `NUMERIC(${col.numeric_precision}, ${col.numeric_scale || 0})`
+              : 'NUMERIC';
+          } else if (col.udt_name === 'uuid') {
+            colDef += 'UUID';
+          } else if (col.udt_name === 'json') {
+            colDef += 'JSON';
+          } else if (col.udt_name === 'jsonb') {
+            colDef += 'JSONB';
+          } else if (col.data_type === 'ARRAY') {
+            colDef += col.udt_name.replace('_', '') + '[]';
+          } else {
+            colDef += col.data_type.toUpperCase();
+          }
+
+          if (col.is_nullable === 'NO') {
+            colDef += ' NOT NULL';
+          }
+
+          if (col.column_default) {
+            colDef += ` DEFAULT ${col.column_default}`;
+          }
+
+          columnDefs.push(colDef);
+        }
+
+        // Get primary key
+        const pkResult = await pgPool.query(`
+          SELECT a.attname
+          FROM pg_index i
+          JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+          WHERE i.indrelid = $1::regclass AND i.indisprimary
+        `, [tableName]);
+
+        if (pkResult.rowCount && pkResult.rowCount > 0) {
+          const pkColumns = pkResult.rows.map(r => `"${r.attname}"`).join(', ');
+          columnDefs.push(`  PRIMARY KEY (${pkColumns})`);
+        }
+
+        sql += columnDefs.join(',\n');
+        sql += '\n);\n\n';
+
+        // Get indexes (excluding primary key)
+        const indexResult = await pgPool.query(`
+          SELECT indexname, indexdef
+          FROM pg_indexes
+          WHERE schemaname = 'public' AND tablename = $1
+          AND indexname NOT LIKE '%_pkey'
+        `, [tableName]);
+
+        for (const idx of indexResult.rows) {
+          sql += `${idx.indexdef};\n`;
+        }
+        if (indexResult.rowCount && indexResult.rowCount > 0) {
+          sql += '\n';
+        }
+
+        // Include data if requested
+        if (includeData) {
+          const dataResult = await pgPool.query(`SELECT * FROM "${tableName}"`);
+          if (dataResult.rowCount && dataResult.rowCount > 0) {
+            const columns = Object.keys(dataResult.rows[0]);
+            sql += `-- Data for ${tableName}\n`;
+            
+            for (const row of dataResult.rows) {
+              const values = columns.map(col => {
+                const val = row[col];
+                if (val === null) return 'NULL';
+                if (typeof val === 'number') return val;
+                if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
+                if (val instanceof Date) return `'${val.toISOString()}'`;
+                if (typeof val === 'object') return `'${JSON.stringify(val).replace(/'/g, "''")}'`;
+                return `'${String(val).replace(/'/g, "''")}'`;
+              });
+              sql += `INSERT INTO "${tableName}" (${columns.map(c => `"${c}"`).join(', ')}) VALUES (${values.join(', ')});\n`;
+            }
+            sql += '\n';
+            
+            // Reset sequences to max value after data import
+            const seqColsResult = await pgPool.query(`
+              SELECT column_name, column_default
+              FROM information_schema.columns
+              WHERE table_schema = 'public' 
+                AND table_name = $1 
+                AND column_default LIKE 'nextval(%'
+            `, [tableName]);
+            
+            for (const seqCol of seqColsResult.rows) {
+              const match = seqCol.column_default.match(/nextval\('([^']+)'::regclass\)/);
+              if (match) {
+                const seqName = match[1];
+                sql += `SELECT setval('${seqName}', COALESCE((SELECT MAX("${seqCol.column_name}") FROM "${tableName}"), 1), true);\n`;
+              }
+            }
+            sql += '\n';
+          }
+        }
+      }
+
+      await pgPool.end();
+    } catch (error) {
+      await pgPool.end();
+      throw error;
+    }
+  } else {
+    // MySQL export
+    const mysqlConn = await createMysqlConnection(conn);
+    try {
+      sql += `-- MySQL Database Export\n`;
+      sql += `-- Database: ${dbName}\n`;
+      sql += `-- Generated: ${new Date().toISOString()}\n`;
+      sql += `-- Prism Database Management\n\n`;
+      sql += `SET FOREIGN_KEY_CHECKS=0;\n\n`;
+
+      // Get all tables
+      let tableQuery = `SHOW TABLES`;
+      const [tablesResult] = await mysqlConn.query(tableQuery);
+      let tableList = (tablesResult as any[]).map(r => Object.values(r)[0] as string);
+      
+      if (tables && tables.length > 0) {
+        tableList = tableList.filter(t => tables.includes(t));
+      }
+
+      for (const tableName of tableList) {
+        // Get CREATE TABLE statement
+        const [createResult] = await mysqlConn.query(`SHOW CREATE TABLE \`${tableName}\``);
+        const createStatement = (createResult as any[])[0]['Create Table'];
+        
+        sql += `-- Table: ${tableName}\n`;
+        sql += `DROP TABLE IF EXISTS \`${tableName}\`;\n`;
+        sql += `${createStatement};\n\n`;
+
+        // Include data if requested
+        if (includeData) {
+          const [dataResult] = await mysqlConn.query(`SELECT * FROM \`${tableName}\``);
+          const rows = dataResult as any[];
+          if (rows.length > 0) {
+            const columns = Object.keys(rows[0]);
+            sql += `-- Data for ${tableName}\n`;
+            
+            for (const row of rows) {
+              const values = columns.map(col => {
+                const val = row[col];
+                if (val === null) return 'NULL';
+                if (typeof val === 'number') return val;
+                if (typeof val === 'boolean') return val ? '1' : '0';
+                if (val instanceof Date) return `'${val.toISOString().slice(0, 19).replace('T', ' ')}'`;
+                if (typeof val === 'object') return `'${JSON.stringify(val).replace(/'/g, "''")}'`;
+                return `'${String(val).replace(/'/g, "''").replace(/\\/g, '\\\\')}'`;
+              });
+              sql += `INSERT INTO \`${tableName}\` (${columns.map(c => `\`${c}\``).join(', ')}) VALUES (${values.join(', ')});\n`;
+            }
+            sql += '\n';
+          }
+        }
+      }
+
+      sql += `SET FOREIGN_KEY_CHECKS=1;\n`;
+      await mysqlConn.end();
+    } catch (error) {
+      await mysqlConn.end();
+      throw error;
+    }
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const filename = `${dbName}_${includeData ? 'full' : 'schema'}_${timestamp}.sql`;
+
+  return { sql, filename };
+};
+
+// ============================================
+// Import SQL Service
+// ============================================
+
+// Helper to detect SQL dialect
+function detectSqlDialect(sql: string): 'mysql' | 'postgres' | 'unknown' {
+  const mysqlIndicators = [
+    /`\w+`/,                          // Backtick quoted identifiers
+    /AUTO_INCREMENT/i,                 // MySQL auto increment
+    /ENGINE\s*=\s*InnoDB/i,           // MySQL engine
+    /UNSIGNED/i,                       // MySQL unsigned
+    /SET FOREIGN_KEY_CHECKS/i,        // MySQL specific
+    /COLLATE\s+utf8/i,                // MySQL collation
+  ];
+  
+  const postgresIndicators = [
+    /"\w+"/,                           // Double-quoted identifiers (but also standard SQL)
+    /SERIAL\s+(PRIMARY\s+KEY)?/i,     // PostgreSQL serial
+    /RETURNING\s+/i,                   // PostgreSQL returning clause
+    /::[\w\[\]]+/,                     // PostgreSQL type casting
+    /WITH\s+TIME\s+ZONE/i,            // PostgreSQL timestamp with time zone
+    /JSONB/i,                          // PostgreSQL JSONB type
+  ];
+  
+  let mysqlScore = 0;
+  let postgresScore = 0;
+  
+  for (const pattern of mysqlIndicators) {
+    if (pattern.test(sql)) mysqlScore++;
+  }
+  
+  for (const pattern of postgresIndicators) {
+    if (pattern.test(sql)) postgresScore++;
+  }
+  
+  // Backticks are a strong MySQL indicator
+  if (/`\w+`/.test(sql)) mysqlScore += 3;
+  
+  if (mysqlScore > postgresScore && mysqlScore >= 2) return 'mysql';
+  if (postgresScore > mysqlScore && postgresScore >= 2) return 'postgres';
+  
+  return 'unknown';
+}
+
+export const importSqlService = async (
+  userId: string,
+  databaseId: string,
+  sql: string
+): Promise<{ success: boolean; message: string; executedStatements: number; errors: string[] }> => {
+  const conn = await getDatabaseConnection(userId, databaseId);
+  const errors: string[] = [];
+  let executedStatements = 0;
+
+  // Detect SQL dialect and check compatibility
+  const detectedDialect = detectSqlDialect(sql);
+  
+  if (detectedDialect === 'mysql' && conn.engine === 'postgres') {
+    return {
+      success: false,
+      message: 'Cannot import MySQL SQL into a PostgreSQL database. The SQL file contains MySQL-specific syntax (backticks, AUTO_INCREMENT, etc.).',
+      executedStatements: 0,
+      errors: ['Incompatible SQL dialect: MySQL SQL cannot be imported into PostgreSQL. Please export from a PostgreSQL database or convert the SQL syntax.'],
+    };
+  }
+  
+  if (detectedDialect === 'postgres' && conn.engine === 'mysql') {
+    return {
+      success: false,
+      message: 'Cannot import PostgreSQL SQL into a MySQL database. The SQL file contains PostgreSQL-specific syntax (SERIAL, ::casting, etc.).',
+      executedStatements: 0,
+      errors: ['Incompatible SQL dialect: PostgreSQL SQL cannot be imported into MySQL. Please export from a MySQL database or convert the SQL syntax.'],
+    };
+  }
+
+  // For PostgreSQL, pre-process to find and create missing sequences
+  let processedSql = sql;
+  if (conn.engine === 'postgres') {
+    // Find all sequences referenced via nextval('sequence_name'::regclass)
+    const seqMatches = sql.matchAll(/nextval\('([^']+)'::regclass\)/g);
+    const sequencesToCreate = new Set<string>();
+    for (const match of seqMatches) {
+      sequencesToCreate.add(match[1]);
+    }
+    
+    // Generate CREATE SEQUENCE statements for any sequences referenced
+    if (sequencesToCreate.size > 0) {
+      const seqStatements: string[] = [];
+      for (const seqName of sequencesToCreate) {
+        seqStatements.push(`DROP SEQUENCE IF EXISTS "${seqName}" CASCADE`);
+        seqStatements.push(`CREATE SEQUENCE IF NOT EXISTS "${seqName}"`);
+      }
+      // Prepend sequence creation to the SQL
+      processedSql = seqStatements.join(';\n') + ';\n\n' + sql;
+    }
+  }
+
+  // Split SQL into statements (basic splitting, handles most cases)
+  const statements = processedSql
+    .replace(/--.*$/gm, '') // Remove single-line comments
+    .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
+    .split(/;(?=(?:[^']*'[^']*')*[^']*$)/g) // Split by semicolons not inside quotes
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+
+  if (conn.engine === 'postgres') {
+    const pgPool = createPgPool(conn);
+    try {
+      for (const statement of statements) {
+        try {
+          await pgPool.query(statement);
+          executedStatements++;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown error';
+          // Skip sequence errors since we auto-create them
+          if (message.includes('already exists') && statement.includes('CREATE SEQUENCE')) {
+            executedStatements++;
+            continue;
+          }
+          errors.push(`Statement failed: ${statement.substring(0, 100)}... Error: ${message}`);
+        }
+      }
+      await pgPool.end();
+    } catch (error) {
+      await pgPool.end();
+      throw error;
+    }
+  } else {
+    const mysqlConn = await createMysqlConnection(conn);
+    try {
+      for (const statement of statements) {
+        try {
+          await mysqlConn.execute(statement);
+          executedStatements++;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown error';
+          errors.push(`Statement failed: ${statement.substring(0, 100)}... Error: ${message}`);
+        }
+      }
+      await mysqlConn.end();
+    } catch (error) {
+      await mysqlConn.end();
+      throw error;
+    }
+  }
+
+  return {
+    success: errors.length === 0,
+    message: errors.length === 0 
+      ? `Successfully executed ${executedStatements} statements`
+      : `Executed ${executedStatements} statements with ${errors.length} errors`,
+    executedStatements,
+    errors,
+  };
+};
+
+// ============================================
+// Schema Document Creator
+// ============================================
+
+class SchemaDocumentCreator {
+  private tables: Array<{
+    name: string;
+    columns: ColumnDto[];
+    rowCount: number;
+  }>;
+
+  private dbName: string;
+  private dbEngine: string;
+
+  constructor(
+    tables: Array<{
+      name: string;
+      columns: ColumnDto[];
+      rowCount: number;
+    }>,
+    dbName: string,
+    dbEngine: string
+  ) {
+    this.tables = tables;
+    this.dbName = dbName;
+    this.dbEngine = dbEngine === 'postgres' ? 'PostgreSQL' : 'MySQL';
+  }
+
+  public create(): Document {
+    const children: (Paragraph | Table)[] = [];
+
+    // Title
+    children.push(new Paragraph({
+      text: "Database Schema Documentation",
+      heading: HeadingLevel.TITLE,
+      alignment: AlignmentType.CENTER,
+    }));
+
+    // Spacing
+    children.push(new Paragraph(""));
+
+    // Metadata Table
+    children.push(this.createMetadataTable());
+
+    // Spacing
+    children.push(new Paragraph(""));
+    children.push(new Paragraph(""));
+
+    // Tables
+    for (const table of this.tables) {
+      // Table Name Header
+      children.push(new Paragraph({
+        text: table.name,
+        heading: HeadingLevel.HEADING_1,
+      }));
+
+      // Row count info
+      children.push(new Paragraph({
+        children: [
+          new TextRun({
+            text: `Row Count: ${table.rowCount}`,
+            italics: true,
+            size: 20,
+          }),
+        ],
+      }));
+
+      children.push(new Paragraph(""));
+
+      // Columns Table with borders
+      children.push(this.createColumnsTable(table.columns));
+
+      // Spacing between tables
+      children.push(new Paragraph(""));
+      children.push(new Paragraph(""));
+    }
+
+    // Footer
+    children.push(new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [
+        new TextRun({
+          text: "Generated by Prism Database Management",
+          italics: true,
+          size: 18,
+          color: "666666",
+        }),
+      ],
+    }));
+
+    const document = new Document({
+      sections: [{
+        properties: {},
+        children: children,
+      }],
+    });
+
+    return document;
+  }
+
+  private createMetadataTable(): Table {
+    const borderStyle = {
+      style: BorderStyle.SINGLE,
+      size: 1,
+      color: "CCCCCC",
+    };
+
+    return new Table({
+      width: { size: 50, type: WidthType.PERCENTAGE },
+      borders: {
+        top: borderStyle,
+        bottom: borderStyle,
+        left: borderStyle,
+        right: borderStyle,
+        insideHorizontal: borderStyle,
+        insideVertical: borderStyle,
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              shading: { fill: "F0F0F0" },
+              margins: { top: 60, bottom: 60, left: 100, right: 100 },
+              children: [new Paragraph({
+                children: [new TextRun({ text: "Database", bold: true })],
+              })],
+            }),
+            new TableCell({
+              margins: { top: 60, bottom: 60, left: 100, right: 100 },
+              children: [new Paragraph(this.dbName)],
+            }),
+          ],
+        }),
+        new TableRow({
+          children: [
+            new TableCell({
+              shading: { fill: "F0F0F0" },
+              margins: { top: 60, bottom: 60, left: 100, right: 100 },
+              children: [new Paragraph({
+                children: [new TextRun({ text: "Engine", bold: true })],
+              })],
+            }),
+            new TableCell({
+              margins: { top: 60, bottom: 60, left: 100, right: 100 },
+              children: [new Paragraph(this.dbEngine)],
+            }),
+          ],
+        }),
+        new TableRow({
+          children: [
+            new TableCell({
+              shading: { fill: "F0F0F0" },
+              margins: { top: 60, bottom: 60, left: 100, right: 100 },
+              children: [new Paragraph({
+                children: [new TextRun({ text: "Generated", bold: true })],
+              })],
+            }),
+            new TableCell({
+              margins: { top: 60, bottom: 60, left: 100, right: 100 },
+              children: [new Paragraph(new Date().toLocaleString())],
+            }),
+          ],
+        }),
+        new TableRow({
+          children: [
+            new TableCell({
+              shading: { fill: "F0F0F0" },
+              margins: { top: 60, bottom: 60, left: 100, right: 100 },
+              children: [new Paragraph({
+                children: [new TextRun({ text: "Total Tables", bold: true })],
+              })],
+            }),
+            new TableCell({
+              margins: { top: 60, bottom: 60, left: 100, right: 100 },
+              children: [new Paragraph(String(this.tables.length))],
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  private createColumnsTable(columns: ColumnDto[]): Table {
+    const borderStyle = {
+      style: BorderStyle.SINGLE,
+      size: 1,
+      color: "999999",
+    };
+
+    const rows: TableRow[] = [];
+
+    // Header row with background
+    rows.push(
+      new TableRow({
+        children: [
+          this.createHeaderCell("Column Name"),
+          this.createHeaderCell("Data Type"),
+          this.createHeaderCell("Nullable"),
+          this.createHeaderCell("Default Value"),
+          this.createHeaderCell("Key"),
+        ],
+      })
+    );
+
+    // Data rows with alternating colors
+    columns.forEach((col, index) => {
+      const isAlternate = index % 2 === 1;
+      const nullable = col.nullable ? "Yes" : "No";
+      const defaultVal = col.defaultValue ? String(col.defaultValue) : "-";
+
+      rows.push(
+        new TableRow({
+          children: [
+            this.createDataCell(col.name, isAlternate, true),
+            this.createDataCell(col.type, isAlternate),
+            this.createDataCell(nullable, isAlternate),
+            this.createDataCell(defaultVal, isAlternate),
+            this.createKeyCell(col.isPrimaryKey, col.isForeignKey, isAlternate),
+          ],
+        })
+      );
+    });
+
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: borderStyle,
+        bottom: borderStyle,
+        left: borderStyle,
+        right: borderStyle,
+        insideHorizontal: borderStyle,
+        insideVertical: borderStyle,
+      },
+      rows,
+    });
+  }
+
+  private createHeaderCell(text: string): TableCell {
+    return new TableCell({
+      shading: { fill: "4472C4" },
+      margins: {
+        top: 80,
+        bottom: 80,
+        left: 120,
+        right: 120,
+      },
+      children: [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({
+              text,
+              bold: true,
+              color: "FFFFFF",
+              size: 22,
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  private createDataCell(text: string, isAlternate: boolean, isBold: boolean = false): TableCell {
+    return new TableCell({
+      shading: isAlternate ? { fill: "F2F2F2" } : undefined,
+      margins: {
+        top: 60,
+        bottom: 60,
+        left: 120,
+        right: 120,
+      },
+      children: [
+        new Paragraph({
+          children: [
+            new TextRun({
+              text,
+              bold: isBold,
+              size: 20,
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  private createKeyCell(isPK: boolean, isFK: boolean, isAlternate: boolean): TableCell {
+    const parts: TextRun[] = [];
+    
+    if (isPK) {
+      parts.push(new TextRun({
+        text: "PK",
+        bold: true,
+        color: "C65911",
+        size: 20,
+      }));
+    }
+    
+    if (isPK && isFK) {
+      parts.push(new TextRun({
+        text: " / ",
+        size: 20,
+      }));
+    }
+    
+    if (isFK) {
+      parts.push(new TextRun({
+        text: "FK",
+        bold: true,
+        color: "2E75B6",
+        size: 20,
+      }));
+    }
+    
+    if (!isPK && !isFK) {
+      parts.push(new TextRun({
+        text: "-",
+        size: 20,
+        color: "999999",
+      }));
+    }
+
+    return new TableCell({
+      shading: isAlternate ? { fill: "F2F2F2" } : undefined,
+      margins: {
+        top: 60,
+        bottom: 60,
+        left: 120,
+        right: 120,
+      },
+      children: [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: parts,
+        }),
+      ],
+    });
+  }
+}
+
+/**
+ * Generate a Word document with schema documentation
+ */
+
+export const generateSchemaDocService = async (
+  userId: string,
+  databaseId: string
+): Promise<{ buffer: Buffer; filename: string }> => {
+  const conn = await getDatabaseConnection(userId, databaseId);
+
+  const dbResult = await pool.query(
+    `SELECT name FROM database_connections WHERE id = $1 AND user_id = $2`,
+    [databaseId, userId]
+  );
+  const dbName = dbResult.rows[0]?.name || 'Database';
+
+  const tables: Array<{
+    name: string;
+    columns: ColumnDto[];
+    rowCount: number;
+  }> = [];
+
+  // Collect metadata
+  if (conn.engine === 'postgres') {
+    const pgPool = createPgPool(conn);
+
+    try {
+      const tablesResult = await pgPool.query(`
+        SELECT tablename FROM pg_tables
+        WHERE schemaname = 'public'
+        ORDER BY tablename
+      `);
+
+      for (const { tablename } of tablesResult.rows) {
+        const columnsResult = await pgPool.query(
+          `
+          SELECT column_name, data_type, is_nullable, column_default, udt_name
+          FROM information_schema.columns
+          WHERE table_schema='public' AND table_name=$1
+          ORDER BY ordinal_position
+        `,
+          [tablename]
+        );
+
+        // Get primary key columns
+        const pkResult = await pgPool.query(
+          `
+          SELECT kcu.column_name
+          FROM information_schema.table_constraints tc
+          JOIN information_schema.key_column_usage kcu
+            ON tc.constraint_name = kcu.constraint_name
+            AND tc.table_schema = kcu.table_schema
+          WHERE tc.constraint_type = 'PRIMARY KEY'
+            AND tc.table_schema = 'public'
+            AND tc.table_name = $1
+        `,
+          [tablename]
+        );
+        const pkColumns = new Set(pkResult.rows.map(r => r.column_name));
+
+        // Get foreign key columns
+        const fkResult = await pgPool.query(
+          `
+          SELECT kcu.column_name
+          FROM information_schema.table_constraints tc
+          JOIN information_schema.key_column_usage kcu
+            ON tc.constraint_name = kcu.constraint_name
+            AND tc.table_schema = kcu.table_schema
+          WHERE tc.constraint_type = 'FOREIGN KEY'
+            AND tc.table_schema = 'public'
+            AND tc.table_name = $1
+        `,
+          [tablename]
+        );
+        const fkColumns = new Set(fkResult.rows.map(r => r.column_name));
+
+        const countResult = await pgPool.query(
+          `SELECT COUNT(*) FROM "${tablename}"`
+        );
+
+        const columns: ColumnDto[] = columnsResult.rows.map(col => ({
+          name: col.column_name,
+          type: col.udt_name.toUpperCase(),
+          nullable: col.is_nullable === 'YES',
+          defaultValue: col.column_default,
+          isPrimaryKey: pkColumns.has(col.column_name),
+          isForeignKey: fkColumns.has(col.column_name),
+        }));
+
+        tables.push({
+          name: tablename,
+          columns,
+          rowCount: Number(countResult.rows[0].count),
+        });
+      }
+    } finally {
+      await pgPool.end();
+    }
+  } else {
+    const mysql = await createMysqlConnection(conn);
+
+    try {
+      const [rows] = await mysql.query(`SHOW TABLES`);
+      const tableNames: string[] = (rows as any[]).map(
+        r => String(Object.values(r)[0])
+      );
+
+      for (const tableName of tableNames) {
+        const [cols] = await mysql.query(
+          `
+          SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT, COLUMN_KEY
+          FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?
+        `,
+          [tableName]
+        );
+
+        // Get foreign key columns
+        const [fkRows] = await mysql.query(
+          `
+          SELECT COLUMN_NAME
+          FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+          WHERE TABLE_SCHEMA=DATABASE() 
+            AND TABLE_NAME=?
+            AND REFERENCED_TABLE_NAME IS NOT NULL
+        `,
+          [tableName]
+        );
+        const fkColumns = new Set((fkRows as any[]).map(r => r.COLUMN_NAME));
+
+        const columns: ColumnDto[] = (cols as any[]).map(c => ({
+          name: c.COLUMN_NAME,
+          type: c.DATA_TYPE.toUpperCase(),
+          nullable: c.IS_NULLABLE === 'YES',
+          defaultValue: c.COLUMN_DEFAULT,
+          isPrimaryKey: c.COLUMN_KEY === 'PRI',
+          isForeignKey: fkColumns.has(c.COLUMN_NAME),
+        }));
+
+        const [count] = await mysql.query(
+          `SELECT COUNT(*) as count FROM \`${tableName}\``
+        );
+
+        tables.push({
+          name: tableName,
+          columns,
+          rowCount: (count as any)[0].count,
+        });
+      }
+    } finally {
+      await mysql.end();
+    }
+  }
+
+  // Create document using SchemaDocumentCreator
+  const creator = new SchemaDocumentCreator(tables, dbName, conn.engine);
+  const doc = creator.create();
+
+  const buffer = await Packer.toBuffer(doc);
+  const filename = `${dbName.replace(/[^a-zA-Z0-9]/g, '_')}_schema.docx`;
+
+  return { buffer, filename };
 };

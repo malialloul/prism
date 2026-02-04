@@ -58,7 +58,7 @@ export default function ObjectDetailsPanel({
     objectType === 'table' ? objectName : undefined
   );
 
-  
+
 
   const table = tableData?.table;
 
@@ -78,7 +78,7 @@ export default function ObjectDetailsPanel({
     );
   }
 
-  const isLoading = (objectType === 'table' && tableLoading) ;
+  const isLoading = (objectType === 'table' && tableLoading);
 
   return (
     <DetailsPanel>
@@ -99,7 +99,7 @@ export default function ObjectDetailsPanel({
       {objectType === 'table' && (
         <TableActionsBar>
           <Tooltip title="Add a new column to this table" arrow>
-            <TableActionButton 
+            <TableActionButton
               onClick={() => onAddColumn?.(objectName)}
             >
               <AddIcon />
@@ -107,7 +107,7 @@ export default function ObjectDetailsPanel({
             </TableActionButton>
           </Tooltip>
           <Tooltip title="Edit table data and structure" arrow>
-            <TableActionButton 
+            <TableActionButton
               onClick={() => onEditTable?.(objectName)}
             >
               <EditIcon />
@@ -115,8 +115,8 @@ export default function ObjectDetailsPanel({
             </TableActionButton>
           </Tooltip>
           <Tooltip title="Permanently delete this table" arrow>
-            <TableActionButton 
-              variant="danger" 
+            <TableActionButton
+              variant="danger"
               onClick={() => onDeleteTable?.(objectName)}
             >
               <DeleteIcon />
@@ -126,7 +126,7 @@ export default function ObjectDetailsPanel({
         </TableActionsBar>
       )}
 
-      
+
 
       <DetailsPanelContent>
         {isLoading ? (

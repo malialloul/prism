@@ -72,6 +72,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useFullSchema } from '../../../../api/entities/schema/useFullSchema';
 import { useExecuteQuery } from '../../../../api/entities/schema/useExecuteQuery';
 import { SAVED_QUERIES_KEY } from '../../../../api/entities/schema/useSavedQueries';
+import { DATABASES_QUERY_KEY } from '../../../../api/entities/databases';
 import { SchemaService } from '../../../../api/services/SchemaService';
 import { SaveApiDialog } from './components/SaveApiDialog';
 import {
@@ -206,7 +207,7 @@ const snapToGrid = (value: number): number => Math.round(value / GRID_SIZE) * GR
 // Helper to check if two column types are compatible for joining
 const areTypesCompatible = (type1: string | undefined, type2: string | undefined): boolean => {
   if (!type1 || !type2) return true; // Unknown types - allow and let DB handle it
-  
+
   const normalizeType = (type: string): string => {
     const t = type.toLowerCase();
     if (t.includes('uuid')) return 'uuid';
@@ -217,19 +218,19 @@ const areTypesCompatible = (type1: string | undefined, type2: string | undefined
     if (t.includes('numeric') || t.includes('decimal') || t.includes('float') || t.includes('double') || t.includes('real')) return 'numeric';
     return t;
   };
-  
+
   const norm1 = normalizeType(type1);
   const norm2 = normalizeType(type2);
-  
+
   // Same type family is compatible
   if (norm1 === norm2) return true;
-  
+
   // Integer and numeric are compatible
   if ((norm1 === 'integer' && norm2 === 'numeric') || (norm1 === 'numeric' && norm2 === 'integer')) return true;
-  
+
   // Text types can be compared with most things (DB will handle conversion)
   if (norm1 === 'text' || norm2 === 'text') return true;
-  
+
   return false;
 };
 
@@ -246,22 +247,22 @@ const generateJoinCondition = (
 // Helper to check if an aggregation is valid for a column type
 const isAggregationValidForType = (aggregation: string | null | undefined, columnType: string | undefined): boolean => {
   if (!aggregation || !columnType) return true; // Unknown - let DB handle it
-  
+
   const t = columnType.toLowerCase();
-  
+
   // COUNT works on any type
   if (aggregation === 'count') return true;
-  
+
   // MIN/MAX work on any comparable type (numbers, strings, dates)
   if (aggregation === 'min' || aggregation === 'max') return true;
-  
+
   // SUM/AVG only work on numeric types
   if (aggregation === 'sum' || aggregation === 'avg') {
     const numericTypes = ['int', 'integer', 'smallint', 'bigint', 'tinyint', 'serial', 'bigserial',
-                          'decimal', 'numeric', 'float', 'double', 'real', 'money', 'smallmoney'];
+      'decimal', 'numeric', 'float', 'double', 'real', 'money', 'smallmoney'];
     return numericTypes.some(nt => t.includes(nt));
   }
-  
+
   return true;
 };
 
@@ -295,25 +296,25 @@ interface ConnectionButtonProps {
 const ConnectionButton: React.FC<ConnectionButtonProps> = ({ type, connected, onClick, disabled }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  
+
   const config = {
-    join: { 
-      icon: <JoinIcon sx={{ fontSize: 14 }} />, 
-      color: '#2196F3', 
+    join: {
+      icon: <JoinIcon sx={{ fontSize: 14 }} />,
+      color: '#2196F3',
       bgColor: isDark ? 'rgba(33, 150, 243, 0.15)' : '#e3f2fd',
       label: '+',
       tooltip: 'Combine: Merge data from both tables where values match'
     },
-    include: { 
-      icon: <IncludeIcon sx={{ fontSize: 14 }} />, 
-      color: '#4CAF50', 
+    include: {
+      icon: <IncludeIcon sx={{ fontSize: 14 }} />,
+      color: '#4CAF50',
       bgColor: isDark ? 'rgba(76, 175, 80, 0.15)' : '#e8f5e9',
       label: '✓',
       tooltip: 'Keep: Only show rows that have a match in the other table'
     },
-    exclude: { 
-      icon: <ExcludeIcon sx={{ fontSize: 14 }} />, 
-      color: '#f44336', 
+    exclude: {
+      icon: <ExcludeIcon sx={{ fontSize: 14 }} />,
+      color: '#f44336',
       bgColor: isDark ? 'rgba(244, 67, 54, 0.15)' : '#ffebee',
       label: '✗',
       tooltip: 'Remove: Hide rows that have a match in the other table'
@@ -420,33 +421,32 @@ const FieldRow: React.FC<FieldRowProps> = ({
       sx={{
         p: 1,
         borderRadius: 1.5,
-        backgroundColor: isConnectSource 
+        backgroundColor: isConnectSource
           ? connectionMode === 'join' ? (isDark ? 'rgba(33, 150, 243, 0.15)' : '#e3f2fd')
-          : connectionMode === 'include' ? (isDark ? 'rgba(76, 175, 80, 0.15)' : '#e8f5e9')
-          : (isDark ? 'rgba(244, 67, 54, 0.15)' : '#ffebee')
-          : isSelected 
+            : connectionMode === 'include' ? (isDark ? 'rgba(76, 175, 80, 0.15)' : '#e8f5e9')
+              : (isDark ? 'rgba(244, 67, 54, 0.15)' : '#ffebee')
+          : isSelected
             ? (isDark ? 'rgba(124, 77, 255, 0.15)' : '#f3f0ff')
             : (isDark ? '#1a1f35' : '#fff'),
-        border: `2px solid ${
-          isConnectSource 
-            ? connectionMode === 'join' ? '#2196F3' 
-            : connectionMode === 'include' ? '#4CAF50' 
-            : '#f44336'
+        border: `2px solid ${isConnectSource
+            ? connectionMode === 'join' ? '#2196F3'
+              : connectionMode === 'include' ? '#4CAF50'
+                : '#f44336'
             : isSelected ? '#7c4dff' : (isDark ? '#334155' : '#e0e0e0')
-        }`,
+          }`,
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         '&:hover': {
-          backgroundColor: isConnectTarget 
+          backgroundColor: isConnectTarget
             ? connectionMode === 'join' ? (isDark ? 'rgba(33, 150, 243, 0.25)' : '#bbdefb')
-            : connectionMode === 'include' ? (isDark ? 'rgba(76, 175, 80, 0.25)' : '#c8e6c9')
-            : (isDark ? 'rgba(244, 67, 54, 0.25)' : '#ffcdd2')
+              : connectionMode === 'include' ? (isDark ? 'rgba(76, 175, 80, 0.25)' : '#c8e6c9')
+                : (isDark ? 'rgba(244, 67, 54, 0.25)' : '#ffcdd2')
             : (isDark ? '#252b42' : '#f5f5f5'),
           transform: isConnectTarget ? 'scale(1.02)' : 'none',
-          borderColor: isConnectTarget 
-            ? connectionMode === 'join' ? '#2196F3' 
-            : connectionMode === 'include' ? '#4CAF50' 
-            : '#f44336'
+          borderColor: isConnectTarget
+            ? connectionMode === 'join' ? '#2196F3'
+              : connectionMode === 'include' ? '#4CAF50'
+                : '#f44336'
             : (isDark ? '#475569' : '#bbb'),
         },
       }}
@@ -454,10 +454,10 @@ const FieldRow: React.FC<FieldRowProps> = ({
       {/* Field Name & Type */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.75 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flex: 1, minWidth: 0 }}>
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              fontWeight: isSelected ? 600 : 500, 
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: isSelected ? 600 : 500,
               color: isSelected ? '#7c4dff' : (isDark ? '#f1f5f9' : '#333'),
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -466,18 +466,18 @@ const FieldRow: React.FC<FieldRowProps> = ({
           >
             {field.name}
           </Typography>
-          <Chip 
-            label={field.type} 
-            size="small" 
-            sx={{ 
-              height: 18, 
-              fontSize: '0.6rem', 
+          <Chip
+            label={field.type}
+            size="small"
+            sx={{
+              height: 18,
+              fontSize: '0.6rem',
               backgroundColor: isDark ? '#252b42' : '#f5f5f5',
               color: isDark ? '#94a3b8' : '#666',
-            }} 
+            }}
           />
         </Box>
-        
+
         {/* Status Indicators */}
         <Box sx={{ display: 'flex', gap: 0.5 }}>
           {hasAggregation && (
@@ -500,9 +500,9 @@ const FieldRow: React.FC<FieldRowProps> = ({
             mb: 0.75,
             p: 0.75,
             borderRadius: 1,
-            backgroundColor: connectionMode === 'join' ? '#2196F3' 
-              : connectionMode === 'include' ? '#4CAF50' 
-              : '#f44336',
+            backgroundColor: connectionMode === 'join' ? '#2196F3'
+              : connectionMode === 'include' ? '#4CAF50'
+                : '#f44336',
             color: 'white',
             textAlign: 'center',
             cursor: 'pointer',
@@ -619,11 +619,11 @@ const FieldRow: React.FC<FieldRowProps> = ({
       {/* Duplicate Column Warning & Alias Input */}
       {isSelected && hasDuplicateName && connectionMode === 'none' && (
         <Box sx={{ mt: 0.75, pt: 0.75, borderTop: `1px solid ${isDark ? '#334155' : '#eee'}` }}>
-          <Alert 
-            severity="warning" 
-            sx={{ 
-              py: 0.25, 
-              px: 1, 
+          <Alert
+            severity="warning"
+            sx={{
+              py: 0.25,
+              px: 1,
               fontSize: '0.7rem',
               '& .MuiAlert-icon': { fontSize: 16, mr: 0.5 },
               '& .MuiAlert-message': { py: 0 },
@@ -637,11 +637,11 @@ const FieldRow: React.FC<FieldRowProps> = ({
             value={alias || ''}
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => onSetAlias(e.target.value)}
-            sx={{ 
-              mt: 0.75, 
+            sx={{
+              mt: 0.75,
               width: '100%',
-              '& .MuiInputBase-input': { 
-                fontSize: '0.75rem', 
+              '& .MuiInputBase-input': {
+                fontSize: '0.75rem',
                 py: 0.5,
                 px: 1,
               },
@@ -723,9 +723,9 @@ const TableCardComponent: React.FC<TableCardComponentProps> = ({
         overflow: 'hidden',
         transition: 'box-shadow 0.2s, transform 0.2s',
         backgroundColor: isDark ? '#1a1f35' : '#fff',
-        border: isTargetCandidate 
+        border: isTargetCandidate
           ? `3px dashed ${connectionMode === 'join' ? '#2196F3' : connectionMode === 'include' ? '#4CAF50' : '#f44336'}`
-          : hasConnectionFromThis 
+          : hasConnectionFromThis
             ? `3px solid ${connectionMode === 'join' ? '#2196F3' : connectionMode === 'include' ? '#4CAF50' : '#f44336'}`
             : `1px solid ${isDark ? '#334155' : '#e0e0e0'}`,
         transform: isTargetCandidate ? 'scale(1.02)' : 'scale(1)',
@@ -754,8 +754,8 @@ const TableCardComponent: React.FC<TableCardComponentProps> = ({
             {table.columns.length} columns • {selectedFieldsInTable.length} selected
           </Typography>
         </Box>
-        <IconButton 
-          size="small" 
+        <IconButton
+          size="small"
           onClick={(e) => setMenuAnchor(e.currentTarget)}
           sx={{ color: 'white', p: 0.5 }}
         >
@@ -777,11 +777,11 @@ const TableCardComponent: React.FC<TableCardComponentProps> = ({
       {isTargetCandidate && (
         <Box sx={{
           p: 1,
-          backgroundColor: connectionMode === 'join' 
-            ? (isDark ? 'rgba(33, 150, 243, 0.15)' : '#e3f2fd') 
-            : connectionMode === 'include' 
-            ? (isDark ? 'rgba(76, 175, 80, 0.15)' : '#e8f5e9') 
-            : (isDark ? 'rgba(244, 67, 54, 0.15)' : '#ffebee'),
+          backgroundColor: connectionMode === 'join'
+            ? (isDark ? 'rgba(33, 150, 243, 0.15)' : '#e3f2fd')
+            : connectionMode === 'include'
+              ? (isDark ? 'rgba(76, 175, 80, 0.15)' : '#e8f5e9')
+              : (isDark ? 'rgba(244, 67, 54, 0.15)' : '#ffebee'),
           borderBottom: `1px solid ${isDark ? '#334155' : '#e0e0e0'}`,
           textAlign: 'center',
         }}>
@@ -798,8 +798,8 @@ const TableCardComponent: React.FC<TableCardComponentProps> = ({
           const isSelected = !!fieldData;
           const hasFilter = visualFilters.some(f => f.tableId === table.id && f.columnName === field.name);
           const isGrouped = groupingRules.some(g => g.tableId === table.id && g.columnName === field.name);
-          
-          const hasExistingJoin = tableConnections.some(c => 
+
+          const hasExistingJoin = tableConnections.some(c =>
             (c.sourceTableId === table.id && c.sourceColumn === field.name) ||
             (c.targetTableId === table.id && c.targetColumn === field.name)
           );
@@ -876,7 +876,7 @@ const Minimap: React.FC<MinimapProps> = ({
   const scale = 0.05;
   const minimapWidth = CANVAS_WIDTH * scale;
   const minimapHeight = CANVAS_HEIGHT * scale;
-  
+
   const viewportWidth = containerWidth * scale;
   const viewportHeight = containerHeight * scale;
 
@@ -924,7 +924,7 @@ const Minimap: React.FC<MinimapProps> = ({
           />
         );
       })}
-      
+
       {/* Viewport indicator */}
       <Box
         sx={{
@@ -950,11 +950,11 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
   const isDark = theme.palette.mode === 'dark';
   const databaseId = connectedDatabase?.id ? Number(connectedDatabase.id) : 0;
   const queryClient = useQueryClient();
-  
+
   const { data: schemaData, isLoading: schemaLoading } = useFullSchema(
     databaseId || undefined,
   );
-  
+
   const { mutateAsync: executeQuery, isPending: isExecuting } = useExecuteQuery(databaseId, {
     onError: (error) => {
       setApiTestResult({
@@ -976,7 +976,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
   const [zoom, setZoom] = useState(1);
   const [showGrid, setShowGrid] = useState(true);
   const [showMinimap, setShowMinimap] = useState(true);
-  
+
   // Dragging State
   const [draggingTable, setDraggingTable] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -1069,7 +1069,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
     const currentParamNames = visualFilters
       .filter(f => f.isParameter && f.parameterName)
       .map(f => f.parameterName!);
-    
+
     setTestParamValues(prev => {
       const updated: Record<string, string> = {};
       // Only keep values for parameters that still exist
@@ -1088,7 +1088,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
     schemaData?.tables?.map((t: any) => ({
       id: t.name, name: t.name, columns: t.columns || [],
     })) || []
-  , [schemaData]);
+    , [schemaData]);
 
   // Detect type mismatches in table connections
   const connectionTypeErrors = useMemo(() => {
@@ -1122,12 +1122,12 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
   // Detect computed fields referencing tables not in the query
   const computedFieldErrors = useMemo(() => {
     const errors: { id: string; message: string }[] = [];
-    
+
     // Check which tables are actually joined (reachable from the primary table)
     const joinedTables = new Set<string>();
     if (selectedTables.length > 0) {
       joinedTables.add(selectedTables[0].id); // Primary table is always included
-      
+
       // Add tables that are connected via JOINs
       let changed = true;
       while (changed) {
@@ -1147,7 +1147,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
     computedFields.forEach(cf => {
       const leftTableInQuery = joinedTables.has(cf.expression.leftTableId);
       const rightTableInQuery = joinedTables.has(cf.expression.rightTableId);
-      
+
       if (!leftTableInQuery) {
         errors.push({
           id: cf.id,
@@ -1178,7 +1178,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
     if (selectedTables.length === 0) return '';
 
     const lines: string[] = [];
-    
+
     // SELECT clause
     let selectFields: string[] = [];
     if (selectedFields.length === 0 && computedFields.length === 0) {
@@ -1202,13 +1202,13 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
         }
         return fieldExpr;
       });
-      
+
       // Computed fields (expressions like quantity * price)
       computedFields.forEach(cf => {
         const leftCol = `${cf.expression.leftTableId}.${cf.expression.leftColumn}`;
         const rightCol = `${cf.expression.rightTableId}.${cf.expression.rightColumn}`;
         const expr = `${leftCol} ${cf.expression.operator} ${rightCol}`;
-        
+
         let fieldExpr: string;
         if (cf.aggregation) {
           fieldExpr = `${cf.aggregation.toUpperCase()}(${expr})`;
@@ -1228,34 +1228,34 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
     // JOIN clauses - build a proper join order
     // Track which tables have been added to the query
     const joinedTables = new Set<string>([primaryTable]);
-    
+
     // Process connections to build JOINs in correct order
     // We need to ensure each JOIN only references tables already in the query
     const remainingConnections = [...tableConnections];
     const maxIterations = remainingConnections.length * 2; // Prevent infinite loops
     let iterations = 0;
-    
+
     while (remainingConnections.length > 0 && iterations < maxIterations) {
       iterations++;
       let foundConnection = false;
-      
+
       for (let i = 0; i < remainingConnections.length; i++) {
         const conn = remainingConnections[i];
         const sourceInQuery = joinedTables.has(conn.sourceTableId);
         const targetInQuery = joinedTables.has(conn.targetTableId);
-        
+
         // Skip if both tables are already joined (redundant connection)
         if (sourceInQuery && targetInQuery) {
           remainingConnections.splice(i, 1);
           foundConnection = true;
           break;
         }
-        
+
         // Can only process this connection if at least one table is already in the query
         if (!sourceInQuery && !targetInQuery) {
           continue; // Skip for now, try other connections first
         }
-        
+
         // Generate simple JOIN condition
         const joinCondition = generateJoinCondition(
           conn.sourceTableId,
@@ -1263,7 +1263,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
           conn.targetTableId,
           conn.targetColumn
         );
-        
+
         if (sourceInQuery && !targetInQuery) {
           // Source is already in query, join the target table
           lines.push(`INNER JOIN ${conn.targetTableId}`);
@@ -1275,12 +1275,12 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
           lines.push(`  ON ${joinCondition}`);
           joinedTables.add(conn.sourceTableId);
         }
-        
+
         remainingConnections.splice(i, 1);
         foundConnection = true;
         break;
       }
-      
+
       // If no connection could be processed, we might have disconnected tables
       if (!foundConnection && remainingConnections.length > 0) {
         // Try to add the first remaining connection anyway (might create invalid SQL)
@@ -1300,7 +1300,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
 
     // WHERE clause
     const whereClauses: string[] = [];
-    
+
     visualFilters.forEach(f => {
       const col = `${f.tableId}.${f.columnName}`;
       const op = getSqlOperator(f.operator);
@@ -1338,7 +1338,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
     // ORDER BY clause
     const sortedFields = selectedFields.filter(f => f.sortOrder);
     if (sortedFields.length > 0) {
-      const orderCols = sortedFields.map(f => 
+      const orderCols = sortedFields.map(f =>
         `${f.tableId}.${f.columnName} ${f.sortOrder?.toUpperCase()}`
       );
       lines.push(`ORDER BY ${orderCols.join(', ')}`);
@@ -1373,7 +1373,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
     const cols = Math.ceil(Math.sqrt(selectedTables.length));
     const padding = 40;
     const newPositions: Record<string, TablePosition> = {};
-    
+
     selectedTables.forEach((table, i) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
@@ -1382,7 +1382,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
         y: padding + row * (TABLE_HEIGHT + padding),
       };
     });
-    
+
     setTablePositions(newPositions);
     setZoom(1);
     // Scroll to top-left after arranging
@@ -1394,7 +1394,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
 
   const handleCenterView = useCallback(() => {
     if (selectedTables.length === 0 || !containerRef.current) return;
-    
+
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     selectedTables.forEach(t => {
       const pos = tablePositions[t.id];
@@ -1405,10 +1405,10 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
         maxY = Math.max(maxY, pos.y + TABLE_HEIGHT);
       }
     });
-    
+
     const centerX = (minX + maxX) / 2 * zoom;
     const centerY = (minY + maxY) / 2 * zoom;
-    
+
     containerRef.current.scrollLeft = centerX - containerSize.width / 2;
     containerRef.current.scrollTop = centerY - containerSize.height / 2;
   }, [selectedTables, tablePositions, containerSize, zoom]);
@@ -1423,7 +1423,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
       const rect = containerRef.current.getBoundingClientRect();
       const scrollLeft = containerRef.current.scrollLeft;
       const scrollTop = containerRef.current.scrollTop;
-      
+
       const newX = snapToGrid((e.clientX - rect.left + scrollLeft - dragOffset.x) / zoom);
       const newY = snapToGrid((e.clientY - rect.top + scrollTop - dragOffset.y) / zoom);
       setTablePositions(prev => ({
@@ -1454,14 +1454,14 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
       const cols = Math.ceil(Math.sqrt(selectedTables.length + 1));
       const col = selectedTables.length % cols;
       const row = Math.floor(selectedTables.length / cols);
-      
+
       setSelectedTables(prev => [...prev, {
         id: table.id, name: table.name, columns: table.columns || [],
       }]);
       setTablePositions(prev => ({
         ...prev,
-        [table.id]: { 
-          x: 40 + col * (TABLE_WIDTH + 40), 
+        [table.id]: {
+          x: 40 + col * (TABLE_WIDTH + 40),
           y: 40 + row * (TABLE_HEIGHT + 40),
         },
       }));
@@ -1474,13 +1474,13 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
     const tablesToAddData = tableIds
       .map(id => tables.find((t: any) => t.id === id))
       .filter((t): t is any => !!t && !selectedTables.find(s => s.id === t.id));
-    
+
     if (tablesToAddData.length === 0) return;
 
     const startIndex = selectedTables.length;
     const totalTables = startIndex + tablesToAddData.length;
     const cols = Math.ceil(Math.sqrt(totalTables));
-    
+
     const newTables = tablesToAddData.map((table) => ({
       id: table.id,
       name: table.name,
@@ -1549,7 +1549,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
         targetColumnType: targetColumnType,
         connectionType: 'matches',
       };
-      setTableConnections(prev => [...prev.filter(c => 
+      setTableConnections(prev => [...prev.filter(c =>
         !(c.sourceTableId === conn.sourceTableId && c.targetTableId === conn.targetTableId)
       ), conn]);
     } else if (connectionMode === 'include' || connectionMode === 'exclude') {
@@ -1793,13 +1793,13 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
       });
       return;
     }
-    
+
     setApiTestResult({ loading: true });
     setPreviewLoading(true);
     setTestResultsOpen(true);
-    
+
     const startTime = performance.now();
-    
+
     try {
       // Replace parameters with test values
       let testSql = generatedSql;
@@ -1807,18 +1807,18 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
         const value = testParamValues[f.parameterName!].trim();
         const colType = (f.columnType || '').toLowerCase();
         const operator = f.operator;
-        
+
         // Only these types should NOT be quoted
-        const numericTypes = ['int', 'integer', 'smallint', 'bigint', 'tinyint', 
-                              'decimal', 'numeric', 'float', 'double', 'real',
-                              'money', 'smallmoney', 'serial', 'bigserial'];
-        
+        const numericTypes = ['int', 'integer', 'smallint', 'bigint', 'tinyint',
+          'decimal', 'numeric', 'float', 'double', 'real',
+          'money', 'smallmoney', 'serial', 'bigserial'];
+
         const isNumericType = numericTypes.some(t => colType === t || colType.startsWith(t + '('));
         const isNumericValue = !isNaN(Number(value)) && value !== '';
-        
+
         // Escape single quotes
         const escapedValue = value.replace(/'/g, "''");
-        
+
         // Format value based on operator and type
         let formattedValue: string;
         if (operator === 'contains') {
@@ -1832,22 +1832,22 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
         } else {
           formattedValue = `'${escapedValue}'`;
         }
-        
+
         testSql = testSql.replace(`:${f.parameterName}`, formattedValue);
       });
 
       // Add LIMIT to prevent fetching too many rows for preview
-      const previewSql = testSql.includes('LIMIT') 
-        ? testSql 
+      const previewSql = testSql.includes('LIMIT')
+        ? testSql
         : `${testSql} LIMIT 100`;
-      
+
       const result = await executeQuery(previewSql);
       const endTime = performance.now();
-      
+
       // Transform result rows to preview data format
       const rows = result.rows || [];
       setPreviewData(rows);
-      
+
       setApiTestResult({
         success: true,
         status: 200,
@@ -1927,21 +1927,23 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
       const savedQuery = response.query;
       const baseUrl = window.location.origin;
       const apiEndpoint = `/api${savedQuery.endpoint}`;
-      
+
       // Build example URL with parameters
       const exampleParams = parameters.map(p => `${p.name}=<value>`).join('&');
-      const fullExampleUrl = parameters.length > 0 
-        ? `${baseUrl}${apiEndpoint}?${exampleParams}` 
+      const fullExampleUrl = parameters.length > 0
+        ? `${baseUrl}${apiEndpoint}?${exampleParams}`
         : `${baseUrl}${apiEndpoint}`;
 
       setSaveDialogOpen(false);
-      
+
       // Invalidate the saved queries cache so Open API tab shows the new API
       queryClient.invalidateQueries({ queryKey: [...SAVED_QUERIES_KEY, databaseId] });
-      
+      // Also invalidate databases to update the apis count on dashboard
+      queryClient.invalidateQueries({ queryKey: DATABASES_QUERY_KEY });
+
       // Notify parent that API was saved (for refreshing Open API tab)
       onApiSaved?.();
-      
+
       // Show success with the endpoint information
       setApiTestResult({
         success: true,
@@ -1989,22 +1991,22 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
             fill="none"
             strokeLinecap="round"
           />
-          <rect 
-            x={midX - 45} 
-            y={(y1 + y2) / 2 - 14} 
-            width={90} 
-            height={28} 
-            rx={14} 
+          <rect
+            x={midX - 45}
+            y={(y1 + y2) / 2 - 14}
+            width={90}
+            height={28}
+            rx={14}
             fill={isDark ? 'rgba(33, 150, 243, 0.15)' : '#e3f2fd'}
             stroke="#2196F3"
             strokeWidth={1.5 / zoom}
           />
-          <text 
-            x={midX} 
-            y={(y1 + y2) / 2 + 5} 
+          <text
+            x={midX}
+            y={(y1 + y2) / 2 + 5}
             fill={isDark ? '#64b5f6' : '#1565c0'}
-            fontSize={12 / zoom} 
-            textAnchor="middle" 
+            fontSize={12 / zoom}
+            textAnchor="middle"
             fontWeight="600"
           >
             🔗 Combined
@@ -2037,22 +2039,22 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
             fill="none"
             strokeLinecap="round"
           />
-          <rect 
-            x={midX - 50} 
-            y={(y1 + y2) / 2 - 14} 
-            width={100} 
-            height={28} 
-            rx={14} 
-            fill={bgColor} 
+          <rect
+            x={midX - 50}
+            y={(y1 + y2) / 2 - 14}
+            width={100}
+            height={28}
+            rx={14}
+            fill={bgColor}
             stroke={color}
             strokeWidth={1.5 / zoom}
           />
-          <text 
-            x={midX} 
-            y={(y1 + y2) / 2 + 5} 
-            fill={color} 
-            fontSize={11 / zoom} 
-            textAnchor="middle" 
+          <text
+            x={midX}
+            y={(y1 + y2) / 2 + 5}
+            fill={color}
+            fontSize={11 / zoom}
+            textAnchor="middle"
             fontWeight="600"
           >
             {ref.filterType === 'include' ? '✅ Keep' : '🚫 Remove'}
@@ -2084,21 +2086,21 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
             <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => setAddTableDialogOpen(true)}>
               Add Table
             </Button>
-            <Button 
-              size="small" 
-              variant="outlined" 
-              startIcon={<FunctionsIcon />} 
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<FunctionsIcon />}
               onClick={openComputedFieldDialog}
               disabled={selectedTables.length < 1}
               sx={{ borderColor: '#9c27b0', color: '#9c27b0', '&:hover': { borderColor: '#7b1fa2', backgroundColor: 'rgba(156, 39, 176, 0.08)' } }}
             >
               Add Calculation
             </Button>
-            <SaveButton 
-              size="small" 
-              variant="contained" 
-              startIcon={<SaveIcon />} 
-              onClick={() => setSaveDialogOpen(true)} 
+            <SaveButton
+              size="small"
+              variant="contained"
+              startIcon={<SaveIcon />}
+              onClick={() => setSaveDialogOpen(true)}
               disabled={!selectedTables.length || hasValidationErrors}
             >
               Save API
@@ -2108,17 +2110,17 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
 
         {/* Connection Mode Banner */}
         {connectionMode !== 'none' && (
-          <Box sx={{ 
-            px: 2, py: 1.5, 
-            backgroundColor: connectionMode === 'join' 
-              ? (isDark ? 'rgba(33, 150, 243, 0.15)' : '#e3f2fd') 
-              : connectionMode === 'include' 
-              ? (isDark ? 'rgba(76, 175, 80, 0.15)' : '#e8f5e9') 
-              : (isDark ? 'rgba(244, 67, 54, 0.15)' : '#ffebee'),
+          <Box sx={{
+            px: 2, py: 1.5,
+            backgroundColor: connectionMode === 'join'
+              ? (isDark ? 'rgba(33, 150, 243, 0.15)' : '#e3f2fd')
+              : connectionMode === 'include'
+                ? (isDark ? 'rgba(76, 175, 80, 0.15)' : '#e8f5e9')
+                : (isDark ? 'rgba(244, 67, 54, 0.15)' : '#ffebee'),
             borderBottom: '2px solid',
             borderColor: connectionMode === 'join' ? '#2196F3' : connectionMode === 'include' ? '#4CAF50' : '#f44336',
-            display: 'flex', 
-            alignItems: 'center', 
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'space-between',
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -2147,10 +2149,10 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
 
         {/* Type Mismatch Error Banner */}
         {connectionTypeErrors.length > 0 && (
-          <Alert 
-            severity="error" 
-            sx={{ 
-              mx: 2, 
+          <Alert
+            severity="error"
+            sx={{
+              mx: 2,
               mt: 1,
               '& .MuiAlert-message': { width: '100%' },
             }}
@@ -2160,7 +2162,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
             </Typography>
             {connectionTypeErrors.map(err => (
               <Typography key={err.id} variant="body2" sx={{ fontSize: '0.8rem' }}>
-                • <strong>{err.sourceTable}.{err.sourceColumn}</strong> ({err.sourceType || 'unknown'}) 
+                • <strong>{err.sourceTable}.{err.sourceColumn}</strong> ({err.sourceType || 'unknown'})
                 {' '}cannot be joined with{' '}
                 <strong>{err.targetTable}.{err.targetColumn}</strong> ({err.targetType || 'unknown'})
               </Typography>
@@ -2173,10 +2175,10 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
 
         {/* Invalid Aggregation Error Banner */}
         {aggregationErrors.length > 0 && (
-          <Alert 
-            severity="error" 
-            sx={{ 
-              mx: 2, 
+          <Alert
+            severity="error"
+            sx={{
+              mx: 2,
               mt: 1,
               '& .MuiAlert-message': { width: '100%' },
             }}
@@ -2198,10 +2200,10 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
 
         {/* Missing Table Error Banner for Computed Fields */}
         {computedFieldErrors.length > 0 && (
-          <Alert 
-            severity="error" 
-            sx={{ 
-              mx: 2, 
+          <Alert
+            severity="error"
+            sx={{
+              mx: 2,
               mt: 1,
               '& .MuiAlert-message': { width: '100%' },
             }}
@@ -2221,9 +2223,9 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
         )}
 
         {/* Toolbar */}
-        <Box sx={{ 
-          px: 2, py: 1, 
-          backgroundColor: isDark ? '#141825' : '#fff', 
+        <Box sx={{
+          px: 2, py: 1,
+          backgroundColor: isDark ? '#141825' : '#fff',
           borderBottom: `1px solid ${isDark ? '#1e293b' : '#e0e0e0'}`,
           display: 'flex',
           alignItems: 'center',
@@ -2245,13 +2247,13 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                 </Button>
               </Tooltip>
             </ButtonGroup>
-            
+
             <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
-            
+
             <Tooltip title="Auto-arrange Tables">
-              <Button 
-                size="small" 
-                variant="outlined" 
+              <Button
+                size="small"
+                variant="outlined"
                 onClick={handleAutoArrange}
                 disabled={selectedTables.length === 0}
                 startIcon={<AutoArrangeIcon />}
@@ -2259,26 +2261,26 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                 Auto Arrange
               </Button>
             </Tooltip>
-            
+
             <Tooltip title="Center View">
               <IconButton size="small" onClick={handleCenterView}>
                 <CenterIcon />
               </IconButton>
             </Tooltip>
-            
+
             <Tooltip title={showGrid ? 'Hide Grid' : 'Show Grid'}>
-              <IconButton 
-                size="small" 
+              <IconButton
+                size="small"
                 onClick={() => setShowGrid(!showGrid)}
                 color={showGrid ? 'primary' : 'default'}
               >
                 <GridIcon />
               </IconButton>
             </Tooltip>
-            
+
             <Tooltip title={showMinimap ? 'Hide Minimap' : 'Show Minimap'}>
-              <IconButton 
-                size="small" 
+              <IconButton
+                size="small"
                 onClick={() => setShowMinimap(!showMinimap)}
                 color={showMinimap ? 'primary' : 'default'}
               >
@@ -2286,9 +2288,9 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
               </IconButton>
             </Tooltip>
           </Box>
-          
+
           <Typography variant="caption" sx={{ color: isDark ? '#64748b' : '#999' }}>
-            {selectedTables.length} table(s) • {selectedFields.length} field(s) selected • 
+            {selectedTables.length} table(s) • {selectedFields.length} field(s) selected •
             Scroll to navigate • Ctrl+Scroll to zoom
           </Typography>
         </Box>
@@ -2492,11 +2494,11 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                           <Box>
                             <Typography variant="caption" sx={{ display: 'block' }}>
                               {f.columnName} {getOperatorLabel(f.operator)} {f.isParameter ? (
-                                <Chip 
-                                  label={`:${f.parameterName}`} 
-                                  size="small" 
+                                <Chip
+                                  label={`:${f.parameterName}`}
+                                  size="small"
                                   color="primary"
-                                  sx={{ height: 18, fontSize: '0.65rem', ml: 0.5 }} 
+                                  sx={{ height: 18, fontSize: '0.65rem', ml: 0.5 }}
                                 />
                               ) : String(f.value)}
                             </Typography>
@@ -2563,14 +2565,14 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
 
                 {/* Add Calculation Button */}
                 {selectedTables.length > 0 && (
-                  <Button 
-                    fullWidth 
-                    variant="outlined" 
+                  <Button
+                    fullWidth
+                    variant="outlined"
                     startIcon={<FunctionsIcon />}
                     onClick={openComputedFieldDialog}
-                    sx={{ 
-                      mt: 2, 
-                      borderColor: '#9c27b0', 
+                    sx={{
+                      mt: 2,
+                      borderColor: '#9c27b0',
                       color: '#9c27b0',
                       '&:hover': { borderColor: '#7b1fa2', backgroundColor: 'rgba(156, 39, 176, 0.08)' }
                     }}
@@ -2588,8 +2590,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                       </Typography>
                       <FormControlLabel
                         control={
-                          <Switch 
-                            checked={paginationEnabled} 
+                          <Switch
+                            checked={paginationEnabled}
                             onChange={(e) => setPaginationEnabled(e.target.checked)}
                             size="small"
                           />
@@ -2598,7 +2600,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                         sx={{ m: 0 }}
                       />
                     </Box>
-                    
+
                     {paginationEnabled && (
                       <Paper sx={{ p: 1.5, backgroundColor: isDark ? 'rgba(33, 150, 243, 0.1)' : '#f5f5f5' }}>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -2616,13 +2618,13 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                               InputProps={{ inputProps: { min: 1, max: 10000 } }}
                             />
                           </Box>
-                          
+
                           {/* Parameterize options */}
                           <Box>
                             <FormControlLabel
                               control={
-                                <Checkbox 
-                                  checked={allowPageSizeParam} 
+                                <Checkbox
+                                  checked={allowPageSizeParam}
                                   onChange={(e) => setAllowPageSizeParam(e.target.checked)}
                                   size="small"
                                 />
@@ -2635,8 +2637,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                             />
                             <FormControlLabel
                               control={
-                                <Checkbox 
-                                  checked={allowPageCountParam} 
+                                <Checkbox
+                                  checked={allowPageCountParam}
                                   onChange={(e) => setAllowPageCountParam(e.target.checked)}
                                   size="small"
                                 />
@@ -2648,7 +2650,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                               }
                             />
                           </Box>
-                          
+
                           <Alert severity="info" sx={{ py: 0.5, fontSize: '0.75rem' }}>
                             API will support: <code>?pagesize=50&pagecount=2</code>
                           </Alert>
@@ -2711,8 +2713,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Generated SQL</Typography>
                   <Tooltip title="Copy SQL">
-                    <IconButton 
-                      size="small" 
+                    <IconButton
+                      size="small"
                       onClick={() => navigator.clipboard.writeText(generatedSql)}
                       disabled={!generatedSql}
                     >
@@ -2724,17 +2726,17 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                 {!generatedSql ? (
                   <Alert severity="info" sx={{ fontSize: '0.8rem' }}>Add tables and select fields to generate SQL</Alert>
                 ) : (
-                  <Paper 
-                    sx={{ 
-                      p: 1.5, 
-                      backgroundColor: '#1e1e1e', 
+                  <Paper
+                    sx={{
+                      p: 1.5,
+                      backgroundColor: '#1e1e1e',
                       borderRadius: 1,
                       maxHeight: 400,
                       overflow: 'auto',
                     }}
                   >
-                    <pre style={{ 
-                      margin: 0, 
+                    <pre style={{
+                      margin: 0,
                       fontFamily: '"Fira Code", "Consolas", monospace',
                       fontSize: '0.75rem',
                       lineHeight: 1.6,
@@ -2744,7 +2746,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                     }}>
                       {generatedSql.split('\n').map((line, i) => {
                         const highlighted = line
-                          .replace(/\b(SELECT|FROM|WHERE|AND|OR|INNER JOIN|LEFT JOIN|RIGHT JOIN|ON|GROUP BY|ORDER BY|HAVING|DISTINCT|IN|NOT IN|LIKE|BETWEEN|IS NULL|IS NOT NULL|ASC|DESC|COUNT|SUM|AVG|MIN|MAX)\b/gi, 
+                          .replace(/\b(SELECT|FROM|WHERE|AND|OR|INNER JOIN|LEFT JOIN|RIGHT JOIN|ON|GROUP BY|ORDER BY|HAVING|DISTINCT|IN|NOT IN|LIKE|BETWEEN|IS NULL|IS NOT NULL|ASC|DESC|COUNT|SUM|AVG|MIN|MAX)\b/gi,
                             match => `<span style="color: #569cd6; font-weight: 600">${match.toUpperCase()}</span>`)
                           .replace(/'[^']*'/g, match => `<span style="color: #ce9178">${match}</span>`)
                           .replace(/\b\d+\b/g, match => `<span style="color: #b5cea8">${match}</span>`);
@@ -2800,17 +2802,17 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
             {rightPanelTab === 3 && (
               <Box>
                 {/* Big Run Query Button */}
-                <Button 
-                  fullWidth 
-                  variant="contained" 
+                <Button
+                  fullWidth
+                  variant="contained"
                   size="large"
-                  startIcon={previewLoading ? <CircularProgress size={20} color="inherit" /> : <PlayIcon />} 
-                  onClick={runQuery} 
+                  startIcon={previewLoading ? <CircularProgress size={20} color="inherit" /> : <PlayIcon />}
+                  onClick={runQuery}
                   disabled={!generatedSql || previewLoading || isExecuting}
-                  sx={{ 
-                    mb: 2, 
-                    py: 1.5, 
-                    fontSize: '1rem', 
+                  sx={{
+                    mb: 2,
+                    py: 1.5,
+                    fontSize: '1rem',
                     fontWeight: 600,
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     '&:hover': {
@@ -2833,7 +2835,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                         const value = testParamValues[f.parameterName!] || '';
                         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
                         const isValidUuid = !isUuid || !value || uuidRegex.test(value);
-                        
+
                         return (
                           <TextField
                             key={f.id}
@@ -2843,13 +2845,13 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                             value={value}
                             onChange={(e) => setTestParamValues(prev => ({ ...prev, [f.parameterName!]: e.target.value }))}
                             helperText={
-                              isUuid && value && !isValidUuid 
-                                ? '⚠️ Invalid UUID format. Use format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' 
+                              isUuid && value && !isValidUuid
+                                ? '⚠️ Invalid UUID format. Use format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
                                 : `${f.tableId}.${f.columnName} (${f.columnType || 'unknown'})`
                             }
                             error={isUuid && !!value && !isValidUuid}
                             fullWidth
-                            sx={{ 
+                            sx={{
                               '& .MuiOutlinedInput-root': { backgroundColor: isDark ? '#1a1f35' : 'white' },
                               '& .MuiFormHelperText-root': { fontSize: '0.65rem', mt: 0.25 }
                             }}
@@ -2884,10 +2886,10 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                                   Test your API in Postman:
                                 </Typography>
                                 <Paper sx={{ p: 1, mt: 0.5, backgroundColor: isDark ? '#252b42' : '#f0f0f0' }}>
-                                  <Typography 
-                                    variant="caption" 
-                                    sx={{ 
-                                      fontFamily: 'monospace', 
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      fontFamily: 'monospace',
                                       color: isDark ? '#f1f5f9' : '#333',
                                       wordBreak: 'break-all',
                                       display: 'block'
@@ -2972,14 +2974,14 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
       {/* ====== DIALOGS ====== */}
 
       {/* Add Table Dialog */}
-      <Dialog 
-        open={addTableDialogOpen} 
+      <Dialog
+        open={addTableDialogOpen}
         onClose={() => {
           setAddTableDialogOpen(false);
           setTableSearchQuery('');
           setTablesToAdd([]);
-        }} 
-        maxWidth="sm" 
+        }}
+        maxWidth="sm"
         fullWidth
       >
         <DialogTitle>Add Tables</DialogTitle>
@@ -3008,8 +3010,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
               {/* Select All / Clear */}
               {tables.filter((t: any) => !selectedTables.find(s => s.id === t.id)).length > 0 && (
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Button 
-                    size="small" 
+                  <Button
+                    size="small"
                     onClick={() => {
                       const availableTables = tables
                         .filter((t: any) => !selectedTables.find(s => s.id === t.id))
@@ -3042,33 +3044,33 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                     <Paper
                       key={t.id}
                       onClick={() => {
-                        setTablesToAdd(prev => 
-                          prev.includes(t.id) 
+                        setTablesToAdd(prev =>
+                          prev.includes(t.id)
                             ? prev.filter(id => id !== t.id)
                             : [...prev, t.id]
                         );
                       }}
-                      sx={{ 
-                        p: 1.5, 
+                      sx={{
+                        p: 1.5,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         gap: 1,
-                        backgroundColor: tablesToAdd.includes(t.id) 
-                          ? (isDark ? 'rgba(33, 150, 243, 0.15)' : '#e3f2fd') 
+                        backgroundColor: tablesToAdd.includes(t.id)
+                          ? (isDark ? 'rgba(33, 150, 243, 0.15)' : '#e3f2fd')
                           : (isDark ? '#1a1f35' : '#fff'),
-                        border: tablesToAdd.includes(t.id) 
-                          ? '2px solid #2196f3' 
+                        border: tablesToAdd.includes(t.id)
+                          ? '2px solid #2196f3'
                           : `1px solid ${isDark ? '#334155' : '#e0e0e0'}`,
-                        '&:hover': { 
-                          backgroundColor: tablesToAdd.includes(t.id) 
-                            ? (isDark ? 'rgba(33, 150, 243, 0.25)' : '#bbdefb') 
-                            : (isDark ? '#252b42' : '#f5f5f5') 
+                        '&:hover': {
+                          backgroundColor: tablesToAdd.includes(t.id)
+                            ? (isDark ? 'rgba(33, 150, 243, 0.25)' : '#bbdefb')
+                            : (isDark ? '#252b42' : '#f5f5f5')
                         },
                       }}
                     >
-                      <Checkbox 
-                        checked={tablesToAdd.includes(t.id)} 
+                      <Checkbox
+                        checked={tablesToAdd.includes(t.id)}
                         size="small"
                         sx={{ p: 0 }}
                       />
@@ -3083,10 +3085,10 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                   .filter((t: any) => !selectedTables.find(s => s.id === t.id))
                   .filter((t: any) => t.name.toLowerCase().includes(tableSearchQuery.toLowerCase()))
                   .length === 0 && (
-                  <Alert severity="info">
-                    {tableSearchQuery ? 'No tables match your search' : 'All tables added'}
-                  </Alert>
-                )}
+                    <Alert severity="info">
+                      {tableSearchQuery ? 'No tables match your search' : 'All tables added'}
+                    </Alert>
+                  )}
               </Box>
             </Box>
           )}
@@ -3099,8 +3101,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
           }}>
             Cancel
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             disabled={tablesToAdd.length === 0}
             onClick={() => {
               // Add all selected tables with proper positions
@@ -3148,14 +3150,14 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
               <MenuItem value="is_not_null">Is Not Empty</MenuItem>
             </Select>
           </FormControl>
-          
+
           {/* Parameter Toggle - only show for operators that need a value */}
           {!['is_null', 'is_not_null', 'between'].includes(filterOperator) && (
             <Paper sx={{ p: 1.5, mb: 2, backgroundColor: filterIsParameter ? (isDark ? 'rgba(33, 150, 243, 0.15)' : '#e3f2fd') : (isDark ? '#1a1f35' : '#f5f5f5') }}>
               <FormControlLabel
                 control={
-                  <Switch 
-                    checked={filterIsParameter} 
+                  <Switch
+                    checked={filterIsParameter}
                     onChange={(e) => setFilterIsParameter(e.target.checked)}
                     color="primary"
                   />
@@ -3182,10 +3184,10 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
           ) : !['is_null', 'is_not_null'].includes(filterOperator) && (
             filterIsParameter ? (
               <Box>
-                <TextField 
-                  fullWidth 
-                  label="Parameter Name" 
-                  value={filterParameterName} 
+                <TextField
+                  fullWidth
+                  label="Parameter Name"
+                  value={filterParameterName}
                   onChange={(e) => setFilterParameterName(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
                   helperText={`API will expect: ?${filterParameterName}=value`}
                   sx={{ mb: 1 }}
@@ -3201,8 +3203,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setFilterDialogOpen(false)}>Cancel</Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             onClick={handleAddFilter}
             disabled={filterIsParameter && !filterParameterName}
           >
@@ -3244,7 +3246,7 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
           <Typography variant="body2" sx={{ color: isDark ? '#94a3b8' : '#666', mb: 2 }}>
             Create a calculation using two columns (e.g., quantity × price for order totals)
           </Typography>
-          
+
           <TextField
             fullWidth
             label="Field Name (alias)"
@@ -3259,8 +3261,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
             <Box sx={{ flex: 1 }}>
               <FormControl fullWidth size="small" sx={{ mb: 1 }}>
                 <InputLabel>Table</InputLabel>
-                <Select 
-                  value={computedLeftTable} 
+                <Select
+                  value={computedLeftTable}
                   onChange={(e) => { setComputedLeftTable(e.target.value); setComputedLeftColumn(''); }}
                   label="Table"
                 >
@@ -3271,8 +3273,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
               </FormControl>
               <FormControl fullWidth size="small">
                 <InputLabel>Column</InputLabel>
-                <Select 
-                  value={computedLeftColumn} 
+                <Select
+                  value={computedLeftColumn}
                   onChange={(e) => setComputedLeftColumn(e.target.value)}
                   label="Column"
                   disabled={!computedLeftTable}
@@ -3280,8 +3282,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                   {selectedTables.find(t => t.id === computedLeftTable)?.columns
                     .filter(c => {
                       const t = c.type.toLowerCase();
-                      return t.includes('int') || t.includes('decimal') || t.includes('numeric') || 
-                             t.includes('float') || t.includes('double') || t.includes('real') || t.includes('money');
+                      return t.includes('int') || t.includes('decimal') || t.includes('numeric') ||
+                        t.includes('float') || t.includes('double') || t.includes('real') || t.includes('money');
                     })
                     .map(c => (
                       <MenuItem key={c.name} value={c.name}>{c.name} ({c.type})</MenuItem>
@@ -3293,8 +3295,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
             {/* Operator */}
             <FormControl sx={{ minWidth: 80 }} size="small">
               <InputLabel>Op</InputLabel>
-              <Select 
-                value={computedOperator} 
+              <Select
+                value={computedOperator}
                 onChange={(e) => setComputedOperator(e.target.value as '*' | '+' | '-' | '/')}
                 label="Op"
               >
@@ -3309,8 +3311,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
             <Box sx={{ flex: 1 }}>
               <FormControl fullWidth size="small" sx={{ mb: 1 }}>
                 <InputLabel>Table</InputLabel>
-                <Select 
-                  value={computedRightTable} 
+                <Select
+                  value={computedRightTable}
                   onChange={(e) => { setComputedRightTable(e.target.value); setComputedRightColumn(''); }}
                   label="Table"
                 >
@@ -3321,8 +3323,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
               </FormControl>
               <FormControl fullWidth size="small">
                 <InputLabel>Column</InputLabel>
-                <Select 
-                  value={computedRightColumn} 
+                <Select
+                  value={computedRightColumn}
                   onChange={(e) => setComputedRightColumn(e.target.value)}
                   label="Column"
                   disabled={!computedRightTable}
@@ -3330,8 +3332,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
                   {selectedTables.find(t => t.id === computedRightTable)?.columns
                     .filter(c => {
                       const t = c.type.toLowerCase();
-                      return t.includes('int') || t.includes('decimal') || t.includes('numeric') || 
-                             t.includes('float') || t.includes('double') || t.includes('real') || t.includes('money');
+                      return t.includes('int') || t.includes('decimal') || t.includes('numeric') ||
+                        t.includes('float') || t.includes('double') || t.includes('real') || t.includes('money');
                     })
                     .map(c => (
                       <MenuItem key={c.name} value={c.name}>{c.name} ({c.type})</MenuItem>
@@ -3343,8 +3345,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
 
           <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>Aggregation (optional)</InputLabel>
-            <Select 
-              value={computedAggregation} 
+            <Select
+              value={computedAggregation}
               onChange={(e) => setComputedAggregation(e.target.value as any)}
               label="Aggregation (optional)"
             >
@@ -3370,8 +3372,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setComputedFieldDialogOpen(false)}>Cancel</Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             onClick={handleAddComputedField}
             disabled={!computedFieldName || !computedLeftColumn || !computedRightColumn}
           >
@@ -3390,10 +3392,10 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
       />
 
       {/* Test Results Dialog */}
-      <Dialog 
-        open={testResultsOpen} 
-        onClose={() => setTestResultsOpen(false)} 
-        maxWidth="lg" 
+      <Dialog
+        open={testResultsOpen}
+        onClose={() => setTestResultsOpen(false)}
+        maxWidth="lg"
         fullWidth
         PaperProps={{ sx: { height: '80vh' } }}
       >
@@ -3407,12 +3409,12 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
             )}
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button 
-              size="small" 
-              variant="outlined" 
+            <Button
+              size="small"
+              variant="outlined"
               startIcon={<CopyIcon />}
               onClick={() => {
-                const csv = previewData.length > 0 
+                const csv = previewData.length > 0
                   ? [Object.keys(previewData[0]).join(','), ...previewData.map(row => Object.values(row).join(','))].join('\n')
                   : '';
                 navigator.clipboard.writeText(csv);
@@ -3437,8 +3439,8 @@ function QueryBuilderImproved({ connectedDatabase, onApiSaved }: QueryBuilderPro
               </Tooltip>
             </Box>
             <Paper sx={{ p: 1.5, backgroundColor: '#1e1e1e', borderRadius: 1, maxHeight: 120, overflow: 'auto' }}>
-              <pre style={{ 
-                margin: 0, 
+              <pre style={{
+                margin: 0,
                 fontFamily: '"Fira Code", "Consolas", monospace',
                 fontSize: '0.75rem',
                 lineHeight: 1.4,

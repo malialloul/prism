@@ -22,8 +22,8 @@ const AvatarButton = styled('button')<{ variant?: 'light' | 'dark' }>(({ variant
   transition: 'transform 0.2s ease, box-shadow 0.2s ease',
   '&:hover': {
     transform: 'scale(1.05)',
-    boxShadow: variant === 'dark' 
-      ? '0 0 0 3px rgba(139, 92, 246, 0.3)' 
+    boxShadow: variant === 'dark'
+      ? '0 0 0 3px rgba(139, 92, 246, 0.3)'
       : '0 0 0 3px rgba(139, 92, 246, 0.2)',
   },
 }));

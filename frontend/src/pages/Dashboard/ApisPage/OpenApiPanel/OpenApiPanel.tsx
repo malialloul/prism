@@ -28,6 +28,11 @@ import {
   Tooltip,
   Switch,
   FormControlLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import { AppContext } from '../../../../App';
 import {
@@ -54,11 +59,13 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
   const { mutate: deleteQuery } = useDeleteSavedQuery(databaseId || 0, {
     onSuccess: () => refetch(),
   });
-  
+
   const [expandedApi, setExpandedApi] = useState<string | false>(false);
   const [testParams, setTestParams] = useState<Record<string, Record<string, string>>>({});
   const [testResults, setTestResults] = useState<Record<string, any>>({});
   const [testLoading, setTestLoading] = useState<Record<string, boolean>>({});
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [apiToDelete, setApiToDelete] = useState<SavedQueryDto | null>(null);
 
   const savedApis = savedQueriesData?.queries || [];
 
@@ -76,21 +83,21 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
 
   const handleTestApi = async (api: SavedQueryDto) => {
     if (!databaseId) return;
-    
+
     const slug = getSlugFromEndpoint(api.endpoint);
-    
+
     setTestLoading(prev => ({ ...prev, [api.id]: true }));
     try {
       const params = testParams[api.id] || {};
       const result = await SchemaService.executeSavedQuery(databaseId, slug || api.id, params, api.method as 'GET' | 'POST');
       setTestResults(prev => ({ ...prev, [api.id]: result }));
     } catch (error: any) {
-      setTestResults(prev => ({ 
-        ...prev, 
-        [api.id]: { 
-          success: false, 
-          error: error?.body?.message || error?.message || 'Request failed' 
-        } 
+      setTestResults(prev => ({
+        ...prev,
+        [api.id]: {
+          success: false,
+          error: error?.body?.message || error?.message || 'Request failed'
+        }
       }));
     } finally {
       setTestLoading(prev => ({ ...prev, [api.id]: false }));
@@ -111,7 +118,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
 
   const handleTogglePublic = async (api: SavedQueryDto) => {
     if (!databaseId) return;
-    
+
     setToggleLoading(prev => ({ ...prev, [api.id]: true }));
     try {
       await SchemaService.toggleApiPublic(databaseId, api.id, !api.isPublic);
@@ -173,14 +180,14 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
           Your APIs ({savedApis.length})
         </Typography>
-        
+
         {savedApis.map((api) => {
           const parameters: SavedQueryParameterDto[] = api.parameters || [];
           const result = testResults[api.id];
           const isTestLoading = testLoading[api.id];
-          
+
           return (
-            <Accordion 
+            <Accordion
               key={api.id}
               expanded={expandedApi === api.id}
               onChange={(_, isExpanded) => setExpandedApi(isExpanded ? api.id : false)}
@@ -188,9 +195,9 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
             >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
-                  <Chip 
-                    label={api.method || 'GET'} 
-                    size="small" 
+                  <Chip
+                    label={api.method || 'GET'}
+                    size="small"
                     color={api.method === 'POST' ? 'warning' : 'success'}
                     sx={{ fontWeight: 600, minWidth: 50 }}
                   />
@@ -202,10 +209,10 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                       <LockIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
                     )}
                   </Tooltip>
-                  <Typography 
-                    variant="caption" 
-                    sx={{ 
-                      fontFamily: 'monospace', 
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontFamily: 'monospace',
                       color: 'text.secondary',
                       ml: 'auto',
                       mr: 2,
@@ -224,8 +231,8 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                         Public Access
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {api.isPublic 
-                          ? 'Anyone can access this API without authentication' 
+                        {api.isPublic
+                          ? 'Anyone can access this API without authentication'
                           : 'Only authenticated users can access this API'}
                       </Typography>
                     </Box>
@@ -249,9 +256,9 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                       Endpoint {!api.isPublic && '(requires authentication)'}
                     </Typography>
                     <Paper sx={{ p: 1.5, backgroundColor: colors.backgroundTertiary, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography 
-                        sx={{ 
-                          fontFamily: 'monospace', 
+                      <Typography
+                        sx={{
+                          fontFamily: 'monospace',
                           fontSize: '0.85rem',
                           flex: 1,
                           wordBreak: 'break-all',
@@ -275,9 +282,9 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                       </Typography>
                       <Paper sx={{ p: 1.5, backgroundColor: colors.successLight, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <PublicIcon sx={{ fontSize: 18, color: 'success.main' }} />
-                        <Typography 
-                          sx={{ 
-                            fontFamily: 'monospace', 
+                        <Typography
+                          sx={{
+                            fontFamily: 'monospace',
                             fontSize: '0.85rem',
                             flex: 1,
                             wordBreak: 'break-all',
@@ -286,8 +293,8 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                           {getPublicEndpoint(api)}
                         </Typography>
                         <Tooltip title="Copy Public URL">
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={() => navigator.clipboard.writeText(getPublicEndpoint(api))}
                           >
                             <ContentCopyIcon fontSize="small" />
@@ -333,7 +340,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                                 if (name === 'pagecount') return 'Page number (1-indexed, default: 1)';
                                 return param.operator || '-';
                               };
-                              
+
                               return (
                                 <TableRow key={param.name}>
                                   <TableCell>
@@ -377,9 +384,8 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                       color="error"
                       startIcon={<DeleteIcon />}
                       onClick={() => {
-                        if (confirm('Are you sure you want to delete this API?')) {
-                          deleteQuery(api.id);
-                        }
+                        setApiToDelete(api);
+                        setDeleteDialogOpen(true);
                       }}
                     >
                       Delete
@@ -424,6 +430,41 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
           );
         })}
       </Box>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            backgroundColor: colors.backgroundCard,
+            backgroundImage: 'none',
+          }
+        }}
+      >
+        <DialogTitle>Delete API</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: colors.textSecondary }}>
+            Are you sure you want to delete the API "{apiToDelete?.name}"? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => {
+              if (apiToDelete) {
+                deleteQuery(apiToDelete.id);
+              }
+              setDeleteDialogOpen(false);
+              setApiToDelete(null);
+            }}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </OpenApiWrapper>
   );
 }

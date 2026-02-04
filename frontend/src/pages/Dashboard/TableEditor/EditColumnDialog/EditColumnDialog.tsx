@@ -36,7 +36,7 @@ export default function EditColumnDialog({
   isModifying,
 }: EditColumnDialogProps) {
   const { canEditColumn } = usePermissions();
-  
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Edit Column: {selectedColumn?.name}</DialogTitle>

@@ -10,6 +10,7 @@ import type {
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
+import { getAuthToken } from '../httpClient';
 
 export class SchemaService {
   /**
@@ -405,5 +406,82 @@ export class SchemaService {
         404: 'Not found',
       },
     });
+  }
+
+  /**
+   * Export database schema (and optionally data) as SQL
+   * @param databaseId Database ID
+   * @param includeData Include table data in export
+   * @param tables Optional list of specific tables to export
+   * @returns SQL file content as blob
+   * @throws ApiError
+   */
+  public static exportSchema(
+    databaseId: number,
+    includeData: boolean = false,
+    tables?: string[]
+  ): CancelablePromise<Blob> {
+    const params = new URLSearchParams();
+    if (includeData) params.append('includeData', 'true');
+    if (tables && tables.length > 0) params.append('tables', tables.join(','));
+    const queryString = params.toString();
+    
+    return __request(OpenAPI, {
+      method: 'GET',
+      url: `/databases/${databaseId}/export${queryString ? `?${queryString}` : ''}`,
+      errors: {
+        401: 'Unauthorized',
+        404: 'Database not found',
+      },
+    });
+  }
+
+  /**
+   * Import SQL file to database
+   * @param databaseId Database ID
+   * @param sql SQL content to import
+   * @returns Import result
+   * @throws ApiError
+   */
+  public static importSql(
+    databaseId: number,
+    sql: string
+  ): CancelablePromise<{ success: boolean; message: string; executedStatements: number; errors: string[] }> {
+    return __request(OpenAPI, {
+      method: 'POST',
+      url: `/databases/${databaseId}/import`,
+      body: { sql },
+      mediaType: 'application/json',
+      errors: {
+        400: 'Invalid SQL',
+        401: 'Unauthorized',
+        404: 'Database not found',
+      },
+    });
+  }
+
+  /**
+   * Generate Word document with schema documentation
+   * @param databaseId Database ID
+   * @returns Word document as blob
+   * @throws ApiError
+   */
+  public static async generateSchemaDoc(
+    databaseId: number
+  ): Promise<Blob> {
+    const token = getAuthToken();
+    
+    const response = await fetch(`${OpenAPI.BASE}/databases/${databaseId}/schema/documentation`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to generate document');
+    }
+    
+    return response.blob();
   }
 }

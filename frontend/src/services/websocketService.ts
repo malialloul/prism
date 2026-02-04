@@ -50,6 +50,9 @@ class WebSocketService {
   private shareNotificationCallbacks: Set<ShareNotificationCallback> = new Set();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
+  // Deduplication: track last shown toast to prevent duplicates
+  private lastToastMessage: string | null = null;
+  private lastToastTime: number = 0;
 
   connect(): void {
     const token = getAuthToken();
@@ -58,8 +61,8 @@ class WebSocketService {
       return;
     }
 
-    if (this.socket?.connected) {
-      console.log('[WebSocket] Already connected');
+    // If socket already exists, don't create a new one (prevents duplicate handlers)
+    if (this.socket) {
       return;
     }
 
@@ -74,21 +77,25 @@ class WebSocketService {
     });
 
     this.socket.on('connect', () => {
-      console.log('[WebSocket] Connected');
       this.reconnectAttempts = 0;
     });
 
     this.socket.on('disconnect', (reason) => {
-      console.log('[WebSocket] Disconnected:', reason);
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('[WebSocket] Connection error:', error.message);
       this.reconnectAttempts++;
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        console.error('[WebSocket] Max reconnection attempts reached');
       }
     });
+
+    // Remove any existing listeners before adding new ones (prevents duplicates from HMR)
+    this.socket.off('notification');
+    this.socket.off('notification:read');
+    this.socket.off('notifications:allRead');
+    this.socket.off('force_logout');
+    this.socket.off('permissions_updated');
+    this.socket.off('share_notification');
 
     // Handle incoming notifications
     this.socket.on('notification', (notification: NotificationPayload) => {
@@ -135,19 +142,32 @@ class WebSocketService {
       // Update permissions in localStorage for immediate UI effect
       updateSharedPermissions(payload.permissions as unknown as SharePermissions);
       
-      // Note: The notification bell will be updated automatically because we also emit 'notification' event
+      // Show success toast for permission approval
+      if (payload.message) {
+        toastService.success(payload.message, { duration: 5000 });
+      }
     });
 
     // Handle share-specific notifications (for shared users without persistent accounts)
     this.socket.on('share_notification', (payload: ShareNotificationPayload) => {
-      console.log('[WebSocket] Received share notification:', payload);
+      console.log('[WebSocket] Received share notification, socket id:', this.socket?.id, 'payload:', payload);
       this.shareNotificationCallbacks.forEach((callback) => callback(payload));
       
-      // Show toast notification
-      if (payload.type === 'request_approved') {
-        toastService.success(payload.message, { duration: 5000 });
-      } else if (payload.type === 'request_rejected') {
-        toastService.error(payload.message, { duration: 5000 });
+      // Show toast with deduplication (prevent same message within 5 seconds)
+      const now = Date.now();
+      const isDuplicate = this.lastToastMessage === payload.message && (now - this.lastToastTime) < 5000;
+      
+      if (!isDuplicate) {
+        this.lastToastMessage = payload.message;
+        this.lastToastTime = now;
+        
+        if (payload.type === 'request_approved') {
+          toastService.success(payload.message, { duration: 5000 });
+        } else if (payload.type === 'request_rejected') {
+          toastService.error(payload.message, { duration: 5000 });
+        }
+      } else {
+        console.log('[WebSocket] Duplicate toast suppressed');
       }
     });
   }

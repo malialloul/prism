@@ -19,7 +19,7 @@ export default function DeleteColumnDialog({
   isDropping,
 }: DeleteColumnDialogProps) {
   const { canDeleteColumn } = usePermissions();
-  
+
   return (
     <Dialog open={open} onClose={onClose}>
       <DialogTitle>Delete Column</DialogTitle>

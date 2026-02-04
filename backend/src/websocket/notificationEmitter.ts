@@ -92,7 +92,8 @@ export interface ShareNotificationPayload {
 
 /**
  * Emit a permissions updated event to a specific share via WebSocket
- * Used when shared account permissions are updated
+ * Used when shared account permissions are updated (e.g., permission request approved)
+ * Only emits to the share-specific room to avoid duplicates
  */
 export function emitPermissionsUpdated(userId: string, payload: PermissionsUpdatedPayload): void {
   const io = getIO();
@@ -101,10 +102,10 @@ export function emitPermissionsUpdated(userId: string, payload: PermissionsUpdat
     return;
   }
 
-  // Emit to both user room (for all sessions) and share-specific room
-  io.to(`user:${userId}`).emit('permissions_updated', payload);
+  // Only emit to share-specific room (shared users are in this room)
+  // Don't emit to user room to avoid duplicates since shared users join both rooms
   io.to(`share:${payload.shareId}`).emit('permissions_updated', payload);
-  console.log(`[WebSocket] Permissions updated emitted to user ${userId} and share ${payload.shareId}`);
+  console.log(`[WebSocket] Permissions updated emitted to share ${payload.shareId}`);
 }
 
 /**

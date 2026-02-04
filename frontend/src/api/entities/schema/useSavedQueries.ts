@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { SchemaService } from '../../services/SchemaService';
 import { ApiError } from '../../core/ApiError';
 import type { SavedQueryDto } from '../../models/SchemaDto';
+import { DATABASES_QUERY_KEY } from '../databases';
 
 export const SAVED_QUERIES_KEY = ['saved-queries'];
 
@@ -26,6 +27,8 @@ export function useSaveQuery(databaseId: number, options: UseSaveQueryOptions = 
     mutationFn: ({ name, sql }) => SchemaService.saveQuery(databaseId, name, sql),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: [...SAVED_QUERIES_KEY, databaseId] });
+      // Also invalidate databases to update the apis count
+      queryClient.invalidateQueries({ queryKey: DATABASES_QUERY_KEY });
       options.onSuccess?.(response.query);
     },
     onError: (error) => {
@@ -46,6 +49,8 @@ export function useDeleteSavedQuery(databaseId: number, options: UseDeleteSavedQ
     mutationFn: (queryId) => SchemaService.deleteSavedQuery(databaseId, queryId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...SAVED_QUERIES_KEY, databaseId] });
+      // Also invalidate databases to update the apis count
+      queryClient.invalidateQueries({ queryKey: DATABASES_QUERY_KEY });
       options.onSuccess?.();
     },
     onError: (error) => {

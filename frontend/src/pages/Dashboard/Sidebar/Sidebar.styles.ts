@@ -177,6 +177,23 @@ export const DeleteButton = styled(IconButton)(({ theme }) => {
   };
 });
 
+export const InfoButton = styled(IconButton)(({ theme }) => {
+  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  return {
+    padding: '0.375rem',
+    borderRadius: '0.375rem',
+    color: colors.primary,
+    opacity: 0,
+    transition: 'opacity 0.15s ease',
+    '.MuiBox-root:hover &': {
+      opacity: 1,
+    },
+    '&:hover': {
+      backgroundColor: colors.primaryLight,
+    },
+  };
+});
+
 export const AllDatabasesItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'selected',
 })<{ selected?: boolean }>(({ theme, selected }) => {

@@ -8,6 +8,7 @@ import {
   StatContent,
   StatValue,
   StatLabel,
+  StatSubValue,
 } from './OverviewStatsCards.styles';
 import type { DatabaseDto } from '../../../api/models/DatabaseDto';
 import { useQueryStats } from '../../../api/entities/databases';
@@ -45,7 +46,11 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
 
     const totalDatabases = filteredDatabases.length;
     const totalTables = filteredDatabases.reduce((sum, db) => sum + db.tables, 0);
-    const totalApis = filteredDatabases.reduce((sum, db) => sum + db.apis, 0);
+    const customApis = filteredDatabases.reduce((sum, db) => sum + db.apis, 0);
+
+    // OpenAPIs = 5 CRUD endpoints per table (GET all, GET one, POST, PATCH, DELETE)
+    const openApis = totalTables * 5;
+    const totalApis = openApis + customApis;
 
     // Use real query stats from the backend
     const queriesExecuted = queryStats?.totalQueries ?? 0;
@@ -57,6 +62,8 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
       totalDatabases,
       totalTables,
       totalApis,
+      openApis,
+      customApis,
       queriesExecuted,
       totalStorageBytes,
     };
@@ -81,11 +88,11 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
       change: 'vs last month',
     },
     {
-      label: 'APIs Generated',
-      value: stats.totalApis.toString(),
+      label: 'Custom APIs',
+      value: stats.customApis.toString(),
       icon: <ApiIcon />,
       variant: 'success' as const,
-      change: 'vs last month',
+      change: 'saved queries',
     },
     {
       label: 'Queries Executed',
@@ -94,7 +101,7 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
         : stats.queriesExecuted.toString(),
       icon: <QueryStatsIcon />,
       variant: 'warning' as const,
-   
+
       change: 'queries last hour',
     },
     {
@@ -115,7 +122,7 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
             <StatIconBox variant={stat.variant}>
               {stat.icon}
             </StatIconBox>
-          
+
           </StatHeader>
           <StatContent>
             <StatValue>{stat.value}</StatValue>

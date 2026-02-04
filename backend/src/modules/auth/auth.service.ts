@@ -1347,14 +1347,20 @@ export const getNotificationsService = async (
       [userId, String(shareId)],
     );
   } else {
-    // For account owners, show all their notifications
+    // For account owners, show all their notifications EXCEPT request_approved/request_rejected
+    // (those are for shared users only)
     result = await pool.query<DbNotificationDto>(
-      `SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`,
+      `SELECT * FROM notifications 
+       WHERE user_id = $1 
+       AND type NOT IN ('request_approved', 'request_rejected')
+       ORDER BY created_at DESC LIMIT 50`,
       [userId],
     );
 
     unreadResult = await pool.query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND read_at IS NULL`,
+      `SELECT COUNT(*) as count FROM notifications 
+       WHERE user_id = $1 AND read_at IS NULL
+       AND type NOT IN ('request_approved', 'request_rejected')`,
       [userId],
     );
   }
@@ -1715,37 +1721,66 @@ export const respondPermissionRequestService = async (
       [JSON.stringify(updatedPermissions), request.share_id],
     );
 
+    // Create notification for the shared user (stored with owner's user_id but filtered by shareId for shared users)
+    await pool.query(
+      `INSERT INTO notifications (user_id, type, title, message, metadata)
+       VALUES ($1, 'request_approved', $2, $3, $4)`,
+      [
+        share.owner_user_id,
+        'Permission Request Approved',
+        `${owner.full_name || owner.email} approved your request to ${formatPermissionName(request.permission)}.`,
+        JSON.stringify({
+          requestId,
+          shareId: request.share_id,
+          permission: request.permission,
+          action,
+        }),
+      ],
+    );
+
     // Emit permissions update to the shared user via share room
+    // This handles both updating permissions in localStorage AND notifying the UI
     const { emitPermissionsUpdated } = await import('../../websocket/notificationEmitter');
     emitPermissionsUpdated(String(share.owner_user_id), {
       shareId: share.id,
       permissions: updatedPermissions as unknown as Record<string, boolean>,
       message: `Your permission request for "${formatPermissionName(request.permission)}" has been approved.`,
     });
+  } else {
+    // Create notification for the shared user (stored with owner's user_id but filtered by shareId for shared users)
+    await pool.query(
+      `INSERT INTO notifications (user_id, type, title, message, metadata)
+       VALUES ($1, 'request_rejected', $2, $3, $4)`,
+      [
+        share.owner_user_id,
+        'Permission Request Rejected',
+        `${owner.full_name || owner.email} rejected your request to ${formatPermissionName(request.permission)}.${message ? ` Reason: ${message}` : ''}`,
+        JSON.stringify({
+          requestId,
+          shareId: request.share_id,
+          permission: request.permission,
+          action,
+          responseMessage: message || null,
+        }),
+      ],
+    );
+
+    // Only emit share_notification for rejections (approvals are handled by permissions_updated)
+    const { emitNotificationToShare } = await import('../../websocket/notificationEmitter');
+    console.log('HERE')
+    emitNotificationToShare(request.share_id, {
+      type: 'request_rejected',
+      title: 'Permission Request Rejected',
+      message: `${owner.full_name || owner.email} rejected your request to ${formatPermissionName(request.permission)}.${message ? ` Reason: ${message}` : ''}`,
+      metadata: JSON.stringify({
+        requestId,
+        shareId: request.share_id,
+        permission: request.permission,
+        action,
+        responseMessage: message || null,
+      }),
+    });
   }
-
-  // Emit real-time notification to the shared user via share room
-  // (Shared users don't have user accounts, so we emit to the share room instead of storing in DB)
-  const notificationType = action === 'approve' ? 'request_approved' : 'request_rejected';
-  const notificationTitle = action === 'approve' ? 'Permission Request Approved' : 'Permission Request Rejected';
-  const notificationMessage = action === 'approve'
-    ? `${owner.full_name || owner.email} approved your request to ${formatPermissionName(request.permission)}.`
-    : `${owner.full_name || owner.email} rejected your request to ${formatPermissionName(request.permission)}.${message ? ` Reason: ${message}` : ''}`;
-
-  // Emit notification to the share room
-  const { emitNotificationToShare } = await import('../../websocket/notificationEmitter');
-  emitNotificationToShare(request.share_id, {
-    type: notificationType,
-    title: notificationTitle,
-    message: notificationMessage,
-    metadata: JSON.stringify({
-      requestId,
-      shareId: request.share_id,
-      permission: request.permission,
-      action,
-      responseMessage: message || null,
-    }),
-  });
 
   // Delete the original permission_request notification from owner's notifications
   await pool.query(

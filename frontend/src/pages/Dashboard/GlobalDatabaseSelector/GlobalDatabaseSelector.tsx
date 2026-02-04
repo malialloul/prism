@@ -160,7 +160,7 @@ export default function GlobalDatabaseSelector({
         )}
 
         <Tooltip title="Add Database" arrow>
-          <AddDatabaseButton 
+          <AddDatabaseButton
             onClick={onAddDatabase}
           >
             <AddIcon fontSize="small" />

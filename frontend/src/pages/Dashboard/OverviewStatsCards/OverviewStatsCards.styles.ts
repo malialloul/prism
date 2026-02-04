@@ -105,6 +105,15 @@ export const StatLabel = styled('span')(({ theme }) => {
   };
 });
 
+export const StatSubValue = styled('span')(({ theme }) => {
+  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  return {
+    fontSize: '0.6875rem',
+    color: colors.textMuted,
+    marginTop: '0.125rem',
+  };
+});
+
 export const StatFooter = styled(Box)(({ theme }) => {
   const colors = getDashboardColors(theme.palette.mode === 'dark');
   return {

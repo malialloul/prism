@@ -348,12 +348,18 @@ export const createDatabaseService = async (
     }
   } else {
     // Connect to MySQL admin server
-    const adminConnection = await mysql.createConnection({
-      host: 'localhost',
-      port: 3306,
-      user: 'root',
-      password: 'mysql',
-    });
+    let adminConnection;
+    try {
+      adminConnection = await mysql.createConnection({
+        host: config.mysql.host,
+        port: config.mysql.port,
+        user: config.mysql.user,
+        password: config.mysql.password,
+      });
+    } catch (connError) {
+      const message = connError instanceof Error ? connError.message : 'Unknown error';
+      throw new ValidationError(`Cannot connect to MySQL server. Make sure MySQL is running and configured correctly. Error: ${message}`);
+    }
 
     try {
       // Create the database if it doesn't exist

@@ -58,7 +58,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           autoHideDuration={toast.duration ?? 6000}
           onClose={() => hideToast(toast.id)}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-          sx={{ 
+          sx={{
             bottom: `${24 + index * 60}px !important`,
           }}
         >

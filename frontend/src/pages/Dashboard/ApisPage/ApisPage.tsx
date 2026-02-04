@@ -103,7 +103,7 @@ export default function ApisPage({ connectedDatabase }: ApisPageProps) {
     const [selectedTable, setSelectedTable] = useState<string | null>(null);
     const [expandedTables, setExpandedTables] = useState<Set<string>>(new Set());
     const [openApiRefreshKey, setOpenApiRefreshKey] = useState(0);
-    
+
     const { canCreateApi, canTryAutoApis, canTryOpenApi } = usePermissions();
 
     // Fetch schema objects to get table list
@@ -176,10 +176,10 @@ export default function ApisPage({ connectedDatabase }: ApisPageProps) {
             <ApisHeader>
                 <ApisTitle>API Explorer</ApisTitle>
                 <ApisTabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
-                    <ApisTab 
-                        icon={<BuildIcon sx={{ fontSize: '1rem', mr: 0.5 }} />} 
-                        iconPosition="start" 
-                        label="Build Query" 
+                    <ApisTab
+                        icon={<BuildIcon sx={{ fontSize: '1rem', mr: 0.5 }} />}
+                        iconPosition="start"
+                        label="Build Query"
                     />
                     <ApisTab label="Auto-generated APIs" />
                     <ApisTab label="Open API" />

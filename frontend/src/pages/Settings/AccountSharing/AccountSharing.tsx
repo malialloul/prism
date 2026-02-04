@@ -159,9 +159,9 @@ function ShareAccountForm({ onShareCreated }: ShareAccountFormProps) {
           Share
         </ShareButton>
       </ShareFormRow>
-      
-      <Accordion 
-        expanded={showPermissions} 
+
+      <Accordion
+        expanded={showPermissions}
         onChange={() => setShowPermissions(!showPermissions)}
         sx={{ mt: 2, '&:before': { display: 'none' } }}
       >
@@ -263,7 +263,7 @@ function ShareCardItem({ share, isOwner, onRevoke, onUpdatePermissions, isRevoki
   const status = getShareStatus(share);
   const canRevoke = isOwner && (status === 'pending' || status === 'accepted');
   const canEditPermissions = isOwner && (status === 'pending' || status === 'accepted');
-  
+
   const [expanded, setExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedPermissions, setEditedPermissions] = useState<SharePermissions>(share.permissions);
@@ -311,8 +311,8 @@ function ShareCardItem({ share, isOwner, onRevoke, onUpdatePermissions, isRevoki
             <StatusBadge status={status}>{status}</StatusBadge>
           </div>
           <ShareMeta>
-            {isOwner ? 'Shared with' : 'Shared by'} • 
-            {status === 'expired' 
+            {isOwner ? 'Shared with' : 'Shared by'} •
+            {status === 'expired'
               ? ` Expired on ${formatDate(share.expiresAt)}`
               : ` Expires ${formatDate(share.expiresAt)}`}
             {isOwner && ` • ${enabledCount}/${totalCount} permissions`}
@@ -335,13 +335,13 @@ function ShareCardItem({ share, isOwner, onRevoke, onUpdatePermissions, isRevoki
           )}
         </div>
       </div>
-      
+
       {/* Expandable Permissions Section */}
       {isOwner && (
         <Collapse in={expanded} timeout="auto" unmountOnExit>
-          <Box sx={{ 
-            mt: 2, 
-            pt: 2, 
+          <Box sx={{
+            mt: 2,
+            pt: 2,
             borderTop: '1px solid',
             borderColor: 'divider',
           }}>
@@ -384,7 +384,7 @@ function ShareCardItem({ share, isOwner, onRevoke, onUpdatePermissions, isRevoki
                 </Box>
               )}
             </Box>
-            
+
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {Object.entries(PERMISSION_CATEGORIES).map(([category, perms]) => (
                 <Box key={category}>
@@ -478,18 +478,18 @@ function PermissionRequestsPanel() {
 
   return (
     <Box sx={{ mb: 3 }}>
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 1, 
-        mb: 1.5 
+      <Box sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        mb: 1.5
       }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
           Permission Requests
         </Typography>
-        <Chip 
-          label={pendingRequests.length} 
-          size="small" 
+        <Chip
+          label={pendingRequests.length}
+          size="small"
           color="warning"
           sx={{ height: 20, fontSize: '0.75rem' }}
         />
@@ -515,7 +515,7 @@ function PermissionRequestsPanel() {
                   size="small"
                   onClick={() => handleApprove(request)}
                   disabled={responding}
-                  sx={{ 
+                  sx={{
                     color: 'success.main',
                     '&:hover': { backgroundColor: 'rgba(46, 125, 50, 0.1)' }
                   }}
@@ -528,7 +528,7 @@ function PermissionRequestsPanel() {
                   size="small"
                   onClick={() => handleReject(request)}
                   disabled={responding}
-                  sx={{ 
+                  sx={{
                     color: 'error.main',
                     '&:hover': { backgroundColor: 'rgba(211, 47, 47, 0.1)' }
                   }}
@@ -596,7 +596,7 @@ export default function AccountSharing() {
   const handleClearShares = async (type: 'active' | 'inactive' | 'all') => {
     setClearDialogOpen(null);
     setIsRevoking(true);
-    
+
     try {
       let sharesToDelete = sharedByMe;
       if (type === 'active') {

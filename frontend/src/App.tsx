@@ -39,7 +39,7 @@ type AppContextType = {
 
 export const AppContext = React.createContext<AppContextType>({
   darkMode: true,
-  setDarkMode: () => {},
+  setDarkMode: () => { },
 });
 
 const App: React.FC = () => {

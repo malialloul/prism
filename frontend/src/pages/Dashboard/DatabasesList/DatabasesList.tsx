@@ -3,6 +3,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import StorageIcon from '@mui/icons-material/Storage';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import InfoIcon from '@mui/icons-material/Info';
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -36,6 +37,8 @@ import {
   EmptyTableMessage,
 } from './DatabasesList.styles';
 import { Database } from '../Dashboard';
+import DatabaseDetailsDialog from '../DatabaseDetailsDialog';
+import type { DatabaseDto } from '../../../api/models/DatabaseDto';
 
 interface DatabasesListProps {
   databases: Database[];
@@ -56,6 +59,14 @@ export default function DatabasesList({
 }: DatabasesListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedDatabase, setSelectedDatabase] = useState<DatabaseDto | null>(null);
+
+  const handleShowDetails = (db: Database) => {
+    // Convert Database to DatabaseDto for the dialog
+    setSelectedDatabase(db as unknown as DatabaseDto);
+    setDetailsDialogOpen(true);
+  };
 
   // Filter databases by search query
   const filteredDatabases = useMemo(() => {
@@ -187,6 +198,10 @@ export default function DatabasesList({
                 </TableCell>
                 <TableCell>
                   <ActionButtons>
+                    <ActionButton onClick={() => handleShowDetails(db)}>
+                      <InfoIcon />
+                      Details
+                    </ActionButton>
                     <ActionButton onClick={() => onViewDatabase(db.id)}>
                       <VisibilityIcon />
                       View
@@ -248,6 +263,13 @@ export default function DatabasesList({
           </PaginationControls>
         </Pagination>
       )}
+
+      {/* Database Details Dialog */}
+      <DatabaseDetailsDialog
+        open={detailsDialogOpen}
+        onClose={() => setDetailsDialogOpen(false)}
+        database={selectedDatabase}
+      />
     </ListContainer>
   );
 }

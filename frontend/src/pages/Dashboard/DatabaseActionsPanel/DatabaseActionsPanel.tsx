@@ -251,47 +251,47 @@ export default function DatabaseActionsPanel({
               <FormGroup>
                 <FormLabel>Database Name</FormLabel>
                 <StyledTextField
-                name="name"
-                placeholder="my-production-db"
-                value={createFormik.values.name}
-                onChange={createFormik.handleChange}
-                onBlur={createFormik.handleBlur}
-                error={createFormik.touched.name && Boolean(createFormik.errors.name)}
-                helperText={createFormik.touched.name && createFormik.errors.name}
-                fullWidth
-              />
-            </FormGroup>
+                  name="name"
+                  placeholder="my-production-db"
+                  value={createFormik.values.name}
+                  onChange={createFormik.handleChange}
+                  onBlur={createFormik.handleBlur}
+                  error={createFormik.touched.name && Boolean(createFormik.errors.name)}
+                  helperText={createFormik.touched.name && createFormik.errors.name}
+                  fullWidth
+                />
+              </FormGroup>
 
-            <FormRow>
-              <FormGroup>
-                <FormLabel>Password</FormLabel>
-                <StyledTextField
-                  name="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={createFormik.values.password}
-                  onChange={createFormik.handleChange}
-                  onBlur={createFormik.handleBlur}
-                  error={createFormik.touched.password && Boolean(createFormik.errors.password)}
-                  helperText={createFormik.touched.password && createFormik.errors.password}
-                  fullWidth
-                />
-              </FormGroup>
-              <FormGroup>
-                <FormLabel>Confirm Password</FormLabel>
-                <StyledTextField
-                  name="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={createFormik.values.confirmPassword}
-                  onChange={createFormik.handleChange}
-                  onBlur={createFormik.handleBlur}
-                  error={createFormik.touched.confirmPassword && Boolean(createFormik.errors.confirmPassword)}
-                  helperText={createFormik.touched.confirmPassword && createFormik.errors.confirmPassword}
-                  fullWidth
-                />
-              </FormGroup>
-            </FormRow>
+              <FormRow>
+                <FormGroup>
+                  <FormLabel>Password</FormLabel>
+                  <StyledTextField
+                    name="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={createFormik.values.password}
+                    onChange={createFormik.handleChange}
+                    onBlur={createFormik.handleBlur}
+                    error={createFormik.touched.password && Boolean(createFormik.errors.password)}
+                    helperText={createFormik.touched.password && createFormik.errors.password}
+                    fullWidth
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <FormLabel>Confirm Password</FormLabel>
+                  <StyledTextField
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={createFormik.values.confirmPassword}
+                    onChange={createFormik.handleChange}
+                    onBlur={createFormik.handleBlur}
+                    error={createFormik.touched.confirmPassword && Boolean(createFormik.errors.confirmPassword)}
+                    helperText={createFormik.touched.confirmPassword && createFormik.errors.confirmPassword}
+                    fullWidth
+                  />
+                </FormGroup>
+              </FormRow>
             </DialogContent>
             <DialogFooter>
               <CancelButton type="button" onClick={handleCloseCreateDialog} disabled={isCreating}>Cancel</CancelButton>
@@ -336,124 +336,124 @@ export default function DatabaseActionsPanel({
                   onChange={(_, value) => value && connectFormik.setFieldValue('engine', value)}
                 >
                   <EngineToggleButton value="postgres">
-                  <EngineIcon engine="postgres">P</EngineIcon>
-                  <EngineName>PostgreSQL</EngineName>
-                </EngineToggleButton>
-                <EngineToggleButton value="mysql">
-                  <EngineIcon engine="mysql">M</EngineIcon>
-                  <EngineName>MySQL</EngineName>
-                </EngineToggleButton>
-              </EngineToggleGroup>
-            </FormGroup>
+                    <EngineIcon engine="postgres">P</EngineIcon>
+                    <EngineName>PostgreSQL</EngineName>
+                  </EngineToggleButton>
+                  <EngineToggleButton value="mysql">
+                    <EngineIcon engine="mysql">M</EngineIcon>
+                    <EngineName>MySQL</EngineName>
+                  </EngineToggleButton>
+                </EngineToggleGroup>
+              </FormGroup>
 
-            <FormGroup>
-              <FormLabel>Connection Name</FormLabel>
-              <StyledTextField
-                name="name"
-                placeholder="My Production Database"
-                value={connectFormik.values.name}
-                onChange={connectFormik.handleChange}
-                onBlur={connectFormik.handleBlur}
-                error={connectFormik.touched.name && Boolean(connectFormik.errors.name)}
-                helperText={connectFormik.touched.name && connectFormik.errors.name}
-                fullWidth
-              />
-            </FormGroup>
-
-            <FormRow>
               <FormGroup>
-                <FormLabel>Host</FormLabel>
+                <FormLabel>Connection Name</FormLabel>
                 <StyledTextField
-                  name="host"
-                  placeholder="db.example.com"
-                  value={connectFormik.values.host}
+                  name="name"
+                  placeholder="My Production Database"
+                  value={connectFormik.values.name}
                   onChange={connectFormik.handleChange}
                   onBlur={connectFormik.handleBlur}
-                  error={connectFormik.touched.host && Boolean(connectFormik.errors.host)}
-                  helperText={connectFormik.touched.host && connectFormik.errors.host}
+                  error={connectFormik.touched.name && Boolean(connectFormik.errors.name)}
+                  helperText={connectFormik.touched.name && connectFormik.errors.name}
                   fullWidth
                 />
               </FormGroup>
+
+              <FormRow>
+                <FormGroup>
+                  <FormLabel>Host</FormLabel>
+                  <StyledTextField
+                    name="host"
+                    placeholder="db.example.com"
+                    value={connectFormik.values.host}
+                    onChange={connectFormik.handleChange}
+                    onBlur={connectFormik.handleBlur}
+                    error={connectFormik.touched.host && Boolean(connectFormik.errors.host)}
+                    helperText={connectFormik.touched.host && connectFormik.errors.host}
+                    fullWidth
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <FormLabel>Port</FormLabel>
+                  <StyledTextField
+                    name="port"
+                    placeholder={connectFormik.values.engine === 'postgres' ? '5432' : '3306'}
+                    value={connectFormik.values.port}
+                    onChange={connectFormik.handleChange}
+                    onBlur={connectFormik.handleBlur}
+                    error={connectFormik.touched.port && Boolean(connectFormik.errors.port)}
+                    helperText={connectFormik.touched.port && connectFormik.errors.port}
+                    fullWidth
+                  />
+                </FormGroup>
+              </FormRow>
+
+              <FormRow>
+                <FormGroup>
+                  <FormLabel>Username</FormLabel>
+                  <StyledTextField
+                    name="username"
+                    placeholder={connectFormik.values.engine === 'postgres' ? 'postgres' : 'root'}
+                    value={connectFormik.values.username}
+                    onChange={connectFormik.handleChange}
+                    onBlur={connectFormik.handleBlur}
+                    error={connectFormik.touched.username && Boolean(connectFormik.errors.username)}
+                    helperText={connectFormik.touched.username && connectFormik.errors.username}
+                    fullWidth
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <FormLabel>Password</FormLabel>
+                  <StyledTextField
+                    name="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={connectFormik.values.password}
+                    onChange={connectFormik.handleChange}
+                    onBlur={connectFormik.handleBlur}
+                    error={connectFormik.touched.password && Boolean(connectFormik.errors.password)}
+                    helperText={connectFormik.touched.password && connectFormik.errors.password}
+                    fullWidth
+                  />
+                </FormGroup>
+              </FormRow>
+
               <FormGroup>
-                <FormLabel>Port</FormLabel>
+                <FormLabel>Database Name</FormLabel>
                 <StyledTextField
-                  name="port"
-                  placeholder={connectFormik.values.engine === 'postgres' ? '5432' : '3306'}
-                  value={connectFormik.values.port}
+                  name="database"
+                  placeholder="my_database"
+                  value={connectFormik.values.database}
                   onChange={connectFormik.handleChange}
                   onBlur={connectFormik.handleBlur}
-                  error={connectFormik.touched.port && Boolean(connectFormik.errors.port)}
-                  helperText={connectFormik.touched.port && connectFormik.errors.port}
+                  error={connectFormik.touched.database && Boolean(connectFormik.errors.database)}
+                  helperText={connectFormik.touched.database && connectFormik.errors.database}
                   fullWidth
                 />
               </FormGroup>
-            </FormRow>
 
-            <FormRow>
-              <FormGroup>
-                <FormLabel>Username</FormLabel>
-                <StyledTextField
-                  name="username"
-                  placeholder={connectFormik.values.engine === 'postgres' ? 'postgres' : 'root'}
-                  value={connectFormik.values.username}
+              <SSLToggle>
+                <SSLLabel>
+                  <SSLTitle>SSL Connection</SSLTitle>
+                  <SSLDescription>Encrypt data in transit</SSLDescription>
+                </SSLLabel>
+                <Switch
+                  name="ssl"
+                  checked={connectFormik.values.ssl}
                   onChange={connectFormik.handleChange}
-                  onBlur={connectFormik.handleBlur}
-                  error={connectFormik.touched.username && Boolean(connectFormik.errors.username)}
-                  helperText={connectFormik.touched.username && connectFormik.errors.username}
-                  fullWidth
+                  color="primary"
                 />
-              </FormGroup>
-              <FormGroup>
-                <FormLabel>Password</FormLabel>
-                <StyledTextField
-                  name="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={connectFormik.values.password}
-                  onChange={connectFormik.handleChange}
-                  onBlur={connectFormik.handleBlur}
-                  error={connectFormik.touched.password && Boolean(connectFormik.errors.password)}
-                  helperText={connectFormik.touched.password && connectFormik.errors.password}
-                  fullWidth
-                />
-              </FormGroup>
-            </FormRow>
+              </SSLToggle>
 
-            <FormGroup>
-              <FormLabel>Database Name</FormLabel>
-              <StyledTextField
-                name="database"
-                placeholder="my_database"
-                value={connectFormik.values.database}
-                onChange={connectFormik.handleChange}
-                onBlur={connectFormik.handleBlur}
-                error={connectFormik.touched.database && Boolean(connectFormik.errors.database)}
-                helperText={connectFormik.touched.database && connectFormik.errors.database}
-                fullWidth
-              />
-            </FormGroup>
-
-            <SSLToggle>
-              <SSLLabel>
-                <SSLTitle>SSL Connection</SSLTitle>
-                <SSLDescription>Encrypt data in transit</SSLDescription>
-              </SSLLabel>
-              <Switch
-                name="ssl"
-                checked={connectFormik.values.ssl}
-                onChange={connectFormik.handleChange}
-                color="primary"
-              />
-            </SSLToggle>
-
-            {connectionTestStatus !== 'idle' && (
-              <ConnectionStatus status={connectionTestStatus === 'testing' ? 'testing' : connectionTestStatus}>
-                {connectionTestStatus === 'testing' && <ButtonLoadingSkeleton size="small" />}
-                {connectionTestStatus === 'success' && '✓'}
-                {connectionTestStatus === 'error' && '✗'}
-                {connectionTestMessage || 'Testing connection...'}
-              </ConnectionStatus>
-            )}
+              {connectionTestStatus !== 'idle' && (
+                <ConnectionStatus status={connectionTestStatus === 'testing' ? 'testing' : connectionTestStatus}>
+                  {connectionTestStatus === 'testing' && <ButtonLoadingSkeleton size="small" />}
+                  {connectionTestStatus === 'success' && '✓'}
+                  {connectionTestStatus === 'error' && '✗'}
+                  {connectionTestMessage || 'Testing connection...'}
+                </ConnectionStatus>
+              )}
             </DialogContent>
             <DialogFooter>
               <TestConnectionButton

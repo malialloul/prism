@@ -105,7 +105,7 @@ function NotificationItemComponent({ notification, onRead, onDelete, onRespond, 
   let ownerEmail: string | null = null;
   let requestId: number | null = null;
   let permission: keyof SharePermissions | null = null;
-  
+
   if (notification.metadata) {
     try {
       const metadata = notification.metadata as Record<string, unknown>;

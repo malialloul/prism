@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Tooltip } from '@mui/material';
 import {
   SidebarWrapper,
@@ -13,15 +14,18 @@ import {
   StatusDot,
   ConnectionButton,
   DeleteButton,
+  InfoButton,
   SidebarFooter,
   FooterButton,
 } from './Sidebar.styles';
+import DatabaseDetailsDialog from '../DatabaseDetailsDialog';
 
 // Icons
 import AddIcon from '@mui/icons-material/Add';
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { DatabaseDto } from '../../../api/models/DatabaseDto';
@@ -46,6 +50,15 @@ export default function Sidebar({
   onDelete,
   onAddDatabase,
 }: SidebarProps) {
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedDatabase, setSelectedDatabase] = useState<DatabaseDto | null>(null);
+
+  const handleShowDetails = (e: React.MouseEvent, db: DatabaseDto) => {
+    e.stopPropagation();
+    setSelectedDatabase(db);
+    setDetailsDialogOpen(true);
+  };
+
   const handleConnectionToggle = (e: React.MouseEvent, db: DatabaseDto) => {
     e.stopPropagation();
     if (db.status === 'connected') {
@@ -65,8 +78,8 @@ export default function Sidebar({
       <SidebarHeader>
         <HeaderTitle>Databases</HeaderTitle>
         <Tooltip title="Add Database" arrow>
-          <AddButton 
-            onClick={() => onAddDatabase()} 
+          <AddButton
+            onClick={() => onAddDatabase()}
             size="small"
           >
             <AddIcon sx={{ fontSize: '1rem' }} />
@@ -91,6 +104,14 @@ export default function Sidebar({
                 {db.status}
               </DatabaseMeta>
             </DatabaseInfo>
+            <Tooltip title="Details">
+              <InfoButton
+                size="small"
+                onClick={(e) => handleShowDetails(e, db)}
+              >
+                <InfoOutlinedIcon sx={{ fontSize: '1rem' }} />
+              </InfoButton>
+            </Tooltip>
             <Tooltip title={db.status === 'connected' ? 'Disconnect' : 'Connect'}>
               <ConnectionButton
                 size="small"
@@ -128,6 +149,13 @@ export default function Sidebar({
           Help & Support
         </FooterButton>
       </SidebarFooter>
+
+      {/* Database Details Dialog */}
+      <DatabaseDetailsDialog
+        open={detailsDialogOpen}
+        onClose={() => setDetailsDialogOpen(false)}
+        database={selectedDatabase}
+      />
     </SidebarWrapper>
   );
 }

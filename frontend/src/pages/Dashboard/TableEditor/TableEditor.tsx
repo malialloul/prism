@@ -107,10 +107,10 @@ export default function TableEditor({
   const tableDetails = tableDetailsData?.table;
 
   // Fetch table data using dedicated endpoint (viewTableData permission)
-  const { 
-    data: tableDataResult, 
+  const {
+    data: tableDataResult,
     isLoading: isLoadingTableData,
-    refetch: refetchTableData 
+    refetch: refetchTableData
   } = useTableData(
     open ? databaseId : undefined,
     open ? tableName : undefined,

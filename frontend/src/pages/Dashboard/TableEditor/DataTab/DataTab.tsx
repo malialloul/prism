@@ -130,8 +130,8 @@ export default function DataTab({
         <ToolbarRight>
           <Tooltip title="Add Row" arrow>
             <span>
-              <IconButton 
-                onClick={onAddRow} 
+              <IconButton
+                onClick={onAddRow}
                 size="small"
               >
                 <AddIcon />

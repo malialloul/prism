@@ -116,7 +116,7 @@ export default function Dashboard() {
 
   // Fetch schema objects to get existing procedure/function names
   const { data: schemaData } = useSchemaObjects(connectedDatabase?.id);
-  
+
 
   // Auto-refresh connected databases on mount to get fresh stats
   useEffect(() => {
@@ -138,7 +138,7 @@ export default function Dashboard() {
         return db.lastConnectedAt > latest.lastConnectedAt ? db : latest;
       }, databases[0]);
       setSelectedDatabaseId(lastConnected.id);
-      
+
       // If no database is currently connected, auto-reconnect to the last one
       const hasConnected = databases.some(db => db.status === 'connected');
       if (!hasConnected && lastConnected) {
@@ -150,9 +150,9 @@ export default function Dashboard() {
   const selectedDatabase =
     databases.find((db) => db.id === selectedDatabaseId) || null;
 
- 
 
-  
+
+
 
   const handleSelectDatabase = (id: number) => {
     const targetDb: DatabaseDto | undefined = databases.find((db) => db.id === id);
@@ -320,7 +320,7 @@ export default function Dashboard() {
     setActiveTab(2);
   };
 
- 
+
 
 
 
@@ -571,7 +571,7 @@ export default function Dashboard() {
             engine={connectedDatabase.engine}
             onSuccess={handleTableCreated}
           />
-        
+
           {tableToModify && (
             <>
               <AddColumnDialog
@@ -609,9 +609,9 @@ export default function Dashboard() {
             </>
           )}
 
-        
 
-         
+
+
         </>
       )}
     </DashboardWrapper>

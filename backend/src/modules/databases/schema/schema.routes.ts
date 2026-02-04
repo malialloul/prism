@@ -18,6 +18,9 @@ import {
   modifyColumn,
   dropColumn,
   dropTable,
+  exportSchema,
+  importSql,
+  generateSchemaDoc,
 } from './schema.controller';
 
 const router = Router();
@@ -59,6 +62,11 @@ router.delete('/:id/tables/:tableName', requirePermission('deleteTable'), dropTa
 router.post('/:id/tables/:tableName/columns', requirePermission('addColumn'), addColumn);
 router.patch('/:id/tables/:tableName/columns/:columnName', requirePermission('editColumn'), modifyColumn);
 router.delete('/:id/tables/:tableName/columns/:columnName', requirePermission('deleteColumn'), dropColumn);
+
+// Import/Export
+router.get('/:id/export', requirePermission('runQuery'), exportSchema);
+router.post('/:id/import', requirePermission('runQuery'), importSql);
+router.get('/:id/schema/documentation', requirePermission('runQuery'), generateSchemaDoc);
 
 export const publicSchemaRoutes = publicRouter;
 export default router;

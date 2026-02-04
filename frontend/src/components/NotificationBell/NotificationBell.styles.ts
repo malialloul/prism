@@ -242,11 +242,21 @@ export const TempPasswordBox = styled(Box)(({ theme }) => {
   };
 });
 
-export const NotificationActions = styled(Box)({
-  display: 'flex',
-  gap: '0.25rem',
-  marginLeft: '0.5rem',
-  '& button': {
-    padding: '0.25rem',
-  },
+export const NotificationActions = styled(Box)(({ theme }) => {
+  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  return {
+    display: 'flex',
+    gap: '0.25rem',
+    marginLeft: '0.5rem',
+    flexShrink: 0,
+    alignItems: 'flex-start',
+    '& button': {
+      padding: '0.25rem',
+      color: colors.textSecondary,
+      '&:hover': {
+        color: colors.error,
+        backgroundColor: colors.errorLight,
+      },
+    },
+  };
 });

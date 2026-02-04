@@ -1,5 +1,4 @@
 import axios, { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { toastService } from '../services/toastService';
 import type { UserDto } from './models/UserDto';
 import type { SharePermissions } from './models/SharedAccountDto';
 import { DEFAULT_SHARE_PERMISSIONS } from './models/SharedAccountDto';
@@ -182,7 +181,6 @@ httpClient.interceptors.request.use(
     return config;
   },
   (error: AxiosError) => {
-    toastService.error('Request failed');
     return Promise.reject(error);
   }
 );
@@ -190,30 +188,14 @@ httpClient.interceptors.request.use(
 // Response interceptor - handle all responses globally
 httpClient.interceptors.response.use(
   (response: AxiosResponse<ApiResponse>) => {
-    // Show toast based on response status
-    const { status, message } = response.data || {};
-    
-    if (status === 'success' && message) {
-      toastService.success(message);
-    } else if (status === 'fail' && message) {
-      toastService.warning(message);
-    } else if (status === 'error' && message) {
-      toastService.error(message);
-    }
-
+    // Don't auto-show toasts here - let components handle their own toasts
+    // This prevents duplicate toasts when components also show toasts
     return response;
   },
   (error: AxiosError<ApiErrorResponseDto>) => {
-    // Show error toast from error response
-    const { status, message } = error.response?.data || {};
-    const errorMessage = message || error.message || 'An error occurred';
+    // Don't auto-show error toasts here - let components handle their own error toasts
+    // Only handle 401 redirect
     
-    if (status === 'fail') {
-      toastService.warning(errorMessage);
-    } else {
-      toastService.error(errorMessage);
-    }
-
     // Handle 401 - redirect to login
     if (error.response?.status === 401) {
       clearAuthToken();
