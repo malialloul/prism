@@ -164,7 +164,7 @@ export const hasPermission = (permission: keyof SharePermissions): boolean => {
  * Configured axios instance with interceptors
  */
 const httpClient = axios.create({
-  baseURL: 'http://localhost:4000',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
