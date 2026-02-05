@@ -260,7 +260,7 @@ export const connectDatabaseService = async (
 /**
  * Create a Neon PostgreSQL project via API
  */
-async function createNeonProject(projectName: string): Promise<{ host: string; database: string; username: string; password: string; port: number }> {
+async function createNeonProject(projectName: string, userPassword: string): Promise<{ host: string; database: string; username: string; password: string; port: number }> {
   const { apiKey, orgId } = config.neon;
   
   if (!apiKey || !orgId) {
@@ -287,7 +287,11 @@ async function createNeonProject(projectName: string): Promise<{ host: string; d
     throw new ValidationError(`Failed to create Neon project: ${error.message || response.statusText}`);
   }
 
-  const data = await response.json() as { connection_uris?: Array<{ connection_uri?: string }> };
+  const data = await response.json() as { 
+    project?: { id?: string };
+    roles?: Array<{ name?: string; branch_id?: string }>;
+    connection_uris?: Array<{ connection_uri?: string }> 
+  };
   
   // Extract connection details from response
   const connectionUri = data.connection_uris?.[0]?.connection_uri;
@@ -297,13 +301,66 @@ async function createNeonProject(projectName: string): Promise<{ host: string; d
 
   // Parse the connection URI: postgresql://user:password@host/database
   const url = new URL(connectionUri);
+  const projectId = data.project?.id;
+  const roleName = data.roles?.[0]?.name || url.username;
+  const branchId = data.roles?.[0]?.branch_id;
+
+  // Update the role password to user's chosen password
+  if (projectId && branchId && roleName) {
+    const passwordResponse = await fetch(
+      `https://console.neon.tech/api/v2/projects/${projectId}/branches/${branchId}/roles/${roleName}/reset_password`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    // If password reset works, we'll still use user's password via ALTER ROLE
+    // Connect to the database and change password
+    if (passwordResponse.ok) {
+      const tempData = await passwordResponse.json() as { role?: { password?: string } };
+      const tempPassword = tempData.role?.password;
+      
+      if (tempPassword) {
+        // Connect with temp password and change to user's password
+        const tempPool = new Pool({
+          host: url.hostname,
+          port: parseInt(url.port || '5432'),
+          user: roleName,
+          password: tempPassword,
+          database: url.pathname.slice(1),
+          ssl: { rejectUnauthorized: false },
+        });
+
+        try {
+          await tempPool.query(`ALTER ROLE "${roleName}" WITH PASSWORD '${userPassword.replace(/'/g, "''")}'`);
+          await tempPool.end();
+          
+          return {
+            host: url.hostname,
+            port: parseInt(url.port || '5432'),
+            username: roleName,
+            password: userPassword, // Return user's chosen password
+            database: url.pathname.slice(1),
+          };
+        } catch {
+          await tempPool.end();
+          // If ALTER fails, fall back to Neon's password
+        }
+      }
+    }
+  }
   
+  // Fallback: return Neon's auto-generated credentials
   return {
     host: url.hostname,
     port: parseInt(url.port || '5432'),
     username: url.username,
     password: decodeURIComponent(url.password),
-    database: url.pathname.slice(1), // Remove leading /
+    database: url.pathname.slice(1),
   };
 }
 
@@ -342,8 +399,8 @@ export const createDatabaseService = async (
 
   // Provision the database on the hosted infrastructure
   if (engine === 'postgres') {
-    // Use Neon API to create a new project
-    const neonProject = await createNeonProject(projectName);
+    // Use Neon API to create a new project with user's password
+    const neonProject = await createNeonProject(projectName, decryptedPassword);
     host = neonProject.host;
     port = neonProject.port;
     username = neonProject.username;
