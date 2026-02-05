@@ -1,13 +1,28 @@
 import dotenv from 'dotenv';
+import path from 'path';
 import type { Secret, SignOptions } from 'jsonwebtoken';
 
-// Load environment variables FIRST
-dotenv.config();
-
-// Determine environment
+// Determine environment FIRST (before loading env files)
 const nodeEnv = process.env.NODE_ENV || 'development';
 const isProduction = nodeEnv === 'production';
 const isDevelopment = nodeEnv === 'development';
+
+// Load environment-specific .env file first, then base .env
+// Order: .env.{NODE_ENV}.local > .env.{NODE_ENV} > .env.local > .env
+// Later files don't override earlier ones (first value wins)
+const envFiles = [
+  `.env.${nodeEnv}.local`,  // Highest priority: local env-specific overrides
+  `.env.${nodeEnv}`,        // Environment-specific
+  '.env.local',             // Local overrides (gitignored)
+  '.env',                   // Base config
+];
+
+for (const envFile of envFiles) {
+  dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+}
+
+console.log(`📦 Environment: ${nodeEnv}`);
+console.log(`📂 Loaded env files from: ${process.cwd()}`);
 
 // Validate required environment variables (stricter in production)
 const requiredEnvVars = ['JWT_SECRET', 'PG_HOST', 'PG_DATABASE'] as const;
