@@ -81,7 +81,7 @@ interface FormValues {
   confirmPassword: string;
 }
 
-export default function ChangePassword() {
+export default function changePassword() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);

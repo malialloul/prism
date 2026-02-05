@@ -484,13 +484,80 @@ export const createDatabaseService = async (
 
   // Provision the database on the hosted infrastructure
   if (engine === 'postgres') {
-    // Use Neon API to create a new project with user's credentials
-    const neonProject = await createNeonProject(projectName, customDbName, customUsername, decryptedPassword);
-    host = neonProject.host;
-    port = neonProject.port;
-    username = neonProject.username;
-    database = neonProject.database;
-    finalPassword = neonProject.password;
+    // In development, use local PostgreSQL server; in production, use Neon API
+    if (config.env.isDevelopment) {
+      // Use local PostgreSQL server
+      host = config.postgres.host;
+      port = config.postgres.port;
+      username = customUsername;
+      database = customDbName;
+      finalPassword = decryptedPassword;
+
+      // Connect to local PostgreSQL admin server to create database and user
+      const adminPool = new Pool({
+        host: config.postgres.host,
+        port: config.postgres.port,
+        user: config.postgres.user,
+        password: config.postgres.password,
+        database: 'postgres', // Connect to default database for admin operations
+        ssl: config.postgres.ssl ? { rejectUnauthorized: false } : false,
+      });
+
+      try {
+        // Create the database if it doesn't exist
+        const dbExists = await adminPool.query(
+          `SELECT 1 FROM pg_database WHERE datname = $1`,
+          [database]
+        );
+        if (dbExists.rowCount === 0) {
+          await adminPool.query(`CREATE DATABASE "${database}"`);
+        }
+
+        // Create the user if it doesn't exist
+        const userExists = await adminPool.query(
+          `SELECT 1 FROM pg_roles WHERE rolname = $1`,
+          [username]
+        );
+        if (userExists.rowCount === 0) {
+          await adminPool.query(`CREATE USER "${username}" WITH PASSWORD '${decryptedPassword.replace(/'/g, "''")}'`);
+        } else {
+          // Update password if user exists
+          await adminPool.query(`ALTER USER "${username}" WITH PASSWORD '${decryptedPassword.replace(/'/g, "''")}'`);
+        }
+
+        // Grant privileges
+        await adminPool.query(`GRANT ALL PRIVILEGES ON DATABASE "${database}" TO "${username}"`);
+        
+        await adminPool.end();
+
+        // Connect to the new database to grant schema privileges
+        const dbPool = new Pool({
+          host: config.postgres.host,
+          port: config.postgres.port,
+          user: config.postgres.user,
+          password: config.postgres.password,
+          database: database,
+          ssl: config.postgres.ssl ? { rejectUnauthorized: false } : false,
+        });
+        
+        await dbPool.query(`GRANT ALL ON SCHEMA public TO "${username}"`);
+        await dbPool.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO "${username}"`);
+        await dbPool.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO "${username}"`);
+        await dbPool.end();
+      } catch (err) {
+        await adminPool.end();
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        throw new ValidationError(`Failed to create local PostgreSQL database: ${message}`);
+      }
+    } else {
+      // Production: Use Neon API to create a new project with user's credentials
+      const neonProject = await createNeonProject(projectName, customDbName, customUsername, decryptedPassword);
+      host = neonProject.host;
+      port = neonProject.port;
+      username = neonProject.username;
+      database = neonProject.database;
+      finalPassword = neonProject.password;
+    }
   } else {
     // MySQL - check if we have MySQL configured
     if (!config.mysql.host || config.mysql.host === 'localhost') {
