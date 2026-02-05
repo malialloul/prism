@@ -5,6 +5,7 @@ import type { ApiResponseDto } from '../../utils/errors';
 export interface CreateDatabaseDto {
   name: string;
   engine: 'postgres' | 'mysql';
+  username: string;
   password: string;
 }
 
@@ -35,6 +36,7 @@ export interface DatabaseDto {
   engine: 'postgres' | 'mysql';
   host: string;
   port: number;
+  username: string;
   database: string;
   ssl: boolean;
   status: 'connected' | 'disconnected' | 'error';

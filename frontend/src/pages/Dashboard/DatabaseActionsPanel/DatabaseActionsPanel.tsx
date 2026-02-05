@@ -36,6 +36,7 @@ import { DatabaseDto } from '../../../api/models/DatabaseDto';
 const createDatabaseSchema = Yup.object({
   engine: Yup.string().oneOf(['postgres', 'mysql']).required(),
   name: Yup.string().required('Database name is required'),
+  username: Yup.string().required('Username is required').max(32, 'Username must be at most 32 characters'),
   password: Yup.string().required('Password is required').min(8, 'Password must be at least 8 characters'),
   confirmPassword: Yup.string()
     .required('Please confirm your password')
@@ -127,6 +128,7 @@ export default function DatabaseActionsPanel({
     initialValues: {
       engine: initialCreateEngine || 'postgres' as DatabaseDto['engine'],
       name: '',
+      username: '',
       password: '',
       confirmPassword: '',
     },
@@ -136,6 +138,7 @@ export default function DatabaseActionsPanel({
       submitCreateDatabase({
         name: values.name,
         engine: values.engine,
+        username: values.username,
         password: encryptedPassword,
       });
     },
@@ -258,6 +261,20 @@ export default function DatabaseActionsPanel({
                   onBlur={createFormik.handleBlur}
                   error={createFormik.touched.name && Boolean(createFormik.errors.name)}
                   helperText={createFormik.touched.name && createFormik.errors.name}
+                  fullWidth
+                />
+              </FormGroup>
+
+              <FormGroup>
+                <FormLabel>Username</FormLabel>
+                <StyledTextField
+                  name="username"
+                  placeholder="db_admin"
+                  value={createFormik.values.username}
+                  onChange={createFormik.handleChange}
+                  onBlur={createFormik.handleBlur}
+                  error={createFormik.touched.username && Boolean(createFormik.errors.username)}
+                  helperText={createFormik.touched.username && createFormik.errors.username}
                   fullWidth
                 />
               </FormGroup>

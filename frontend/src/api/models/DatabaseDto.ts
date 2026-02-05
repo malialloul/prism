@@ -4,6 +4,7 @@ export interface DatabaseDto {
   engine: 'postgres' | 'mysql';
   host: string;
   port: number;
+  username: string;
   database: string;
   ssl: boolean;
   status: 'connected' | 'disconnected' | 'error';

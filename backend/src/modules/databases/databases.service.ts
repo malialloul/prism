@@ -85,6 +85,7 @@ function mapToDto(row: DbDatabaseConnectionDto): DatabaseDto {
     engine: row.engine,
     host: row.host,
     port: row.port,
+    username: row.username,
     database: row.database,
     ssl: row.ssl,
     status: row.status,
@@ -258,9 +259,9 @@ export const connectDatabaseService = async (
 };
 
 /**
- * Create a Neon PostgreSQL project via API
+ * Create a Neon PostgreSQL project via API with custom username and password
  */
-async function createNeonProject(projectName: string, userPassword: string): Promise<{ host: string; database: string; username: string; password: string; port: number }> {
+async function createNeonProject(projectName: string, customUsername: string, userPassword: string): Promise<{ host: string; database: string; username: string; password: string; port: number }> {
   const { apiKey, orgId } = config.neon;
   
   if (!apiKey || !orgId) {
@@ -302,13 +303,14 @@ async function createNeonProject(projectName: string, userPassword: string): Pro
   // Parse the connection URI: postgresql://user:password@host/database
   const url = new URL(connectionUri);
   const projectId = data.project?.id;
-  const roleName = data.roles?.[0]?.name || url.username;
+  const defaultRoleName = data.roles?.[0]?.name || url.username;
   const branchId = data.roles?.[0]?.branch_id;
 
-  // Update the role password to user's chosen password
-  if (projectId && branchId && roleName) {
+  // Create custom role with user's chosen username and password
+  if (projectId && branchId) {
+    // First, reset the default role's password to get temporary access
     const passwordResponse = await fetch(
-      `https://console.neon.tech/api/v2/projects/${projectId}/branches/${branchId}/roles/${roleName}/reset_password`,
+      `https://console.neon.tech/api/v2/projects/${projectId}/branches/${branchId}/roles/${defaultRoleName}/reset_password`,
       {
         method: 'POST',
         headers: {
@@ -318,37 +320,71 @@ async function createNeonProject(projectName: string, userPassword: string): Pro
       }
     );
 
-    // If password reset works, we'll still use user's password via ALTER ROLE
-    // Connect to the database and change password
     if (passwordResponse.ok) {
       const tempData = await passwordResponse.json() as { role?: { password?: string } };
       const tempPassword = tempData.role?.password;
       
       if (tempPassword) {
-        // Connect with temp password and change to user's password
+        // Connect with temp password and create custom user
         const tempPool = new Pool({
           host: url.hostname,
           port: parseInt(url.port || '5432'),
-          user: roleName,
+          user: defaultRoleName,
           password: tempPassword,
           database: url.pathname.slice(1),
           ssl: { rejectUnauthorized: false },
         });
 
         try {
-          await tempPool.query(`ALTER ROLE "${roleName}" WITH PASSWORD '${userPassword.replace(/'/g, "''")}'`);
+          // Create custom role with user's username and password
+          await tempPool.query(`CREATE ROLE "${customUsername}" WITH LOGIN PASSWORD '${userPassword.replace(/'/g, "''")}' CREATEDB`);
+          
+          // Grant necessary privileges
+          await tempPool.query(`GRANT ALL PRIVILEGES ON DATABASE "${url.pathname.slice(1)}" TO "${customUsername}"`);
+          await tempPool.query(`GRANT ALL ON SCHEMA public TO "${customUsername}"`);
+          await tempPool.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO "${customUsername}"`);
+          await tempPool.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO "${customUsername}"`);
+          
           await tempPool.end();
           
           return {
             host: url.hostname,
             port: parseInt(url.port || '5432'),
-            username: roleName,
+            username: customUsername, // Return user's chosen username
             password: userPassword, // Return user's chosen password
             database: url.pathname.slice(1),
           };
-        } catch {
+        } catch (err) {
           await tempPool.end();
-          // If ALTER fails, fall back to Neon's password
+          // If creating custom role fails, fall back to modifying default role
+          const errMessage = err instanceof Error ? err.message : '';
+          
+          // If role already exists, try to update password
+          if (errMessage.includes('already exists')) {
+            const retryPool = new Pool({
+              host: url.hostname,
+              port: parseInt(url.port || '5432'),
+              user: defaultRoleName,
+              password: tempPassword,
+              database: url.pathname.slice(1),
+              ssl: { rejectUnauthorized: false },
+            });
+            
+            try {
+              await retryPool.query(`ALTER ROLE "${customUsername}" WITH PASSWORD '${userPassword.replace(/'/g, "''")}'`);
+              await retryPool.end();
+              
+              return {
+                host: url.hostname,
+                port: parseInt(url.port || '5432'),
+                username: customUsername,
+                password: userPassword,
+                database: url.pathname.slice(1),
+              };
+            } catch {
+              await retryPool.end();
+            }
+          }
         }
       }
     }
@@ -371,7 +407,7 @@ export const createDatabaseService = async (
   userId: string,
   body: CreateDatabaseDto
 ): Promise<DatabaseDto> => {
-  const { name, engine, password } = body;
+  const { name, engine, username: customUsername, password } = body;
 
   // Check if user already has a database with this name
   const existing = await pool.query(
@@ -383,7 +419,7 @@ export const createDatabaseService = async (
     throw new ValidationError(`You already have a database named "${name}"`);
   }
 
-  // Decrypt the password sent from frontend (not used for Neon, but kept for MySQL)
+  // Decrypt the password sent from frontend
   const decryptedPassword = decryptTransmission(password);
 
   // For hosted databases, we generate unique connection details
@@ -399,8 +435,8 @@ export const createDatabaseService = async (
 
   // Provision the database on the hosted infrastructure
   if (engine === 'postgres') {
-    // Use Neon API to create a new project with user's password
-    const neonProject = await createNeonProject(projectName, decryptedPassword);
+    // Use Neon API to create a new project with user's credentials
+    const neonProject = await createNeonProject(projectName, customUsername, decryptedPassword);
     host = neonProject.host;
     port = neonProject.port;
     username = neonProject.username;
@@ -412,10 +448,10 @@ export const createDatabaseService = async (
       throw new ValidationError('MySQL hosted databases are not available. Please use "Connect Existing Database" to connect your own MySQL database.');
     }
     
-    // Set MySQL variables
+    // Set MySQL variables - use custom username
     host = config.mysql.host;
     port = config.mysql.port;
-    username = `u_${userIdShort}_${sanitizedName}`.substring(0, 32);
+    username = customUsername;
     database = `db_${userIdShort}_${sanitizedName}`.substring(0, 64);
     finalPassword = decryptedPassword;
     

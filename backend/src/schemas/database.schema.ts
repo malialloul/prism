@@ -64,6 +64,7 @@ export const SavedQuerySchema = registerTable(
 export const CreateDatabaseSchema = z.object({
   name: z.string().min(1, "Database name is required"),
   engine: z.enum(["postgres", "mysql"]),
+  username: z.string().min(1, "Username is required").max(32, "Username must be at most 32 characters"),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 

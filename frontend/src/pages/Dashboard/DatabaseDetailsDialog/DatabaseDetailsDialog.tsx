@@ -63,8 +63,8 @@ export default function DatabaseDetailsDialog({ open, onClose, database }: Datab
     if (!database) return null;
 
     const connectionString = database.engine === 'postgres'
-        ? `postgresql://<username>:<password>@${database.host}:${database.port}/${database.database}${database.ssl ? '?sslmode=require' : ''}`
-        : `mysql://<username>:<password>@${database.host}:${database.port}/${database.database}`;
+        ? `postgresql://${database.username}:<password>@${database.host}:${database.port}/${database.database}${database.ssl ? '?sslmode=require' : ''}`
+        : `mysql://${database.username}:<password>@${database.host}:${database.port}/${database.database}`;
 
     const handleCopy = async () => {
         await navigator.clipboard.writeText(connectionString);
@@ -146,7 +146,17 @@ export default function DatabaseDetailsDialog({ open, onClose, database }: Datab
                             </DetailIcon>
                             <DetailContent>
                                 <DetailLabel>Database Name</DetailLabel>
-                                <DetailValue>{database.name}</DetailValue>
+                                <DetailValue>{database.database}</DetailValue>
+                            </DetailContent>
+                        </DetailRow>
+
+                        <DetailRow>
+                            <DetailIcon>
+                                <SecurityIcon />
+                            </DetailIcon>
+                            <DetailContent>
+                                <DetailLabel>Username</DetailLabel>
+                                <DetailValue>{database.username}</DetailValue>
                             </DetailContent>
                         </DetailRow>
 
