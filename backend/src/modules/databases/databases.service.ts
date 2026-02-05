@@ -259,15 +259,16 @@ export const connectDatabaseService = async (
 };
 
 /**
- * Create a Neon PostgreSQL project via API with custom username and password
+ * Create a Neon PostgreSQL project via API with custom database name, username and password
  */
-async function createNeonProject(projectName: string, customUsername: string, userPassword: string): Promise<{ host: string; database: string; username: string; password: string; port: number }> {
+async function createNeonProject(projectName: string, customDbName: string, customUsername: string, userPassword: string): Promise<{ host: string; database: string; username: string; password: string; port: number }> {
   const { apiKey, orgId } = config.neon;
   
   if (!apiKey || !orgId) {
     throw new ValidationError('Neon API is not configured. Please set NEON_API_KEY and NEON_ORG_ID environment variables.');
   }
 
+  // Create project with custom database name and role
   const response = await fetch('https://console.neon.tech/api/v2/projects', {
     method: 'POST',
     headers: {
@@ -279,6 +280,10 @@ async function createNeonProject(projectName: string, customUsername: string, us
         name: projectName,
         org_id: orgId,
         pg_version: 16,
+        default_endpoint_settings: {
+          autoscaling_limit_min_cu: 0.25,
+          autoscaling_limit_max_cu: 0.25,
+        },
       },
     }),
   });
@@ -290,6 +295,7 @@ async function createNeonProject(projectName: string, customUsername: string, us
 
   const data = await response.json() as { 
     project?: { id?: string };
+    branch?: { id?: string };
     roles?: Array<{ name?: string; branch_id?: string }>;
     connection_uris?: Array<{ connection_uri?: string }> 
   };
@@ -303,12 +309,115 @@ async function createNeonProject(projectName: string, customUsername: string, us
   // Parse the connection URI: postgresql://user:password@host/database
   const url = new URL(connectionUri);
   const projectId = data.project?.id;
+  const branchId = data.branch?.id || data.roles?.[0]?.branch_id;
   const defaultRoleName = data.roles?.[0]?.name || url.username;
-  const branchId = data.roles?.[0]?.branch_id;
 
-  // Create custom role with user's chosen username and password
-  if (projectId && branchId) {
-    // First, reset the default role's password to get temporary access
+  if (!projectId || !branchId) {
+    throw new ValidationError('Failed to get project or branch ID from Neon');
+  }
+
+  // Step 1: Create custom database using Neon API
+  const dbResponse = await fetch(
+    `https://console.neon.tech/api/v2/projects/${projectId}/branches/${branchId}/databases`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        database: {
+          name: customDbName,
+          owner_name: defaultRoleName,
+        },
+      }),
+    }
+  );
+
+  if (!dbResponse.ok) {
+    const dbError = await dbResponse.json().catch(() => ({ message: 'Unknown error' })) as { message?: string };
+    console.error('Failed to create custom database:', dbError.message);
+    // Continue with default database if custom creation fails
+  }
+
+  // Step 2: Create custom role using Neon API
+  const roleResponse = await fetch(
+    `https://console.neon.tech/api/v2/projects/${projectId}/branches/${branchId}/roles`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        role: {
+          name: customUsername,
+        },
+      }),
+    }
+  );
+
+  let finalUsername = customUsername;
+  let finalPassword = userPassword;
+  const finalDatabase = dbResponse.ok ? customDbName : url.pathname.slice(1);
+  const defaultPassword = decodeURIComponent(url.password);
+
+  if (roleResponse.ok) {
+    // Step 3: Get the password for the new role (Neon generates it)
+    const roleData = await roleResponse.json() as { role?: { name?: string; password?: string } };
+    const neonGeneratedPassword = roleData.role?.password;
+
+    // Step 4: Connect with DEFAULT role (owner) to grant privileges to new role
+    const adminPool = new Pool({
+      host: url.hostname,
+      port: parseInt(url.port || '5432'),
+      user: defaultRoleName, // Connect as the default owner role
+      password: defaultPassword,
+      database: finalDatabase,
+      ssl: { rejectUnauthorized: false },
+    });
+
+    try {
+      // Grant privileges to the new user
+      await adminPool.query(`GRANT ALL PRIVILEGES ON DATABASE "${finalDatabase}" TO "${customUsername}"`);
+      await adminPool.query(`GRANT ALL ON SCHEMA public TO "${customUsername}"`);
+      await adminPool.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO "${customUsername}"`);
+      await adminPool.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO "${customUsername}"`);
+      await adminPool.end();
+      
+      // Now connect as the new user to set their password
+      if (neonGeneratedPassword) {
+        const userPool = new Pool({
+          host: url.hostname,
+          port: parseInt(url.port || '5432'),
+          user: customUsername,
+          password: neonGeneratedPassword,
+          database: finalDatabase,
+          ssl: { rejectUnauthorized: false },
+        });
+
+        try {
+          // Change to user's chosen password
+          await userPool.query(`ALTER ROLE "${customUsername}" WITH PASSWORD '${userPassword.replace(/'/g, "''")}'`);
+          await userPool.end();
+        } catch (err) {
+          await userPool.end();
+          console.error('Failed to set custom password:', err);
+          // If password change fails, use Neon's generated password
+          finalPassword = neonGeneratedPassword;
+        }
+      }
+    } catch (err) {
+      await adminPool.end();
+      console.error('Failed to grant privileges:', err);
+      // If granting fails, use default role instead
+      finalUsername = defaultRoleName;
+      finalPassword = defaultPassword;
+    }
+  } else {
+    // Role creation failed, fall back to default role with password reset
+    console.error('Failed to create custom role, using default');
+    
     const passwordResponse = await fetch(
       `https://console.neon.tech/api/v2/projects/${projectId}/branches/${branchId}/roles/${defaultRoleName}/reset_password`,
       {
@@ -322,81 +431,20 @@ async function createNeonProject(projectName: string, customUsername: string, us
 
     if (passwordResponse.ok) {
       const tempData = await passwordResponse.json() as { role?: { password?: string } };
-      const tempPassword = tempData.role?.password;
-      
-      if (tempPassword) {
-        // Connect with temp password and create custom user
-        const tempPool = new Pool({
-          host: url.hostname,
-          port: parseInt(url.port || '5432'),
-          user: defaultRoleName,
-          password: tempPassword,
-          database: url.pathname.slice(1),
-          ssl: { rejectUnauthorized: false },
-        });
-
-        try {
-          // Create custom role with user's username and password
-          await tempPool.query(`CREATE ROLE "${customUsername}" WITH LOGIN PASSWORD '${userPassword.replace(/'/g, "''")}' CREATEDB`);
-          
-          // Grant necessary privileges
-          await tempPool.query(`GRANT ALL PRIVILEGES ON DATABASE "${url.pathname.slice(1)}" TO "${customUsername}"`);
-          await tempPool.query(`GRANT ALL ON SCHEMA public TO "${customUsername}"`);
-          await tempPool.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO "${customUsername}"`);
-          await tempPool.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO "${customUsername}"`);
-          
-          await tempPool.end();
-          
-          return {
-            host: url.hostname,
-            port: parseInt(url.port || '5432'),
-            username: customUsername, // Return user's chosen username
-            password: userPassword, // Return user's chosen password
-            database: url.pathname.slice(1),
-          };
-        } catch (err) {
-          await tempPool.end();
-          // If creating custom role fails, fall back to modifying default role
-          const errMessage = err instanceof Error ? err.message : '';
-          
-          // If role already exists, try to update password
-          if (errMessage.includes('already exists')) {
-            const retryPool = new Pool({
-              host: url.hostname,
-              port: parseInt(url.port || '5432'),
-              user: defaultRoleName,
-              password: tempPassword,
-              database: url.pathname.slice(1),
-              ssl: { rejectUnauthorized: false },
-            });
-            
-            try {
-              await retryPool.query(`ALTER ROLE "${customUsername}" WITH PASSWORD '${userPassword.replace(/'/g, "''")}'`);
-              await retryPool.end();
-              
-              return {
-                host: url.hostname,
-                port: parseInt(url.port || '5432'),
-                username: customUsername,
-                password: userPassword,
-                database: url.pathname.slice(1),
-              };
-            } catch {
-              await retryPool.end();
-            }
-          }
-        }
-      }
+      finalUsername = defaultRoleName;
+      finalPassword = tempData.role?.password || decodeURIComponent(url.password);
+    } else {
+      finalUsername = defaultRoleName;
+      finalPassword = decodeURIComponent(url.password);
     }
   }
   
-  // Fallback: return Neon's auto-generated credentials
   return {
     host: url.hostname,
     port: parseInt(url.port || '5432'),
-    username: url.username,
-    password: decodeURIComponent(url.password),
-    database: url.pathname.slice(1),
+    username: finalUsername,
+    password: finalPassword,
+    database: finalDatabase,
   };
 }
 
@@ -426,6 +474,7 @@ export const createDatabaseService = async (
   const userIdShort = String(userId).padStart(8, '0').substring(0, 8);
   const sanitizedName = name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
   const projectName = `prism_${userIdShort}_${sanitizedName}`;
+  const customDbName = sanitizedName; // Use sanitized name as database name
 
   let host: string;
   let port: number;
@@ -436,7 +485,7 @@ export const createDatabaseService = async (
   // Provision the database on the hosted infrastructure
   if (engine === 'postgres') {
     // Use Neon API to create a new project with user's credentials
-    const neonProject = await createNeonProject(projectName, customUsername, decryptedPassword);
+    const neonProject = await createNeonProject(projectName, customDbName, customUsername, decryptedPassword);
     host = neonProject.host;
     port = neonProject.port;
     username = neonProject.username;
