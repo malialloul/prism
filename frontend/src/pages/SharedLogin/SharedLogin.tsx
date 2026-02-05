@@ -27,7 +27,7 @@ import {
   FooterText,
   HomeLink,
   BackLinkContainer,
-} from '../SignIn/SignIn.styles';
+} from './SharedLogin.styles';
 
 const validationSchema = Yup.object().shape({
   ownerEmail: Yup.string()

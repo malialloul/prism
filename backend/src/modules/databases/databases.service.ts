@@ -215,7 +215,7 @@ export const connectDatabaseService = async (
   userId: string,
   body: ConnectDatabaseDto
 ): Promise<DatabaseDto> => {
-  const { name, engine, host, port, username, password, database, ssl } = body;
+  const { name, engine, host, port, username, password, database, ssl, autoConnect = true } = body;
 
   // Decrypt the password sent from frontend
   const decryptedPassword = decryptTransmission(password);
@@ -235,13 +235,17 @@ export const connectDatabaseService = async (
     throw new ValidationError(testResult.message);
   }
 
-  // Disconnect all other databases for this user first
-  await pool.query(
-    `UPDATE database_connections 
-     SET status = 'disconnected', updated_at = NOW()
-     WHERE user_id = $1 AND status = 'connected'`,
-    [userId]
-  );
+  const initialStatus = autoConnect ? 'connected' : 'disconnected';
+
+  // If autoConnect, disconnect all other databases for this user first
+  if (autoConnect) {
+    await pool.query(
+      `UPDATE database_connections 
+       SET status = 'disconnected', updated_at = NOW()
+       WHERE user_id = $1 AND status = 'connected'`,
+      [userId]
+    );
+  }
 
   // Encrypt the decrypted password for storage
   const passwordEncrypted = encrypt(decryptedPassword);
@@ -250,9 +254,9 @@ export const connectDatabaseService = async (
   const result = await pool.query<DbDatabaseConnectionDto>(
     `INSERT INTO database_connections 
      (user_id, name, engine, host, port, username, password_encrypted, database, ssl, status, last_connected_at, tables, storage_bytes, is_hosted)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'connected', NOW(), $10, $11, false)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), $11, $12, false)
      RETURNING *`,
-    [userId, name, engine, host, port, username, passwordEncrypted, database, ssl, testResult.tables || 0, testResult.storageBytes || 0]
+    [userId, name, engine, host, port, username, passwordEncrypted, database, ssl, initialStatus, testResult.tables || 0, testResult.storageBytes || 0]
   );
 
   return mapToDto(result.rows[0]);
@@ -455,7 +459,7 @@ export const createDatabaseService = async (
   userId: string,
   body: CreateDatabaseDto
 ): Promise<DatabaseDto> => {
-  const { name, engine, username: customUsername, password } = body;
+  const { name, engine, username: customUsername, password, autoConnect = true } = body;
 
   // Check if user already has a database with this name
   const existing = await pool.query(
@@ -621,25 +625,29 @@ export const createDatabaseService = async (
     }
   }
 
-  // Disconnect all other databases for this user first
-  await pool.query(
-    `UPDATE database_connections 
-     SET status = 'disconnected', updated_at = NOW()
-     WHERE user_id = $1 AND status = 'connected'`,
-    [userId]
-  );
-
   // Encrypt the password for storage (so we can connect to it later)
   const passwordEncrypted = encrypt(finalPassword);
 
-  // Insert into database - use SSL for Neon PostgreSQL
-  const useSSL = engine === 'postgres';
+  // Insert into database - use SSL only for Neon PostgreSQL (production), not for local dev
+  const useSSL = engine === 'postgres' && !config.env.isDevelopment;
+  const initialStatus = autoConnect ? 'connected' : 'disconnected';
+  
+  // If autoConnect, disconnect all other databases first
+  if (autoConnect) {
+    await pool.query(
+      `UPDATE database_connections 
+       SET status = 'disconnected', updated_at = NOW()
+       WHERE user_id = $1 AND status = 'connected'`,
+      [userId]
+    );
+  }
+  
   const result = await pool.query<DbDatabaseConnectionDto>(
     `INSERT INTO database_connections 
      (user_id, name, engine, host, port, username, password_encrypted, database, ssl, status, last_connected_at, tables, storage_bytes, is_hosted)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'connected', NOW(), 0, 0, true)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), 0, 0, true)
      RETURNING *`,
-    [userId, name, engine, host, port, username, passwordEncrypted, database, useSSL]
+    [userId, name, engine, host, port, username, passwordEncrypted, database, useSSL, initialStatus]
   );
 
   return mapToDto(result.rows[0]);

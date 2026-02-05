@@ -2,13 +2,11 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
-import CreditCardIcon from '@mui/icons-material/CreditCard';
 import SecurityIcon from '@mui/icons-material/Security';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ShareIcon from '@mui/icons-material/Share';
 import { ThemeToggleButton } from '../../components/ThemeToggle/ThemeToggle';
 import AccountSettings from './AccountSettings/AccountSettings';
-import SubscriptionUsage from './SubscriptionUsage/SubscriptionUsage';
 import SecuritySettings from './SecuritySettings/SecuritySettings';
 import DangerZone from './DangerZone/DangerZone';
 import AccountSharing from './AccountSharing';
@@ -30,7 +28,7 @@ import { getDashboardColors } from '../../styles/theme';
 import { useTheme as useMuiTheme } from '@mui/material/styles';
 import { getUserFromToken, clearAuthToken } from '../../api/httpClient';
 
-type SettingsSection = 'account' | 'subscription' | 'security' | 'sharing' | 'danger';
+type SettingsSection = 'account' | 'security' | 'sharing' | 'danger';
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -40,60 +38,6 @@ const Settings = () => {
 
   // Get actual user data from JWT token
   const currentUser = useMemo(() => getUserFromToken(), []);
-
-  const [plan] = useState({
-    name: 'Pro',
-    type: 'pro' as const,
-  });
-
-  const [usage] = useState({
-    apiCalls: { used: 45200, limit: 100000 },
-    databases: { connected: 3, limit: 10 },
-    storage: { used: 2.4, limit: 10 },
-  });
-
-  const [sessions] = useState([
-    {
-      id: '1',
-      device: 'Chrome on Windows',
-      deviceType: 'desktop' as const,
-      location: 'New York, US',
-      lastActive: 'Active now',
-      isCurrent: true,
-    },
-    {
-      id: '2',
-      device: 'Safari on MacBook Pro',
-      deviceType: 'desktop' as const,
-      location: 'Los Angeles, US',
-      lastActive: '2 hours ago',
-      isCurrent: false,
-    },
-    {
-      id: '3',
-      device: 'Mobile App on iPhone',
-      deviceType: 'mobile' as const,
-      location: 'Chicago, US',
-      lastActive: '1 day ago',
-      isCurrent: false,
-    },
-  ]);
-
-  // Handler functions
-  const handleUpgrade = () => {
-    console.log('Upgrade clicked');
-    // Navigate to pricing/billing page
-  };
-
-  const handleRevokeSession = (sessionId: string) => {
-    console.log('Revoke session:', sessionId);
-    // Call API to revoke session
-  };
-
-  const handleLogoutAll = () => {
-    console.log('Logout all sessions clicked');
-    // Call API to logout all other sessions
-  };
 
   const handleDeactivateSuccess = () => {
     // Clear token cookie and redirect to login
@@ -112,13 +56,9 @@ const Settings = () => {
       title: 'Account',
       subtitle: 'Manage your email and password',
     },
-    subscription: {
-      title: 'Subscription & Usage',
-      subtitle: 'Your current plan and resource usage',
-    },
     security: {
       title: 'Security',
-      subtitle: 'Manage your security preferences and active sessions',
+      subtitle: 'Two-factor authentication settings',
     },
     sharing: {
       title: 'Account Sharing',
@@ -138,16 +78,8 @@ const Settings = () => {
             email={currentUser?.email || ''}
           />
         );
-      case 'subscription':
-        return <SubscriptionUsage plan={plan} usage={usage} onUpgrade={handleUpgrade} />;
       case 'security':
-        return (
-          <SecuritySettings
-            sessions={sessions}
-            onRevokeSession={handleRevokeSession}
-            onLogoutAll={handleLogoutAll}
-          />
-        );
+        return <SecuritySettings />;
       case 'sharing':
         return <AccountSharing />;
       case 'danger':
@@ -209,13 +141,6 @@ const Settings = () => {
           >
             <ManageAccountsIcon sx={{ fontSize: 20 }} />
             Account
-          </SidebarItem>
-          <SidebarItem
-            active={activeSection === 'subscription'}
-            onClick={() => setActiveSection('subscription')}
-          >
-            <CreditCardIcon sx={{ fontSize: 20 }} />
-            Subscription & Usage
           </SidebarItem>
           <SidebarItem
             active={activeSection === 'security'}

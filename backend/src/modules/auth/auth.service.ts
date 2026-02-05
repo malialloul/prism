@@ -1209,6 +1209,9 @@ export const deleteShareService = async (
     });
   }
 
+  // Delete associated permission requests first (foreign key constraint)
+  await pool.query('DELETE FROM permission_requests WHERE share_id = $1', [shareId]);
+
   // Delete the share record
   await pool.query('DELETE FROM shared_accounts WHERE id = $1', [shareId]);
 

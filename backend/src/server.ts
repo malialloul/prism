@@ -1,6 +1,6 @@
 // src/server.ts
 // Load and validate environment variables FIRST
-import './config/env';
+import { config } from './config/env';
 
 import { createServer } from 'http';
 import app from './app';
@@ -29,11 +29,14 @@ async function startServer() {
     const httpServer = createServer(app);
     initializeWebSocket(httpServer);
 
+    const { port } = config.server;
+    const host = config.env.isProduction ? '0.0.0.0' : 'localhost';
+
     // Start server
-    httpServer.listen(4000, () => {
-      console.log('\n🚀 API running on http://localhost:4000');
-      console.log('🔌 WebSocket server running on ws://localhost:4000');
-      console.log('📚 Docs: http://localhost:4000/docs');
+    httpServer.listen(port, host, () => {
+      console.log(`\n🚀 API running on http://${host}:${port}`);
+      console.log(`🔌 WebSocket server running on ws://${host}:${port}`);
+      console.log(`📚 Docs: http://${host}:${port}/docs`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

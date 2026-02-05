@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthenticationService } from '../../services/AuthenticationService';
 import { ApiError } from '../../core/ApiError';
 import { setAuthToken } from '../../httpClient';
+import { toastService } from '../../../services';
 import type { LoginDto } from '../../models/LoginDto';
 import type { TokenResponseDto } from '../../models/TokenResponseDto';
 
@@ -62,6 +63,9 @@ export function useSignIn(options: UseSignInOptions = {}): UseSignInReturn {
         setAuthToken(response.data.token, rememberMe);
         navigate(redirectTo);
       }
+    },
+    onError: (error) => {
+      toastService.error(error.body?.message || 'Login failed. Please check your credentials.');
     },
   });
 

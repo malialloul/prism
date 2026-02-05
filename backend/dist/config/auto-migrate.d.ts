@@ -16,9 +16,6 @@ export interface MigrationResult {
     }[];
     sqlStatements: string[];
 }
-/**
- * Automatically creates/updates database tables based on registered schemas
- */
 export declare function autoMigrate(options?: MigrationOptions): Promise<MigrationResult>;
 /**
  * Generates migration SQL without executing

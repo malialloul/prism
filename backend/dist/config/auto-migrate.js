@@ -98,6 +98,41 @@ async function tableExists(tableName) {
 /**
  * Automatically creates/updates database tables based on registered schemas
  */
+/**
+ * Sorts tables by their foreign key dependencies
+ * Tables with no dependencies come first, then tables that depend on them
+ */
+function sortTablesByDependencies(tables) {
+    const tableMap = new Map(tables.map((t) => [t.tableName, t]));
+    const sorted = [];
+    const visited = new Set();
+    function visit(tableName, visiting = new Set()) {
+        if (visited.has(tableName))
+            return;
+        if (visiting.has(tableName)) {
+            console.warn(`[AutoMigrate] Circular dependency detected for table: ${tableName}`);
+            return;
+        }
+        const table = tableMap.get(tableName);
+        if (!table)
+            return;
+        visiting.add(tableName);
+        // Visit all tables that this table depends on
+        for (const col of table.columns) {
+            if (col.references) {
+                visit(col.references.table, visiting);
+            }
+        }
+        visiting.delete(tableName);
+        visited.add(tableName);
+        sorted.push(table);
+    }
+    // Visit all tables to build dependency order
+    for (const table of tables) {
+        visit(table.tableName);
+    }
+    return sorted;
+}
 async function autoMigrate(options = {}) {
     const { verbose = false, dryRun = false, dropExisting = false } = options;
     const result = {
@@ -107,14 +142,17 @@ async function autoMigrate(options = {}) {
         errors: [],
         sqlStatements: [],
     };
-    const tables = (0, schema_registry_1.getRegisteredTables)();
+    let tables = (0, schema_registry_1.getRegisteredTables)();
     if (tables.length === 0) {
         if (verbose)
             console.log("[AutoMigrate] No tables registered");
         return result;
     }
+    // Sort tables by dependencies (so foreign keys reference existing tables)
+    tables = sortTablesByDependencies(tables);
     if (verbose) {
         console.log(`[AutoMigrate] Processing ${tables.length} registered table(s)`);
+        console.log(`[AutoMigrate] Table order: ${tables.map((t) => t.tableName).join(" → ")}`);
     }
     for (const table of tables) {
         try {

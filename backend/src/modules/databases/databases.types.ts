@@ -7,6 +7,7 @@ export interface CreateDatabaseDto {
   engine: 'postgres' | 'mysql';
   username: string;
   password: string;
+  autoConnect?: boolean;
 }
 
 export interface ConnectDatabaseDto {
@@ -18,6 +19,7 @@ export interface ConnectDatabaseDto {
   password: string;
   database: string;
   ssl: boolean;
+  autoConnect?: boolean;
 }
 
 export interface UpdateDatabaseDto {

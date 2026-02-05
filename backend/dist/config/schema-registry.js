@@ -84,14 +84,13 @@ function getDefaultValue(zodType) {
 function registerTable(name, schema, options = {}) {
     const { tableName = name.toLowerCase().replace(/schema$/i, ""), withId = true, withTimestamps = true, columnOverrides = {}, excludeFields = [], } = options;
     const columns = [];
-    // Add automatic ID column
+    // Add automatic ID column (SERIAL = auto-incrementing INTEGER)
     if (withId) {
         columns.push({
             name: "id",
-            type: "UUID",
+            type: "SERIAL",
             nullable: false,
             primaryKey: true,
-            defaultValue: "gen_random_uuid()",
         });
     }
     // Process schema fields

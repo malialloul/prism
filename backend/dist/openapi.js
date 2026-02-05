@@ -467,6 +467,322 @@ registry.registerPath({
         },
     },
 });
+// =============================================================================
+// Dynamic CRUD API Schemas and Endpoints
+// =============================================================================
+const PaginationSchema = registry.register("PaginationDto", zod_1.z.object({
+    page: zod_1.z.number(),
+    limit: zod_1.z.number(),
+    total: zod_1.z.number(),
+    totalPages: zod_1.z.number(),
+    hasNext: zod_1.z.boolean(),
+    hasPrev: zod_1.z.boolean(),
+}).openapi({
+    description: "Pagination metadata",
+}));
+const CrudRecordSchema = registry.register("CrudRecordDto", zod_1.z.record(zod_1.z.unknown()).openapi({
+    description: "Dynamic record from database table",
+}));
+const ListRecordsResponseSchema = registry.register("ListRecordsResponseDto", zod_1.z.object({
+    success: zod_1.z.boolean(),
+    data: zod_1.z.array(zod_1.z.record(zod_1.z.unknown())),
+    pagination: zod_1.z.object({
+        page: zod_1.z.number(),
+        limit: zod_1.z.number(),
+        total: zod_1.z.number(),
+        totalPages: zod_1.z.number(),
+        hasNext: zod_1.z.boolean(),
+        hasPrev: zod_1.z.boolean(),
+    }),
+}).openapi({
+    description: "Paginated list of records",
+}));
+const GetRecordResponseSchema = registry.register("GetRecordResponseDto", zod_1.z.object({
+    success: zod_1.z.boolean(),
+    record: zod_1.z.record(zod_1.z.unknown()),
+}).openapi({
+    description: "Single record response",
+}));
+const CreateRecordResponseSchema = registry.register("CreateRecordResponseDto", zod_1.z.object({
+    success: zod_1.z.boolean(),
+    record: zod_1.z.record(zod_1.z.unknown()),
+    message: zod_1.z.string(),
+}).openapi({
+    description: "Created record response",
+}));
+const TableRelationSchema = registry.register("TableRelationDto", zod_1.z.object({
+    table: zod_1.z.string(),
+    column: zod_1.z.string(),
+    referencedTable: zod_1.z.string(),
+    referencedColumn: zod_1.z.string(),
+    type: zod_1.z.enum(['one-to-many', 'many-to-one']),
+}).openapi({
+    description: "Table foreign key relation",
+}));
+// CRUD API - List Records
+registry.registerPath({
+    method: "get",
+    path: "/databases/{id}/api/{table}",
+    summary: "List records",
+    description: "List records from a table with pagination, filtering, sorting, and search",
+    tags: ["CRUD API"],
+    security: [{ bearerAuth: [] }],
+    request: {
+        params: zod_1.z.object({
+            id: zod_1.z.string().describe("Database ID"),
+            table: zod_1.z.string().describe("Table name"),
+        }),
+        query: zod_1.z.object({
+            page: zod_1.z.string().optional().describe("Page number (default: 1)"),
+            limit: zod_1.z.string().optional().describe("Records per page (default: 20, max: 100)"),
+            sortBy: zod_1.z.string().optional().describe("Column to sort by"),
+            sortOrder: zod_1.z.enum(["asc", "desc"]).optional().describe("Sort direction"),
+            search: zod_1.z.string().optional().describe("Text search across searchable columns"),
+        }),
+    },
+    responses: {
+        200: {
+            description: "List of records",
+            content: {
+                "application/json": {
+                    schema: ListRecordsResponseSchema,
+                },
+            },
+        },
+    },
+});
+// CRUD API - Get Record by ID
+registry.registerPath({
+    method: "get",
+    path: "/databases/{id}/api/{table}/{recordId}",
+    summary: "Get record by ID",
+    description: "Get a single record by its primary key",
+    tags: ["CRUD API"],
+    security: [{ bearerAuth: [] }],
+    request: {
+        params: zod_1.z.object({
+            id: zod_1.z.string().describe("Database ID"),
+            table: zod_1.z.string().describe("Table name"),
+            recordId: zod_1.z.string().describe("Record primary key"),
+        }),
+    },
+    responses: {
+        200: {
+            description: "Record found",
+            content: {
+                "application/json": {
+                    schema: GetRecordResponseSchema,
+                },
+            },
+        },
+        404: {
+            description: "Record not found",
+        },
+    },
+});
+// CRUD API - Create Record
+registry.registerPath({
+    method: "post",
+    path: "/databases/{id}/api/{table}",
+    summary: "Create record",
+    description: "Create a new record in the table",
+    tags: ["CRUD API"],
+    security: [{ bearerAuth: [] }],
+    request: {
+        params: zod_1.z.object({
+            id: zod_1.z.string().describe("Database ID"),
+            table: zod_1.z.string().describe("Table name"),
+        }),
+        body: {
+            content: {
+                "application/json": {
+                    schema: zod_1.z.record(zod_1.z.unknown()).describe("Record data"),
+                },
+            },
+        },
+    },
+    responses: {
+        201: {
+            description: "Record created",
+            content: {
+                "application/json": {
+                    schema: CreateRecordResponseSchema,
+                },
+            },
+        },
+        400: {
+            description: "Validation error",
+        },
+    },
+});
+// CRUD API - Update Record (PUT)
+registry.registerPath({
+    method: "put",
+    path: "/databases/{id}/api/{table}/{recordId}",
+    summary: "Update record (full)",
+    description: "Fully update a record by its primary key",
+    tags: ["CRUD API"],
+    security: [{ bearerAuth: [] }],
+    request: {
+        params: zod_1.z.object({
+            id: zod_1.z.string().describe("Database ID"),
+            table: zod_1.z.string().describe("Table name"),
+            recordId: zod_1.z.string().describe("Record primary key"),
+        }),
+        body: {
+            content: {
+                "application/json": {
+                    schema: zod_1.z.record(zod_1.z.unknown()).describe("Updated record data"),
+                },
+            },
+        },
+    },
+    responses: {
+        200: {
+            description: "Record updated",
+            content: {
+                "application/json": {
+                    schema: CreateRecordResponseSchema,
+                },
+            },
+        },
+        404: {
+            description: "Record not found",
+        },
+    },
+});
+// CRUD API - Update Record (PATCH)
+registry.registerPath({
+    method: "patch",
+    path: "/databases/{id}/api/{table}/{recordId}",
+    summary: "Update record (partial)",
+    description: "Partially update a record by its primary key",
+    tags: ["CRUD API"],
+    security: [{ bearerAuth: [] }],
+    request: {
+        params: zod_1.z.object({
+            id: zod_1.z.string().describe("Database ID"),
+            table: zod_1.z.string().describe("Table name"),
+            recordId: zod_1.z.string().describe("Record primary key"),
+        }),
+        body: {
+            content: {
+                "application/json": {
+                    schema: zod_1.z.record(zod_1.z.unknown()).describe("Partial record data"),
+                },
+            },
+        },
+    },
+    responses: {
+        200: {
+            description: "Record updated",
+            content: {
+                "application/json": {
+                    schema: CreateRecordResponseSchema,
+                },
+            },
+        },
+        404: {
+            description: "Record not found",
+        },
+    },
+});
+// CRUD API - Delete Record
+registry.registerPath({
+    method: "delete",
+    path: "/databases/{id}/api/{table}/{recordId}",
+    summary: "Delete record",
+    description: "Delete a record by its primary key",
+    tags: ["CRUD API"],
+    security: [{ bearerAuth: [] }],
+    request: {
+        params: zod_1.z.object({
+            id: zod_1.z.string().describe("Database ID"),
+            table: zod_1.z.string().describe("Table name"),
+            recordId: zod_1.z.string().describe("Record primary key"),
+        }),
+    },
+    responses: {
+        200: {
+            description: "Record deleted",
+            content: {
+                "application/json": {
+                    schema: zod_1.z.object({
+                        success: zod_1.z.boolean(),
+                        message: zod_1.z.string(),
+                    }),
+                },
+            },
+        },
+        404: {
+            description: "Record not found",
+        },
+    },
+});
+// CRUD API - Get Table Relations
+registry.registerPath({
+    method: "get",
+    path: "/databases/{id}/api/{table}/relations",
+    summary: "Get table relations",
+    description: "Get foreign key relations for a table",
+    tags: ["CRUD API"],
+    security: [{ bearerAuth: [] }],
+    request: {
+        params: zod_1.z.object({
+            id: zod_1.z.string().describe("Database ID"),
+            table: zod_1.z.string().describe("Table name"),
+        }),
+    },
+    responses: {
+        200: {
+            description: "Table relations",
+            content: {
+                "application/json": {
+                    schema: zod_1.z.object({
+                        success: zod_1.z.boolean(),
+                        relations: zod_1.z.array(TableRelationSchema),
+                    }),
+                },
+            },
+        },
+    },
+});
+// CRUD API - Get Related Records (Nested Route)
+registry.registerPath({
+    method: "get",
+    path: "/databases/{id}/api/{table}/{recordId}/{relatedTable}",
+    summary: "Get related records",
+    description: "Get records from a related table (e.g., /users/5/orders gets all orders for user 5)",
+    tags: ["CRUD API"],
+    security: [{ bearerAuth: [] }],
+    request: {
+        params: zod_1.z.object({
+            id: zod_1.z.string().describe("Database ID"),
+            table: zod_1.z.string().describe("Parent table name"),
+            recordId: zod_1.z.string().describe("Parent record primary key"),
+            relatedTable: zod_1.z.string().describe("Related table name"),
+        }),
+        query: zod_1.z.object({
+            page: zod_1.z.string().optional(),
+            limit: zod_1.z.string().optional(),
+            sortBy: zod_1.z.string().optional(),
+            sortOrder: zod_1.z.enum(["asc", "desc"]).optional(),
+        }),
+    },
+    responses: {
+        200: {
+            description: "Related records",
+            content: {
+                "application/json": {
+                    schema: ListRecordsResponseSchema,
+                },
+            },
+        },
+        400: {
+            description: "No relation found between tables",
+        },
+    },
+});
 // Generate OpenAPI document
 const generator = new zod_to_openapi_1.OpenAPIGenerator(registry.definitions, "3.0.0");
 exports.openapiDoc = generator.generateDocument({

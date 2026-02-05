@@ -66,6 +66,7 @@ export const CreateDatabaseSchema = z.object({
   engine: z.enum(["postgres", "mysql"]),
   username: z.string().min(1, "Username is required").max(32, "Username must be at most 32 characters"),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  autoConnect: z.boolean().default(true),
 });
 
 export const ConnectDatabaseSchema = z.object({
@@ -77,6 +78,7 @@ export const ConnectDatabaseSchema = z.object({
   password: z.string().min(1, "Password is required"),
   database: z.string().min(1, "Database name is required"),
   ssl: z.boolean().default(true),
+  autoConnect: z.boolean().default(true),
 });
 
 export const TestConnectionSchema = z.object({

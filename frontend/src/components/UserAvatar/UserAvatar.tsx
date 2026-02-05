@@ -5,6 +5,7 @@ import { styled } from '@mui/material/styles';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { clearAuthToken, getUserFromToken, isSharedAccessSession } from '../../api/httpClient';
+import { queryClient } from '../../App';
 
 const AvatarButton = styled('button')<{ variant?: 'light' | 'dark' }>(({ variant = 'dark' }) => ({
   width: '2rem',
@@ -73,7 +74,9 @@ export default function UserAvatar({ variant = 'dark', initial = 'D' }: UserAvat
     setAnchorEl(null);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Clear React Query cache to prevent stale data for new user
+    queryClient.clear();
     clearAuthToken();
     handleMenuClose();
     navigate('/signin');

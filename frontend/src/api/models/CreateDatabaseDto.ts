@@ -3,4 +3,5 @@ export interface CreateDatabaseDto {
   engine: 'postgres' | 'mysql';
   username: string;
   password: string;
+  autoConnect?: boolean;
 }

@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "NODE_ENV=development nodemon --exec ts-node src/server.ts",
+    "dev": "cross-env NODE_ENV=development nodemon --exec ts-node src/server.ts",
     "dev:win": "set NODE_ENV=development && nodemon --exec ts-node src/server.ts",
     "build": "tsc",
-    "start": "NODE_ENV=production node dist/server.js",
-    "start:dev": "NODE_ENV=development node dist/server.js",
+    "start": "cross-env NODE_ENV=production node dist/server.js",
+    "start:dev": "cross-env NODE_ENV=development node dist/server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "openapi": "ts-node src/openapi.ts > openapi.json",
     "types": "openapi-typescript openapi.json -o src/types/api.d.ts"
@@ -49,6 +49,7 @@
     "@types/node": "^25.0.10",
     "@types/pg": "^8.16.0",
     "@types/swagger-ui-express": "^4.1.8",
+    "cross-env": "^10.1.0",
     "nodemon": "^3.1.11",
     "openapi-typescript": "^7.10.1",
     "ts-node": "^10.9.2",

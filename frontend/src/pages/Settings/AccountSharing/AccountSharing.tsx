@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TextField, Tooltip, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, Box, Accordion, AccordionSummary, AccordionDetails, IconButton, Collapse, Button, Chip } from '@mui/material';
+import { TextField, Tooltip, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, Box, Accordion, AccordionSummary, AccordionDetails, IconButton, Collapse, Button, Chip, Skeleton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
@@ -34,6 +34,8 @@ import {
   SectionHeader,
   ClearAllButton,
   EmptyState,
+  SkeletonCard,
+  SkeletonContainer,
 } from './AccountSharing.styles';
 
 function formatDate(dateString: string): string {
@@ -81,7 +83,6 @@ const PERMISSION_LABELS: Record<keyof SharePermissions, string> = {
 
 function ShareAccountForm({ onShareCreated }: ShareAccountFormProps) {
   const [email, setEmail] = useState('');
-  const [expiresInDays, setExpiresInDays] = useState(7);
   const [permissions, setPermissions] = useState<SharePermissions>({ ...DEFAULT_SHARE_PERMISSIONS });
   const [showPermissions, setShowPermissions] = useState(false);
 
@@ -123,7 +124,7 @@ function ShareAccountForm({ onShareCreated }: ShareAccountFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
-    shareAccount({ email: email.trim(), expiresInDays, permissions });
+    shareAccount({ email: email.trim(), permissions });
   };
 
   return (
@@ -143,16 +144,7 @@ function ShareAccountForm({ onShareCreated }: ShareAccountFormProps) {
           size="small"
           fullWidth
           required
-          sx={{ flex: 2 }}
-        />
-        <TextField
-          label="Expires In (Days)"
-          type="number"
-          value={expiresInDays}
-          onChange={(e) => setExpiresInDays(Math.max(1, Math.min(30, parseInt(e.target.value) || 7)))}
-          size="small"
-          inputProps={{ min: 1, max: 30 }}
-          sx={{ width: 140 }}
+          sx={{ flex: 1 }}
         />
         <ShareButton type="submit" disabled={isLoading || !email.trim()}>
           {isLoading ? <CircularProgress size={20} color="inherit" /> : <PersonAddIcon sx={{ mr: 0.5 }} />}
@@ -244,7 +236,6 @@ function TempPasswordDisplay({ share, tempPassword, onClose }: TempPasswordDispl
       </div>
       <ShareMeta>
         Share this password with {share.sharedWithEmail}. They will use it to access your account.
-        Expires on {formatDate(share.expiresAt)}.
       </ShareMeta>
     </TempPasswordBox>
   );
@@ -311,10 +302,7 @@ function ShareCardItem({ share, isOwner, onRevoke, onUpdatePermissions, isRevoki
             <StatusBadge status={status}>{status}</StatusBadge>
           </div>
           <ShareMeta>
-            {isOwner ? 'Shared with' : 'Shared by'} •
-            {status === 'expired'
-              ? ` Expired on ${formatDate(share.expiresAt)}`
-              : ` Expires ${formatDate(share.expiresAt)}`}
+            {isOwner ? 'Shared with' : 'Shared by'}
             {isOwner && ` • ${enabledCount}/${totalCount} permissions`}
           </ShareMeta>
         </ShareInfo>
@@ -647,7 +635,22 @@ export default function AccountSharing() {
 
       <SectionSubtitle>Accounts I've Shared</SectionSubtitle>
       {loadingShares ? (
-        <EmptyState><CircularProgress size={24} /></EmptyState>
+        <SkeletonContainer>
+          <SkeletonCard>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, flex: 1 }}>
+              <Skeleton variant="text" width="40%" height={20} />
+              <Skeleton variant="text" width="60%" height={16} />
+            </Box>
+            <Skeleton variant="rounded" width={70} height={24} />
+          </SkeletonCard>
+          <SkeletonCard>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, flex: 1 }}>
+              <Skeleton variant="text" width="35%" height={20} />
+              <Skeleton variant="text" width="55%" height={16} />
+            </Box>
+            <Skeleton variant="rounded" width={70} height={24} />
+          </SkeletonCard>
+        </SkeletonContainer>
       ) : activeShares.length === 0 && inactiveShares.length === 0 ? (
         <EmptyState>You haven't shared your account with anyone yet.</EmptyState>
       ) : (
@@ -732,7 +735,15 @@ export default function AccountSharing() {
 
       <SectionSubtitle>Accounts Shared With Me</SectionSubtitle>
       {loadingShares ? (
-        <EmptyState><CircularProgress size={24} /></EmptyState>
+        <SkeletonContainer>
+          <SkeletonCard>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, flex: 1 }}>
+              <Skeleton variant="text" width="45%" height={20} />
+              <Skeleton variant="text" width="50%" height={16} />
+            </Box>
+            <Skeleton variant="rounded" width={70} height={24} />
+          </SkeletonCard>
+        </SkeletonContainer>
       ) : sharedWithMe.length === 0 ? (
         <EmptyState>No one has shared their account with you yet.</EmptyState>
       ) : (

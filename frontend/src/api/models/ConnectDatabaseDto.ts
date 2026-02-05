@@ -7,4 +7,5 @@ export interface ConnectDatabaseDto {
   password: string;
   database: string;
   ssl: boolean;
+  autoConnect?: boolean;
 }
