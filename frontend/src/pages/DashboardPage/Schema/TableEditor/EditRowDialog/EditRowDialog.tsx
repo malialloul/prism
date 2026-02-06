@@ -57,15 +57,19 @@ export default function EditRowDialog({
 
     if (!row || !editedRow) return null;
 
+    const isNewRow = row._isNew;
+    // For new rows, show all columns; for existing rows, hide PK columns
+    const editableColumns = isNewRow 
+        ? columns 
+        : columns.filter((col) => !primaryKeyColumns.includes(col));
+
     return (
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-            <MuiDialogTitle>Edit Row</MuiDialogTitle>
+            <MuiDialogTitle>{isNewRow ? 'Add Row' : 'Edit Row'}</MuiDialogTitle>
             {canEditTableData ? (
                 <>
                     <DialogContent>
-                        {columns
-                            .filter((col) => !primaryKeyColumns.includes(col))
-                            .map((column) => (
+                        {editableColumns.map((column) => (
                                 <FormGroup key={column}>
                                     <FormLabel>{column}</FormLabel>
                                     <StyledTextField
@@ -73,7 +77,6 @@ export default function EditRowDialog({
                                         value={editedRow[column] ?? ''}
                                         onChange={(e) => handleChange(column, e.target.value || null)}
                                         placeholder="NULL"
-                                        disabled={primaryKeyColumns.includes(column)}
                                     />
                                 </FormGroup>
                             ))}
@@ -89,7 +92,7 @@ export default function EditRowDialog({
                                 isSaving ? <ButtonLoadingSkeleton size="small" /> : <SaveIcon />
                             }
                         >
-                            Save
+                            {isNewRow ? 'Add' : 'Save'}
                         </SubmitButton>
                     </DialogActions>
                 </>

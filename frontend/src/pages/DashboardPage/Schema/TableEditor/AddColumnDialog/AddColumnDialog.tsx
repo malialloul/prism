@@ -20,6 +20,7 @@ import {
 import { AddColumnDto, MYSQL_DATA_TYPES, POSTGRES_DATA_TYPES } from '../../../../../api/models/SchemaDto';
 import { useAddColumn } from '../../../../../api/entities/schema';
 import { DatabaseDto } from '../../../../../api/models/DatabaseDto';
+import { toastService } from '../../../../../services';
 
 interface AddColumnDialogProps {
   open: boolean;
@@ -48,10 +49,15 @@ export default function AddColumnDialog({
   const types = engine === 'postgres' ? POSTGRES_DATA_TYPES : MYSQL_DATA_TYPES;
 
   const { mutate: addColumn, isPending } = useAddColumn(databaseId, tableName, {
-    onSuccess: () => {
+    onSuccess: (message: string) => {
+      toastService.success(message);
       onClose();
       resetForm();
       onSuccess?.();
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || error?.message || 'Failed to add column';
+      toastService.error(message);
     },
   });
 

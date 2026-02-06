@@ -8,8 +8,6 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import UndoIcon from '@mui/icons-material/Undo';
-import WarningIcon from '@mui/icons-material/Warning';
 import EditIcon from '@mui/icons-material/Edit';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
@@ -56,7 +54,6 @@ interface DataTabProps {
   // Editing
   editingCell: EditingCell | null;
   editValue: string;
-  pendingChanges: number;
   isLoading: boolean;
 
   // Handlers
@@ -75,7 +72,6 @@ interface DataTabProps {
   onSelectAll: () => void;
   onAddRow: () => void;
   onDeleteSelected: () => void;
-  onRevertChanges: () => void;
   onRefresh: () => void;
 }
 
@@ -96,7 +92,6 @@ export default function DataTab({
   sortDirection,
   editingCell: _editingCell,
   editValue: _editValue,
-  pendingChanges,
   isLoading,
   onSearchValueChange,
   onSortColumnChange,
@@ -109,7 +104,6 @@ export default function DataTab({
   onSelectAll,
   onAddRow,
   onDeleteSelected,
-  onRevertChanges,
   onRefresh,
 }: DataTabProps) {
   return (
@@ -153,17 +147,6 @@ export default function DataTab({
               </IconButton>
             </span>
           </Tooltip>
-          <Tooltip title="Revert All Changes">
-            <span>
-              <IconButton
-                onClick={onRevertChanges}
-                size="small"
-                disabled={pendingChanges === 0}
-              >
-                <UndoIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
           <Tooltip title="Refresh Data">
             <IconButton onClick={onRefresh} size="small" disabled={isLoading}>
               <RefreshIcon />
@@ -173,16 +156,10 @@ export default function DataTab({
       </DataToolbar>
 
       {/* Status Bar */}
-      {(selectedRows.size > 0 || pendingChanges > 0) && (
+      {selectedRows.size > 0 && (
         <ActionBar>
           <ActionBarInfo>
-            {selectedRows.size > 0 && <span>{selectedRows.size} row(s) selected</span>}
-            {pendingChanges > 0 && (
-              <span style={{ color: '#f59e0b' }}>
-                <WarningIcon sx={{ fontSize: '0.875rem', verticalAlign: 'middle', mr: 0.5 }} />
-                {pendingChanges} unsaved change(s)
-              </span>
-            )}
+            <span>{selectedRows.size} row(s) selected</span>
           </ActionBarInfo>
         </ActionBar>
       )}

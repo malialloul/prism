@@ -10,6 +10,7 @@ export function useTableDetails(databaseId: number | undefined, tableName: strin
     queryFn: () => SchemaService.getTableDetails(databaseId!, tableName!),
     enabled: !!databaseId && !!tableName,
     staleTime: 30000,
+    refetchOnMount: true,
   });
 }
 

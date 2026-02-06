@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import SaveIcon from '@mui/icons-material/Save';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import WarningIcon from '@mui/icons-material/Warning';
 import CloseIcon from '@mui/icons-material/Close';
 import ViewColumnIcon from '@mui/icons-material/ViewColumn';
@@ -18,7 +17,6 @@ import { toastService } from '../../../../services';
 import { Dialog, DialogTitle as MuiDialogTitle, DialogActions } from '@mui/material';
 import {
   CancelButton,
-  SubmitButton,
 } from './shared.styles';
 import {
   TableEditorDialog,
@@ -43,8 +41,7 @@ import ColumnsTab from './ColumnsTab';
 import ConfirmDeleteRowsDialog from './ConfirmDeleteRowsDialog';
 import EditColumnDialog from './EditColumnDialog';
 import DeleteColumnDialog from './DeleteColumnDialog';
-import ConfirmCloseDialog from './ConfirmCloseDialog';
-import { ButtonLoadingSkeleton, usePermissions, AccessRestricted } from '../../../../components';
+import { usePermissions, AccessRestricted } from '../../../../components';
 import EditRowDialog from './EditRowDialog/EditRowDialog';
 
 export default function TableEditor({
@@ -77,8 +74,6 @@ export default function TableEditor({
   const [totalRows, setTotalRows] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
-  const [pendingChanges, setPendingChanges] = useState(0);
 
   // Search and sort state
   const [searchValue, setSearchValue] = useState<string>('');
@@ -230,14 +225,6 @@ export default function TableEditor({
     };
   }, [searchValue, open]);
 
-  // Calculate pending changes
-  useEffect(() => {
-    const newRows = rows.filter((r) => r._isNew && !r._isDeleted).length;
-    const modifiedRows = rows.filter((r) => r._isModified && !r._isNew && !r._isDeleted).length;
-    const deletedRows = rows.filter((r) => r._isDeleted && !r._isNew).length;
-    setPendingChanges(newRows + modifiedRows + deletedRows);
-  }, [rows]);
-
   // Handle sort column click
   const handleSortClick = (column: string) => {
     if (sortColumn === column) {
@@ -311,30 +298,87 @@ export default function TableEditor({
     setEditRowOpen(true);
   };
 
-  const handleRowSave = (updatedRow: RowData) => {
+  const handleRowSave = async (updatedRow: RowData) => {
     setIsSavingRow(true);
+    const quote = engine === 'postgres' ? '"' : '`';
 
-    setRows((prevRows) =>
-      prevRows.map((row) => {
-        if (row._rowId !== updatedRow._rowId) return row;
-
-        const originalData = row._originalData || row;
-        const isModified = columns.some(
-          (col) => String(updatedRow[col] ?? '') !== String(originalData[col] ?? '')
+    try {
+      // For new rows, we don't need to find them in the rows array
+      if (updatedRow._isNew) {
+        // INSERT new row
+        const nonNullColumns = columns.filter(
+          (col) => updatedRow[col] !== null && updatedRow[col] !== undefined && updatedRow[col] !== ''
         );
+        if (nonNullColumns.length === 0) {
+          toastService.error('Please fill in at least one column');
+          setIsSavingRow(false);
+          return;
+        }
 
-        return {
-          ...updatedRow,
-          _isModified: !row._isNew && isModified,
-          _originalData: row._originalData || originalData,
-        };
-      })
-    );
+        const columnList = nonNullColumns.map((col) => `${quote}${col}${quote}`).join(', ');
+        const valueList = nonNullColumns.map((col) => formatValue(updatedRow[col])).join(', ');
+        const sql = `INSERT INTO ${quote}${tableName}${quote} (${columnList}) VALUES (${valueList})`;
 
-    setEditRowOpen(false);
-    setEditingRow(null);
-    setIsSavingRow(false);
-    toastService.success('Row updated');
+        const result = await executeQueryAsync(sql);
+        if (result.success) {
+          toastService.success('Row added successfully');
+          handleRefresh();
+          onDataChanged?.();
+          setEditRowOpen(false);
+          setEditingRow(null);
+        } else {
+          toastService.error(result.message || 'Failed to add row');
+        }
+      } else {
+        // UPDATE existing row
+        const originalRow = rows.find((r) => r._rowId === updatedRow._rowId);
+        if (!originalRow) {
+          toastService.error('Row not found');
+          setIsSavingRow(false);
+          return;
+        }
+
+        if (primaryKeyColumns.length === 0) {
+          toastService.error('Cannot update rows without a primary key');
+          setIsSavingRow(false);
+          return;
+        }
+
+        const originalData = originalRow._originalData || originalRow;
+        const setClauses = columns
+          .filter((col) => !primaryKeyColumns.includes(col))
+          .filter((col) => String(updatedRow[col] ?? '') !== String(originalData[col] ?? ''))
+          .map((col) => `${quote}${col}${quote} = ${formatValue(updatedRow[col])}`)
+          .join(', ');
+
+        if (!setClauses) {
+          toastService.info('No changes to save');
+          setEditRowOpen(false);
+          setEditingRow(null);
+          return;
+        }
+
+        const whereClause = primaryKeyColumns
+          .map((pk) => `${quote}${pk}${quote} = ${formatValue(originalData[pk])}`)
+          .join(' AND ');
+        const sql = `UPDATE ${quote}${tableName}${quote} SET ${setClauses} WHERE ${whereClause}`;
+
+        const result = await executeQueryAsync(sql);
+        if (result.success) {
+          toastService.success('Row updated successfully');
+          handleRefresh();
+          onDataChanged?.();
+          setEditRowOpen(false);
+          setEditingRow(null);
+        } else {
+          toastService.error(result.message || 'Failed to update row');
+        }
+      }
+    } catch (error: any) {
+      toastService.error(error?.message || 'Failed to save row');
+    } finally {
+      setIsSavingRow(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -373,7 +417,9 @@ export default function TableEditor({
     columns.forEach((col) => {
       newRow[col] = null;
     });
-    setRows((prev) => [...prev, newRow]);
+    // Open EditRowDialog with the new row
+    setEditingRow(newRow);
+    setEditRowOpen(true);
   };
 
   const handleSelectRow = (rowId: string) => {
@@ -401,123 +447,62 @@ export default function TableEditor({
     setConfirmDeleteOpen(true);
   };
 
-  const confirmDelete = () => {
-    setRows((prevRows) =>
-      prevRows
-        .map((row) => {
-          if (!selectedRows.has(row._rowId)) return row;
-          if (row._isNew) {
-            return { ...row, _isDeleted: true, _removeFromList: true };
+  const confirmDelete = async () => {
+    const quote = engine === 'postgres' ? '"' : '`';
+    const selectedRowsList = rows.filter((r) => selectedRows.has(r._rowId));
+    const newRows = selectedRowsList.filter((r) => r._isNew);
+    const existingRows = selectedRowsList.filter((r) => !r._isNew);
+
+    // Remove new rows immediately (they don't exist in DB)
+    if (newRows.length > 0) {
+      setRows((prevRows) => prevRows.filter((row) => !newRows.some((nr) => nr._rowId === row._rowId)));
+      toastService.success(`${newRows.length} new row(s) removed`);
+    }
+
+    // Delete existing rows from database
+    if (existingRows.length > 0) {
+      if (primaryKeyColumns.length === 0) {
+        toastService.error('Cannot delete rows without a primary key');
+        setConfirmDeleteOpen(false);
+        return;
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const row of existingRows) {
+        const whereClause = primaryKeyColumns
+          .map((pk) => `${quote}${pk}${quote} = ${formatValue(row._originalData?.[pk] ?? row[pk])}`)
+          .join(' AND ');
+        const sql = `DELETE FROM ${quote}${tableName}${quote} WHERE ${whereClause}`;
+
+        try {
+          const result = await executeQueryAsync(sql);
+          if (result.success) {
+            successCount++;
+          } else {
+            errorCount++;
+            toastService.error(result.message || 'Failed to delete row');
           }
-          return { ...row, _isDeleted: true };
-        })
-        .filter((row) => !row._removeFromList)
-    );
+        } catch {
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toastService.success(`${successCount} row(s) deleted successfully`);
+        handleRefresh();
+        onDataChanged?.();
+      }
+    }
+
     setSelectedRows(new Set());
     setConfirmDeleteOpen(false);
-  };
-
-  const handleRevertChanges = () => {
-    setRows((prevRows) =>
-      prevRows
-        .filter((row) => !row._isNew)
-        .map((row) => ({
-          ...row,
-          ...row._originalData,
-          _isModified: false,
-          _isDeleted: false,
-        }))
-    );
-    setSelectedRows(new Set());
   };
 
   const handleRefresh = () => {
     setSelectedRows(new Set());
     refetchTableData();
-  };
-
-  const generateSaveQueries = useCallback((): string[] => {
-    const queries: string[] = [];
-    const quote = engine === 'postgres' ? '"' : '`';
-
-    const deletedRows = rows.filter((r) => r._isDeleted && !r._isNew);
-    for (const row of deletedRows) {
-      if (primaryKeyColumns.length === 0) {
-        toastService.error('Cannot delete rows without a primary key');
-        return [];
-      }
-      const whereClause = primaryKeyColumns
-        .map((pk) => `${quote}${pk}${quote} = ${formatValue(row._originalData?.[pk])}`)
-        .join(' AND ');
-      queries.push(`DELETE FROM ${quote}${tableName}${quote} WHERE ${whereClause}`);
-    }
-
-    const modifiedRows = rows.filter((r) => r._isModified && !r._isNew && !r._isDeleted);
-    for (const row of modifiedRows) {
-      if (primaryKeyColumns.length === 0) {
-        toastService.error('Cannot update rows without a primary key');
-        return [];
-      }
-      const setClauses = columns
-        .filter((col) => !primaryKeyColumns.includes(col))
-        .filter((col) => String(row[col] ?? '') !== String(row._originalData?.[col] ?? ''))
-        .map((col) => `${quote}${col}${quote} = ${formatValue(row[col])}`)
-        .join(', ');
-
-      if (!setClauses) continue;
-
-      const whereClause = primaryKeyColumns
-        .map((pk) => `${quote}${pk}${quote} = ${formatValue(row._originalData?.[pk])}`)
-        .join(' AND ');
-      queries.push(`UPDATE ${quote}${tableName}${quote} SET ${setClauses} WHERE ${whereClause}`);
-    }
-
-    const newRows = rows.filter((r) => r._isNew && !r._isDeleted);
-    for (const row of newRows) {
-      const nonNullColumns = columns.filter(
-        (col) => row[col] !== null && row[col] !== undefined && row[col] !== ''
-      );
-      if (nonNullColumns.length === 0) continue;
-
-      const columnList = nonNullColumns.map((col) => `${quote}${col}${quote}`).join(', ');
-      const valueList = nonNullColumns.map((col) => formatValue(row[col])).join(', ');
-      queries.push(
-        `INSERT INTO ${quote}${tableName}${quote} (${columnList}) VALUES (${valueList})`
-      );
-    }
-
-    return queries;
-  }, [rows, columns, primaryKeyColumns, tableName, engine]);
-
-  const handleSave = async () => {
-    const queries = generateSaveQueries();
-    if (queries.length === 0) {
-      toastService.info('No changes to save');
-      return;
-    }
-
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (const sql of queries) {
-      try {
-        const result = await executeQueryAsync(sql);
-        if (result.success) {
-          successCount++;
-        } else {
-          errorCount++;
-          toastService.error(result.message || 'Query failed');
-        }
-      } catch {
-        errorCount++;
-      }
-    }
-
-    if (successCount > 0) {
-      toastService.success(`${successCount} change(s) saved successfully`);
-      onDataChanged?.();
-      handleRefresh();
-    }
   };
 
   // Column management handlers
@@ -581,15 +566,10 @@ export default function TableEditor({
   };
 
   const handleClose = () => {
-    if (pendingChanges > 0) {
-      setConfirmCloseOpen(true);
-      return;
-    }
     doClose();
   };
 
   const doClose = () => {
-    setConfirmCloseOpen(false);
     setRows([]);
     setSelectedRows(new Set());
     setPage(0);
@@ -673,7 +653,6 @@ export default function TableEditor({
             sortDirection={sortDirection}
             editingCell={editingCell}
             editValue={editValue}
-            pendingChanges={pendingChanges}
             isLoading={isLoading}
             onSearchValueChange={setSearchValue}
             onSortColumnChange={setSortColumn}
@@ -690,7 +669,6 @@ export default function TableEditor({
             onSelectAll={handleSelectAll}
             onAddRow={handleAddRow}
             onDeleteSelected={handleDeleteSelected}
-            onRevertChanges={handleRevertChanges}
             onRefresh={handleRefresh}
           />
         ) : (
@@ -716,17 +694,6 @@ export default function TableEditor({
 
       <DialogFooter>
         <CancelButton onClick={handleClose}>Close</CancelButton>
-        {activeTab === 0 && (
-          <SubmitButton
-            onClick={handleSave}
-            disabled={pendingChanges === 0}
-            startIcon={
-              isLoading ? <ButtonLoadingSkeleton size="small" /> : <SaveIcon />
-            }
-          >
-            Save {pendingChanges > 0 ? `(${pendingChanges})` : ''}
-          </SubmitButton>
-        )}
       </DialogFooter>
 
       {/* Confirm Delete Rows Dialog */}
@@ -757,14 +724,6 @@ export default function TableEditor({
         columnName={selectedColumn?.name}
         onConfirm={handleConfirmDeleteColumn}
         isDropping={isDropping}
-      />
-
-      {/* Confirm Close Dialog */}
-      <ConfirmCloseDialog
-        open={confirmCloseOpen}
-        onClose={() => setConfirmCloseOpen(false)}
-        pendingChanges={pendingChanges}
-        onDiscard={doClose}
       />
 
       {/* Edit Row Dialog */}

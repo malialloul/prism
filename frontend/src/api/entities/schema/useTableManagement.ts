@@ -46,7 +46,10 @@ export function useAddColumn(databaseId: number, tableName: string, options: Use
   return useMutation<{ message: string }, ApiError, AddColumnDto>({
     mutationFn: (column) => SchemaService.addColumn(databaseId, tableName, column),
     onSuccess: (response) => {
+      // Invalidate table details query to refresh column list
       queryClient.invalidateQueries({ queryKey: [...OBJECT_DETAILS_QUERY_KEY, 'table', databaseId, tableName] });
+      // Also invalidate schema objects to refresh counts
+      queryClient.invalidateQueries({ queryKey: [...SCHEMA_OBJECTS_QUERY_KEY, databaseId] });
       options.onSuccess?.(response.message);
     },
     onError: (error) => {
