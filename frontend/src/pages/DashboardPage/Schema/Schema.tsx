@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Skeleton } from "@mui/material";
+import { Box, Skeleton, Backdrop, CircularProgress, Typography } from "@mui/material";
 import { useDashboard } from "../DashboardLayout";
 import {
   ContentHeader,
@@ -38,6 +38,9 @@ export default function Schema() {
   const [isDeleteTableDialogOpen, setIsDeleteTableDialogOpen] = useState(false);
   const [isTableEditorOpen, setIsTableEditorOpen] = useState(false);
   const [tableToModify, setTableToModify] = useState<string | null>(null);
+
+  // Import state (lifted from SchemaExplorer for full-page loading)
+  const [isImporting, setIsImporting] = useState(false);
 
   // Show loading skeleton while switching databases
   if (isSwitchingDatabase) {
@@ -155,6 +158,23 @@ export default function Schema() {
 
   return (
     <>
+      {/* Full-page Import Loading Overlay */}
+      <Backdrop
+        open={isImporting}
+        sx={{
+          position: 'fixed',
+          zIndex: 1300,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          flexDirection: 'column',
+          gap: 2,
+        }}
+      >
+        <CircularProgress size={48} sx={{ color: 'white' }} />
+        <Typography variant="h6" sx={{ color: 'white' }}>
+          Importing SQL...
+        </Typography>
+      </Backdrop>
+
       <ContentHeader>
         <ContentTitle>Schema Explorer</ContentTitle>
         <QuickActionsBar>
@@ -186,6 +206,8 @@ export default function Schema() {
           databaseId={connectedDatabase.id}
           onSelectObject={handleSelectObject}
           onCreateTable={handleCreateTable}
+          isImporting={isImporting}
+          setIsImporting={setIsImporting}
         />
         {selectedObjectName && (
           <ObjectDetailsPanel

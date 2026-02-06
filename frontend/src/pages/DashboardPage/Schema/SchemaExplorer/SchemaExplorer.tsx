@@ -38,6 +38,8 @@ interface SchemaExplorerProps {
   selectedObject?: { name: string; type: SchemaObjectType } | null;
   onSelectObject: (name: string, type: SchemaObjectType) => void;
   onCreateTable?: () => void;
+  isImporting?: boolean;
+  setIsImporting?: (value: boolean) => void;
 }
 
 const sectionConfig: {
@@ -53,6 +55,8 @@ export default function SchemaExplorer({
   selectedObject,
   onSelectObject,
   onCreateTable,
+  isImporting: isImportingProp,
+  setIsImporting: setIsImportingProp,
 }: SchemaExplorerProps) {
   const { data, isLoading, refetch } = useSchemaObjects(databaseId);
   const [expandedSections, setExpandedSections] = useState<Record<SchemaObjectType, boolean>>({
@@ -60,10 +64,14 @@ export default function SchemaExplorer({
   });
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
+  const [isImportingLocal, setIsImportingLocal] = useState(false);
   const [isGeneratingDoc, setIsGeneratingDoc] = useState(false);
   const [isGeneratingExcel, setIsGeneratingExcel] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Use prop if provided, otherwise use local state
+  const isImporting = isImportingProp ?? isImportingLocal;
+  const setIsImporting = setIsImportingProp ?? setIsImportingLocal;
 
   const handleGenerateDoc = async () => {
     if (!databaseId) return;
