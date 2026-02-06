@@ -457,6 +457,7 @@ interface FieldRowProps {
   hasExistingJoin: boolean;
   hasExistingInclude: boolean;
   hasExistingExclude: boolean;
+  alreadyConnectedWithSource: boolean;
 }
 
 const FieldRow: React.FC<FieldRowProps> = ({
@@ -482,6 +483,7 @@ const FieldRow: React.FC<FieldRowProps> = ({
   hasExistingJoin,
   hasExistingInclude,
   hasExistingExclude,
+  alreadyConnectedWithSource,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
@@ -644,31 +646,35 @@ const FieldRow: React.FC<FieldRowProps> = ({
         <Box
           onClick={(e) => {
             e.stopPropagation();
-            onCompleteConnection();
+            if (!alreadyConnectedWithSource) {
+              onCompleteConnection();
+            }
           }}
           sx={{
             mb: 0.75,
             p: 0.75,
             borderRadius: 1,
-            backgroundColor:
-              connectionMode === "join"
+            backgroundColor: alreadyConnectedWithSource
+              ? "#9e9e9e"
+              : connectionMode === "join"
                 ? "#2196F3"
                 : connectionMode === "include"
                   ? "#4CAF50"
                   : "#f44336",
             color: "white",
             textAlign: "center",
-            cursor: "pointer",
+            cursor: alreadyConnectedWithSource ? "not-allowed" : "pointer",
             fontWeight: 600,
             fontSize: "0.75rem",
             transition: "all 0.2s",
-            "&:hover": {
+            opacity: alreadyConnectedWithSource ? 0.7 : 1,
+            "&:hover": alreadyConnectedWithSource ? {} : {
               transform: "scale(1.02)",
               boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
             },
           }}
         >
-          👆 Click to connect here
+          {alreadyConnectedWithSource ? "🔗 Already connected" : "👆 Click to connect here"}
         </Box>
       )}
 
@@ -1105,6 +1111,33 @@ const TableCardComponent: React.FC<TableCardComponentProps> = ({
                   r.targetColumn === field.name)),
           );
 
+          // Check if this field is already connected with the source field being dragged
+          const alreadyConnectedWithSource = connectingFrom
+            ? (connectionMode === "join"
+                ? tableConnections.some(
+                    (c) =>
+                      (c.sourceTableId === connectingFrom.tableId &&
+                        c.sourceColumn === connectingFrom.column &&
+                        c.targetTableId === table.id &&
+                        c.targetColumn === field.name) ||
+                      (c.sourceTableId === table.id &&
+                        c.sourceColumn === field.name &&
+                        c.targetTableId === connectingFrom.tableId &&
+                        c.targetColumn === connectingFrom.column)
+                  )
+                : referenceFilters.some(
+                    (r) =>
+                      (r.sourceTableId === connectingFrom.tableId &&
+                        r.sourceColumn === connectingFrom.column &&
+                        r.targetTableId === table.id &&
+                        r.targetColumn === field.name) ||
+                      (r.sourceTableId === table.id &&
+                        r.sourceColumn === field.name &&
+                        r.targetTableId === connectingFrom.tableId &&
+                        r.targetColumn === connectingFrom.column)
+                  ))
+            : false;
+
           return (
             <FieldRow
               key={field.name}
@@ -1136,6 +1169,7 @@ const TableCardComponent: React.FC<TableCardComponentProps> = ({
               hasExistingJoin={hasExistingJoin}
               hasExistingInclude={hasExistingInclude}
               hasExistingExclude={hasExistingExclude}
+              alreadyConnectedWithSource={alreadyConnectedWithSource}
             />
           );
         })}
@@ -1945,6 +1979,24 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
     }
 
     if (connectionMode === "join") {
+      // Check if a connection already exists between these two columns (in either direction)
+      const duplicateExists = tableConnections.some(
+        (c) =>
+          (c.sourceTableId === connectingFrom.tableId &&
+            c.sourceColumn === connectingFrom.column &&
+            c.targetTableId === targetTableId &&
+            c.targetColumn === targetColumn) ||
+          (c.sourceTableId === targetTableId &&
+            c.sourceColumn === targetColumn &&
+            c.targetTableId === connectingFrom.tableId &&
+            c.targetColumn === connectingFrom.column)
+      );
+
+      if (duplicateExists) {
+        resetConnection();
+        return;
+      }
+
       const conn: TableConnection = {
         id: `${connectingFrom.tableId}-${targetTableId}-${Date.now()}`,
         sourceTableId: connectingFrom.tableId,
@@ -1955,17 +2007,26 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
         targetColumnType: targetColumnType,
         connectionType: "matches",
       };
-      setTableConnections((prev) => [
-        ...prev.filter(
-          (c) =>
-            !(
-              c.sourceTableId === conn.sourceTableId &&
-              c.targetTableId === conn.targetTableId
-            ),
-        ),
-        conn,
-      ]);
+      setTableConnections((prev) => [...prev, conn]);
     } else if (connectionMode === "include" || connectionMode === "exclude") {
+      // Check if a reference filter already exists between these two columns (in either direction)
+      const duplicateExists = referenceFilters.some(
+        (r) =>
+          (r.sourceTableId === connectingFrom.tableId &&
+            r.sourceColumn === connectingFrom.column &&
+            r.targetTableId === targetTableId &&
+            r.targetColumn === targetColumn) ||
+          (r.sourceTableId === targetTableId &&
+            r.sourceColumn === targetColumn &&
+            r.targetTableId === connectingFrom.tableId &&
+            r.targetColumn === connectingFrom.column)
+      );
+
+      if (duplicateExists) {
+        resetConnection();
+        return;
+      }
+
       const ref: ReferenceFilter = {
         id: `ref-${Date.now()}`,
         sourceTableId: connectingFrom.tableId,
