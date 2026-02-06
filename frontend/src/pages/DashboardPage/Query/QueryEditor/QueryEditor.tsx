@@ -97,10 +97,14 @@ export default function QueryEditor({
   });
 
   const { mutate: saveQuery, isPending: isSaving } = useSaveQuery(databaseId ?? 0, {
-    onSuccess: () => {
+    onSuccess: (response) => {
+      toastService.success(response.message);
       setSaveDialogOpen(false);
       setQueryName('');
       refetchSavedQueries();
+    },
+    onError: (error) => {
+      toastService.error(error.message || 'Failed to save query');
     },
   });
 

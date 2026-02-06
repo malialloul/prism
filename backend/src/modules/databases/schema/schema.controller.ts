@@ -190,7 +190,7 @@ export const saveQuery = async (
     );
 
     res.status(201).json({ 
-      message: 'API saved successfully',
+      message: 'Query saved successfully',
       query 
     });
   } catch (error) {

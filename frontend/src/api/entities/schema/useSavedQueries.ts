@@ -16,7 +16,7 @@ export function useSavedQueries(databaseId: number | undefined) {
 }
 
 interface UseSaveQueryOptions {
-  onSuccess?: (query: SavedQueryDto) => void;
+  onSuccess?: (response: { query: SavedQueryDto; message: string }) => void;
   onError?: (error: ApiError) => void;
 }
 
@@ -29,7 +29,7 @@ export function useSaveQuery(databaseId: number, options: UseSaveQueryOptions = 
       queryClient.invalidateQueries({ queryKey: [...SAVED_QUERIES_KEY, databaseId] });
       // Also invalidate databases to update the apis count
       queryClient.invalidateQueries({ queryKey: DATABASES_QUERY_KEY });
-      options.onSuccess?.(response.query);
+      options.onSuccess?.(response);
     },
     onError: (error) => {
       options.onError?.(error);

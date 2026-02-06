@@ -1292,7 +1292,7 @@ export const saveQueryService = async (
     [databaseId, slug]
   );
   if (existingSlug.rowCount && existingSlug.rowCount > 0) {
-    throw new ValidationError(`An API with a similar name already exists: "${existingSlug.rows[0].name}". Please choose a different name.`);
+    throw new ValidationError(`A query with a similar name already exists: "${existingSlug.rows[0].name}". Please choose a different name.`);
   }
 
   const parametersJson = parameters ? JSON.stringify(parameters) : null;
