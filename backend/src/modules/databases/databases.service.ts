@@ -494,7 +494,8 @@ export const createDatabaseService = async (
       host = config.postgres.host;
       port = config.postgres.port;
       username = customUsername;
-      database = customDbName;
+      // Use unique database name with user ID prefix to avoid conflicts between users
+      database = `db_${userIdShort}_${sanitizedName}`.substring(0, 63);
       finalPassword = decryptedPassword;
 
       // Connect to local PostgreSQL admin server to create database and user
@@ -846,6 +847,12 @@ export const deleteDatabaseService = async (
   await pool.query(
     'DELETE FROM saved_queries WHERE database_id = $1 AND user_id = $2',
     [databaseId, userId]
+  );
+
+  // Delete query execution logs for this database (foreign key constraint)
+  await pool.query(
+    'DELETE FROM query_execution_logs WHERE database_id = $1',
+    [databaseId]
   );
 
   // Delete the connection record
