@@ -217,6 +217,38 @@ export const connectDatabaseService = async (
 ): Promise<DatabaseDto> => {
   const { name, engine, host, port, username, password, database, ssl, autoConnect = true } = body;
 
+  // Check if user already has a connection with the same host, port, and database
+  const existing = await pool.query(
+    'SELECT 1 FROM database_connections WHERE user_id = $1 AND host = $2 AND port = $3 AND database = $4',
+    [userId, host, port, database]
+  );
+  
+  if (existing.rowCount && existing.rowCount > 0) {
+    throw new ValidationError(`You already have a connection to this database (${host}:${port}/${database})`);
+  }
+
+  // Security check: Prevent connecting to another user's hosted database
+  // Hosted databases follow the pattern: db_{userId}_{name}
+  const hostedDbPattern = /^db_(\d{8})_/;
+  const match = database.match(hostedDbPattern);
+  if (match) {
+    const dbOwnerId = match[1];
+    const userIdShort = String(userId).padStart(8, '0').substring(0, 8);
+    if (dbOwnerId !== userIdShort) {
+      throw new ValidationError('You cannot connect to a database that belongs to another user');
+    }
+  }
+
+  // Also check if this database is already registered as a hosted database by another user
+  const hostedByOther = await pool.query(
+    'SELECT 1 FROM database_connections WHERE database = $1 AND is_hosted = true AND user_id != $2',
+    [database, userId]
+  );
+  
+  if (hostedByOther.rowCount && hostedByOther.rowCount > 0) {
+    throw new ValidationError('You cannot connect to a database that belongs to another user');
+  }
+
   // Decrypt the password sent from frontend
   const decryptedPassword = decryptTransmission(password);
 

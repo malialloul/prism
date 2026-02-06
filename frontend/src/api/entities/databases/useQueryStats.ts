@@ -7,6 +7,6 @@ export function useQueryStats(databaseId?: number) {
   return useQuery<QueryStatsResponse>({
     queryKey: databaseId !== undefined ? [...QUERY_STATS_KEY, databaseId] : QUERY_STATS_KEY,
     queryFn: () => DatabasesService.getQueryStats(databaseId),
-    refetchOnWindowFocus: true,
+    staleTime: 30000, // Consider data fresh for 30 seconds
   });
 }

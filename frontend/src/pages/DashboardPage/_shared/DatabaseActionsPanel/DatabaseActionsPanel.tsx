@@ -102,7 +102,9 @@ export default function DatabaseActionsPanel({
         onDatabaseConnected?.(database.id);
       }
     },
-    // Error toast is handled by httpClient interceptor
+    onError: (error) => {
+      toastService.error(error.body?.message || error.message || 'Failed to create database');
+    },
   });
 
   const { mutate: submitConnectDatabase, isPending: isConnecting } = useConnectDatabase({
@@ -116,7 +118,9 @@ export default function DatabaseActionsPanel({
         onDatabaseConnected?.(database.id);
       }
     },
-    // Error toast is handled by httpClient interceptor
+    onError: (error) => {
+      toastService.error(error.body?.message || error.message || 'Failed to connect database');
+    },
   });
 
   const { mutate: testConnection, isPending: isTesting } = useTestConnection({

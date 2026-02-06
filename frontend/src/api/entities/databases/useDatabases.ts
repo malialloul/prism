@@ -8,8 +8,6 @@ export function useDatabases() {
   return useQuery<{ databases: DatabaseDto[] }>({
     queryKey: DATABASES_QUERY_KEY,
     queryFn: () => DatabasesService.getDatabases(),
-    staleTime: 0, // Always consider data stale
-    refetchOnMount: 'always', // Always refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window regains focus
+    staleTime: 30000, // Consider data fresh for 30 seconds
   });
 }
