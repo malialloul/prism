@@ -443,21 +443,41 @@ export class SchemaService {
    * @returns Import result
    * @throws ApiError
    */
-  public static importSql(
+  public static async importSql(
     databaseId: number,
     sql: string
-  ): CancelablePromise<{ success: boolean; message: string; executedStatements: number; errors: string[] }> {
-    return __request(OpenAPI, {
-      method: 'POST',
-      url: `/databases/${databaseId}/import`,
-      body: { sql },
-      mediaType: 'application/json',
-      errors: {
-        400: 'Invalid SQL',
-        401: 'Unauthorized',
-        404: 'Database not found',
-      },
-    });
+  ): Promise<{ success: boolean; message: string; executedStatements: number; errors: string[] }> {
+    const token = getAuthToken();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minute timeout
+
+    try {
+      const response = await fetch(`${OpenAPI.BASE}/databases/${databaseId}/import`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ sql }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw { body: data };
+      }
+
+      return data.data || data;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw { body: { message: 'Request timed out. The import may still be processing - try refreshing to check.' } };
+      }
+      throw error;
+    }
   }
 
   /**

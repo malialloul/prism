@@ -201,6 +201,8 @@ export default function SchemaExplorer({
     return groups;
   }, [data]);
 
+  const hasNoTables = groupedObjects.table.length === 0;
+
   const toggleSection = (type: SchemaObjectType) => {
     setExpandedSections((prev) => ({
       ...prev,
@@ -251,26 +253,26 @@ export default function SchemaExplorer({
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         >
-          <MenuItem onClick={() => handleExport(false)} disabled={isExporting}>
+          <MenuItem onClick={() => handleExport(false)} disabled={isExporting || hasNoTables}>
             <ListItemIcon>
               <CodeIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>Export Schema Only</ListItemText>
           </MenuItem>
-          <MenuItem onClick={() => handleExport(true)} disabled={isExporting}>
+          <MenuItem onClick={() => handleExport(true)} disabled={isExporting || hasNoTables}>
             <ListItemIcon>
               <TableRowsIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>Export Schema + Data</ListItemText>
           </MenuItem>
           <Divider />
-          <MenuItem onClick={handleGenerateDoc} disabled={isGeneratingDoc}>
+          <MenuItem onClick={handleGenerateDoc} disabled={isGeneratingDoc || hasNoTables}>
             <ListItemIcon>
               <DescriptionIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>Export Word Document</ListItemText>
           </MenuItem>
-          <MenuItem onClick={handleGenerateExcel} disabled={isGeneratingExcel}>
+          <MenuItem onClick={handleGenerateExcel} disabled={isGeneratingExcel || hasNoTables}>
             <ListItemIcon>
               <GridOnIcon fontSize="small" />
             </ListItemIcon>
