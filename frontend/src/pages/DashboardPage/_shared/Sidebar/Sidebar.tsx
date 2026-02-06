@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Tooltip } from '@mui/material';
+import CloudIcon from '@mui/icons-material/Cloud';
+import StorageIcon from '@mui/icons-material/Storage';
 import {
   SidebarWrapper,
   SidebarHeader,
@@ -15,8 +17,7 @@ import {
   ConnectionButton,
   DeleteButton,
   InfoButton,
-  SidebarFooter,
-  FooterButton,
+  HostedBadge,
 } from './Sidebar.styles';
 import DatabaseDetailsDialog from '../DatabaseDetailsDialog';
 
@@ -89,9 +90,14 @@ export default function Sidebar({
             selected={selectedId === db.id && db.status === 'connected'}
             onClick={() => onSelect(db.id)}
           >
-            <DatabaseIconBox engine={db.engine}>
-              {db.engine === 'postgres' ? 'P' : 'M'}
-            </DatabaseIconBox>
+            <Tooltip title={db.isHosted ? 'Hosted (created in Prism)' : 'External (connected server)'} arrow>
+              <DatabaseIconBox engine={db.engine}>
+                {db.engine === 'postgres' ? 'P' : 'M'}
+                <HostedBadge isHosted={db.isHosted}>
+                  {db.isHosted ? <CloudIcon sx={{ fontSize: '0.625rem' }} /> : <StorageIcon sx={{ fontSize: '0.625rem' }} />}
+                </HostedBadge>
+              </DatabaseIconBox>
+            </Tooltip>
             <DatabaseInfo>
               <DatabaseName>{db.name}</DatabaseName>
               <DatabaseMeta>

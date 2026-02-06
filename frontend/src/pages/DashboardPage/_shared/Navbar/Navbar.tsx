@@ -25,11 +25,18 @@ interface NavbarProps {
   onRefresh?: () => void;
   activeMainTab?: number;
   onMainTabChange?: (tab: number) => void;
+  hasConnectedDatabase?: boolean;
 }
 
-export default function Navbar({ onRefresh, activeMainTab = 0, onMainTabChange }: NavbarProps) {
+export default function Navbar({ onRefresh, activeMainTab = 0, onMainTabChange, hasConnectedDatabase = false }: NavbarProps) {
   const navigate = useNavigate();
   const { darkMode, setDarkMode } = useContext(AppContext);
+
+  const handleTabChange = (_: React.SyntheticEvent, newTab: number) => {
+    // Prevent switching to APIs tab if no database is connected
+    if (newTab === 1 && !hasConnectedDatabase) return;
+    onMainTabChange?.(newTab);
+  };
 
   return (
     <NavbarWrapper>
@@ -39,7 +46,7 @@ export default function Navbar({ onRefresh, activeMainTab = 0, onMainTabChange }
           <LogoText>Prism</LogoText>
         </Logo>
 
-        <NavTabs value={activeMainTab} onChange={(_, v) => onMainTabChange?.(v)}>
+        <NavTabs value={activeMainTab} onChange={handleTabChange}>
           <NavTab
             icon={<DashboardIcon fontSize="small" />}
             iconPosition="start"
@@ -48,7 +55,13 @@ export default function Navbar({ onRefresh, activeMainTab = 0, onMainTabChange }
           <NavTab
             icon={<ApiIcon fontSize="small" />}
             iconPosition="start"
-            label="APIs"
+            label={hasConnectedDatabase ? 'APIs' : (
+              <Tooltip title="Connect a database first" arrow>
+                <span>APIs</span>
+              </Tooltip>
+            )}
+            disabled={!hasConnectedDatabase}
+            sx={!hasConnectedDatabase ? { opacity: 0.5, pointerEvents: 'auto' } : {}}
           />
         </NavTabs>
       </LeftSection>

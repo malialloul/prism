@@ -85,6 +85,7 @@ export const DatabaseIconBox = styled(Box, {
 })<{ engine: 'postgres' | 'mysql' }>(({ theme, engine }) => {
   const colors = getDashboardColors(theme.palette.mode === 'dark');
   return {
+    position: 'relative',
     width: '2.25rem',
     height: '2.25rem',
     borderRadius: '0.5rem',
@@ -95,6 +96,7 @@ export const DatabaseIconBox = styled(Box, {
     fontWeight: 700,
     backgroundColor: engine === 'postgres' ? colors.postgresLight : colors.mysqlLight,
     color: engine === 'postgres' ? colors.postgres : colors.mysql,
+    flexShrink: 0,
   };
 });
 
@@ -256,5 +258,25 @@ export const FooterButton = styled(Box)(({ theme }) => {
       backgroundColor: colors.backgroundHover,
       color: colors.text,
     },
+  };
+});
+
+export const HostedBadge = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isHosted',
+})<{ isHosted?: boolean }>(({ theme, isHosted }) => {
+  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  return {
+    position: 'absolute',
+    bottom: '-2px',
+    right: '-2px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '0.875rem',
+    height: '0.875rem',
+    borderRadius: '50%',
+    backgroundColor: colors.backgroundSecondary,
+    color: isHosted ? colors.primary : colors.textMuted,
+    border: `1px solid ${colors.border}`,
   };
 });

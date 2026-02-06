@@ -94,6 +94,17 @@ export default function DashboardLayout() {
   // Get the currently connected database
   const connectedDatabase = databases.find((db) => db.status === 'connected') || null;
 
+  // Redirect to overview if trying to access protected routes without a connected database
+  useEffect(() => {
+    if (!isLoading && !connectedDatabase) {
+      const protectedPaths = ['/apis', '/schema', '/query', '/er-diagram'];
+      const isProtectedRoute = protectedPaths.some(path => location.pathname.includes(path));
+      if (isProtectedRoute) {
+        navigate('/dashboard/overview', { replace: true });
+      }
+    }
+  }, [isLoading, connectedDatabase, location.pathname, navigate]);
+
   // Watch for when the pending database becomes connected after switching
   useEffect(() => {
     if (pendingSwitchDatabaseId && isSwitchingDatabase) {
@@ -261,6 +272,7 @@ export default function DashboardLayout() {
               onRefresh={() => handleRefresh()}
               activeMainTab={mainTab}
               onMainTabChange={handleMainTabChange}
+              hasConnectedDatabase={!!connectedDatabase}
             />
           </DashboardHeader>
           <DashboardBody>
@@ -310,6 +322,7 @@ export default function DashboardLayout() {
             onRefresh={() => handleRefresh()}
             activeMainTab={mainTab}
             onMainTabChange={handleMainTabChange}
+            hasConnectedDatabase={!!connectedDatabase}
           />
         </DashboardHeader>
         <DashboardBody>
