@@ -596,24 +596,7 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
                     </Box>
                 </Box>
 
-                {/* Loading indicator */}
-                <Box sx={{
-                    position: 'absolute',
-                    bottom: 24,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.5,
-                    px: 3,
-                    py: 1.5,
-                    bgcolor: 'background.paper',
-                    borderRadius: 2,
-                    boxShadow: 2,
-                }}>
-                    <Skeleton variant="circular" width={20} height={20} sx={{ animation: 'pulse 1s ease-in-out infinite' }} />
-                    <Typography variant="body2" color="text.secondary">Loading schema...</Typography>
-                </Box>
+               
             </Box>
         );
     }

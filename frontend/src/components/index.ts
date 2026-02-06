@@ -8,5 +8,6 @@ export { default as PageSkeleton } from './PageSkeleton/PageSkeleton';
 export { ButtonLoadingSkeleton, TextLoadingSkeleton, BadgeLoadingSkeleton, ContentLoadingSkeleton } from './LoadingSkeleton/LoadingSkeleton';
 export { default as NotificationBell } from './NotificationBell/NotificationBell';
 export { ProtectedRoute } from './ProtectedRoute';
+export { default as ProtectedNotFoundRoute } from './ProtectedNotFoundRoute';
 export { PermissionGate, usePermissions } from './PermissionGate';
 export { AccessRestricted } from './AccessRestricted';

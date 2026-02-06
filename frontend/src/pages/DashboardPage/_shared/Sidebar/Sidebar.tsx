@@ -26,16 +26,12 @@ import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import SettingsIcon from '@mui/icons-material/Settings';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { DatabaseDto } from '../../../../api/models/DatabaseDto';
-import { isSharedAccessSession } from '../../../../api/httpClient';
 
 interface SidebarProps {
   databases: DatabaseDto[];
   selectedId: number | null;
   onSelect: (id: number) => void;
-  onConnect: (id: number) => void;
   onDisconnect: (id: number) => void;
   onDelete: (id: number) => void;
   onAddDatabase: () => void;
@@ -45,7 +41,6 @@ export default function Sidebar({
   databases,
   selectedId,
   onSelect,
-  onConnect,
   onDisconnect,
   onDelete,
   onAddDatabase,
@@ -64,7 +59,7 @@ export default function Sidebar({
     if (db.status === 'connected') {
       onDisconnect(db.id);
     } else {
-      onConnect(db.id);
+      onSelect(db.id);
     }
   };
 

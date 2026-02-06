@@ -30,7 +30,6 @@ interface DashboardContextType {
   selectedDatabase: DatabaseDto | null;
   isSwitchingDatabase: boolean;
   handleRefresh: (id?: number) => void;
-  handleConnect: (id: number) => void;
   handleDisconnect: (id: number) => void;
   handleCreateDatabase: (engine?: DatabaseDto['engine']) => void;
   handleConnectDatabase: () => void;
@@ -90,8 +89,7 @@ export default function DashboardLayout() {
 
   // Track if we've already auto-refreshed on mount
   const hasAutoRefreshed = useRef(false);
-  // Track if we've already done the initial auto-reconnect
-  const hasAutoReconnected = useRef(false);
+  
 
   // Get the currently connected database
   const connectedDatabase = databases.find((db) => db.status === 'connected') || null;
@@ -147,10 +145,6 @@ export default function DashboardLayout() {
         .filter((db) => db.status === 'connected')
         .forEach((db) => refreshDatabase(db.id));
     }
-  };
-
-  const handleConnect = (id: number) => {
-    reconnectDatabase(id);
   };
 
   const handleDisconnect = (id: number) => {
@@ -248,7 +242,6 @@ export default function DashboardLayout() {
     selectedDatabase,
     isSwitchingDatabase,
     handleRefresh,
-    handleConnect,
     handleDisconnect,
     handleCreateDatabase,
     handleConnectDatabase,
@@ -275,7 +268,6 @@ export default function DashboardLayout() {
               databases={databases}
               selectedId={selectedDatabaseId}
               onSelect={handleSelectDatabase}
-              onConnect={handleConnect}
               onDisconnect={handleDisconnect}
               onDelete={handleDeleteDatabase}
               onAddDatabase={handleCreateDatabase}
@@ -325,7 +317,6 @@ export default function DashboardLayout() {
             databases={databases}
             selectedId={selectedDatabaseId}
             onSelect={handleSelectDatabase}
-            onConnect={handleConnect}
             onDisconnect={handleDisconnect}
             onDelete={handleDeleteDatabase}
             onAddDatabase={handleCreateDatabase}

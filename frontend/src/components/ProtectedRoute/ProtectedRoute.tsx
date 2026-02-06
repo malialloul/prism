@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { isSharedAccessSession } from '../../api/httpClient';
+import { isSharedAccessSession, getAuthToken } from '../../api/httpClient';
 import { toastService } from '../../services';
 
 interface ProtectedRouteProps {
@@ -8,9 +8,14 @@ interface ProtectedRouteProps {
 }
 
 /**
- * Protected route wrapper that can block shared access users
+ * Protected route wrapper that checks for authentication and can block shared access users
  */
 export default function ProtectedRoute({ children, blockSharedAccess = false }: ProtectedRouteProps) {
+    // Check if user is logged in
+    if (!getAuthToken()) {
+        return <Navigate to="/signin" replace />;
+    }
+
     if (blockSharedAccess && isSharedAccessSession()) {
         toastService.warning('Settings are not available for shared access accounts');
         return <Navigate to="/dashboard" replace />;
