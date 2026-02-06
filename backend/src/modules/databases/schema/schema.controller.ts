@@ -82,13 +82,19 @@ export const executeQuery = async (
       return;
     }
 
+    // Parse pagination query params
+    const page = req.query.page !== undefined ? parseInt(req.query.page as string, 10) : undefined;
+    const pageSize = req.query.pageSize !== undefined ? Math.min(parseInt(req.query.pageSize as string, 10), 1000) : undefined;
+    const paginationOptions = page !== undefined && pageSize !== undefined ? { page, pageSize } : undefined;
+
     // Pass permissions for shared access validation
     const result = await executeQueryService(
       userId,
       databaseId,
       sql,
       req.user!.permissions,
-      req.user!.isSharedAccess
+      req.user!.isSharedAccess,
+      paginationOptions
     );
 
     res.status(200).json(result);

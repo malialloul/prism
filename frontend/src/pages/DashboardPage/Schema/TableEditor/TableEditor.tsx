@@ -319,7 +319,7 @@ export default function TableEditor({
         const valueList = nonNullColumns.map((col) => formatValue(updatedRow[col])).join(', ');
         const sql = `INSERT INTO ${quote}${tableName}${quote} (${columnList}) VALUES (${valueList})`;
 
-        const result = await executeQueryAsync(sql);
+        const result = await executeQueryAsync({ sql });
         if (result.success) {
           toastService.success('Row added successfully');
           handleRefresh();
@@ -363,7 +363,7 @@ export default function TableEditor({
           .join(' AND ');
         const sql = `UPDATE ${quote}${tableName}${quote} SET ${setClauses} WHERE ${whereClause}`;
 
-        const result = await executeQueryAsync(sql);
+        const result = await executeQueryAsync({ sql });
         if (result.success) {
           toastService.success('Row updated successfully');
           handleRefresh();
@@ -477,7 +477,7 @@ export default function TableEditor({
         const sql = `DELETE FROM ${quote}${tableName}${quote} WHERE ${whereClause}`;
 
         try {
-          const result = await executeQueryAsync(sql);
+          const result = await executeQueryAsync({ sql });
           if (result.success) {
             successCount++;
           } else {

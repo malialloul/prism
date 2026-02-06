@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { ButtonLoadingSkeleton, usePermissions } from '../../../../components';
 import {
   Tooltip,
@@ -46,9 +46,7 @@ import {
   SavedQueryName,
   SaveQueryInput,
   ExportButton,
-  ResultsToolbar,
 } from './QueryEditor.styles';
-import SearchSortToolbar from '../../Schema/TableEditor/SearchSortToolbar/SearchSortToolbar';
 
 interface QueryEditorProps {
   databaseId: number | undefined;
@@ -63,67 +61,25 @@ export default function QueryEditor({
 }: QueryEditorProps) {
   const { canRunQuery, canCreateApi } = usePermissions();
   const [sql, setSql] = useState(initialQuery);
+  const [executedSql, setExecutedSql] = useState<string | null>(null);
   const [result, setResult] = useState<QueryResultDto | null>(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [queryName, setQueryName] = useState('');
   const [showSavedQueries, setShowSavedQueries] = useState(false);
   const [queryToDelete, setQueryToDelete] = useState<string | null>(null);
 
-  // Search and sort state
-  const [searchValue, setSearchValue] = useState('');
-  const [sortColumn, setSortColumn] = useState('');
-  const [sortDirection, setSortDirection] = useState<'ASC' | 'DESC'>('ASC');
-
   // Pagination state
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
+  
+  // Track if pagination change should trigger re-execution
+  const isPageChangeRef = useRef(false);
 
-  // Calculate pagination values with search and sort
-  const paginationData = useMemo(() => {
-    let rows = result?.rows || [];
-    const columns = result?.columns || [];
-
-    // Apply search filter
-    if (searchValue && columns.length > 0) {
-      const searchLower = searchValue.toLowerCase();
-      rows = rows.filter((row) =>
-        columns.some((col) => {
-          const value = row[col];
-          return value !== null && String(value).toLowerCase().includes(searchLower);
-        })
-      );
-    }
-
-    // Apply sorting
-    if (sortColumn && columns.includes(sortColumn)) {
-      rows = [...rows].sort((a, b) => {
-        const aVal = a[sortColumn];
-        const bVal = b[sortColumn];
-
-        if (aVal === null && bVal === null) return 0;
-        if (aVal === null) return sortDirection === 'ASC' ? 1 : -1;
-        if (bVal === null) return sortDirection === 'ASC' ? -1 : 1;
-
-        if (typeof aVal === 'number' && typeof bVal === 'number') {
-          return sortDirection === 'ASC' ? aVal - bVal : bVal - aVal;
-        }
-
-        const aStr = String(aVal).toLowerCase();
-        const bStr = String(bVal).toLowerCase();
-        return sortDirection === 'ASC' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
-      });
-    }
-
-    const totalRows = rows.length;
-    const totalPages = Math.ceil(totalRows / pageSize);
-    const startIndex = page * pageSize;
-    const endIndex = Math.min(startIndex + pageSize, totalRows);
-    const visibleRows = rows.slice(startIndex, endIndex);
-    const startRow = totalRows > 0 ? startIndex + 1 : 0;
-    const endRow = endIndex;
-
-    return { totalRows, totalPages, visibleRows, startRow, endRow };
-  }, [result?.rows, result?.columns, page, pageSize, searchValue, sortColumn, sortDirection]);
+  // Calculate pagination display values
+  const totalRows = result?.totalCount ?? result?.rowCount ?? 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
+  const startRow = totalRows > 0 ? page * pageSize + 1 : 0;
+  const endRow = Math.min((page + 1) * pageSize, totalRows);
 
   const { data: savedQueriesData, refetch: refetchSavedQueries } = useSavedQueries(databaseId);
   const savedQueries = savedQueriesData?.queries || [];
@@ -131,7 +87,6 @@ export default function QueryEditor({
   const { mutate: executeQuery, isPending: isExecuting } = useExecuteQuery(databaseId ?? 0, {
     onSuccess: (queryResult) => {
       setResult(queryResult);
-      setPage(0); // Reset to first page on new query
     },
     onError: (error) => {
       setResult({
@@ -157,8 +112,29 @@ export default function QueryEditor({
 
   const handleRunQuery = useCallback(() => {
     if (!sql.trim() || !databaseId) return;
-    executeQuery(sql);
-  }, [sql, databaseId, executeQuery]);
+    setExecutedSql(sql);
+    setPage(0);
+    executeQuery({ sql, page: 0, pageSize });
+  }, [sql, databaseId, executeQuery, pageSize]);
+
+  // Re-execute query when page or pageSize changes
+  useEffect(() => {
+    if (isPageChangeRef.current && executedSql && databaseId) {
+      executeQuery({ sql: executedSql, page, pageSize });
+      isPageChangeRef.current = false;
+    }
+  }, [page, pageSize, executedSql, databaseId, executeQuery]);
+
+  const handlePageChange = useCallback((newPage: number) => {
+    isPageChangeRef.current = true;
+    setPage(newPage);
+  }, []);
+
+  const handlePageSizeChange = useCallback((newSize: number) => {
+    isPageChangeRef.current = true;
+    setPageSize(newSize);
+    setPage(0);
+  }, []);
 
   const handleSaveQuery = useCallback(() => {
     if (!queryName.trim() || !sql.trim()) return;
@@ -310,7 +286,7 @@ export default function QueryEditor({
               <ResultsTitle>Results</ResultsTitle>
               {result && result.success && result.rows && (
                 <ResultsMeta>
-                  <span>{paginationData.totalRows} rows</span>
+                  <span>{totalRows} rows</span>
                   <span>{result.executionTimeMs}ms</span>
                   <ExportButton onClick={handleExportCSV} startIcon={<DownloadIcon sx={{ fontSize: '0.875rem' }} />}>
                     Export CSV
@@ -318,22 +294,6 @@ export default function QueryEditor({
                 </ResultsMeta>
               )}
             </ResultsHeader>
-            {result && result.success && result.rows && result.columns && (
-              <ResultsToolbar>
-                <SearchSortToolbar
-                  searchValue={searchValue}
-                  onSearchChange={setSearchValue}
-                  sortColumn={sortColumn}
-                  onSortColumnChange={setSortColumn}
-                  sortDirection={sortDirection}
-                  onSortDirectionToggle={() =>
-                    setSortDirection(sortDirection === 'ASC' ? 'DESC' : 'ASC')
-                  }
-                  columns={result.columns}
-                  searchPlaceholder="Search results..."
-                />
-              </ResultsToolbar>
-            )}
             <ResultsContent>
               {!result && (
                 <EmptyResults>
@@ -365,7 +325,7 @@ export default function QueryEditor({
                     </tr>
                   </thead>
                   <tbody>
-                    {paginationData.visibleRows.map((row, idx) => (
+                    {result.rows.map((row, idx) => (
                       <tr key={idx}>
                         {result.columns!.map((col, colIdx) => (
                           <td key={colIdx}>
@@ -386,16 +346,13 @@ export default function QueryEditor({
               <Pagination
                 page={page}
                 pageSize={pageSize}
-                totalRows={paginationData.totalRows}
-                totalPages={paginationData.totalPages}
-                startRow={paginationData.startRow}
-                endRow={paginationData.endRow}
+                totalRows={totalRows}
+                totalPages={totalPages}
+                startRow={startRow}
+                endRow={endRow}
                 isLoading={isExecuting}
-                onPageChange={setPage}
-                onPageSizeChange={(newSize) => {
-                  setPageSize(newSize);
-                  setPage(0);
-                }}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
               />
             )}
           </ResultsArea>

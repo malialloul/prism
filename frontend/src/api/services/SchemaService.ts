@@ -74,16 +74,31 @@ export class SchemaService {
    * Execute a SQL query
    * @param databaseId Database ID
    * @param sql SQL query string
+   * @param options Pagination options
    * @returns QueryResultDto Query result
    * @throws ApiError
    */
   public static executeQuery(
     databaseId: number,
-    sql: string
+    sql: string,
+    options?: {
+      page?: number;
+      pageSize?: number;
+    }
   ): CancelablePromise<QueryResultDto> {
+    const queryParams = new URLSearchParams();
+    if (options?.page !== undefined) {
+      queryParams.set('page', String(options.page));
+    }
+    if (options?.pageSize !== undefined) {
+      queryParams.set('pageSize', String(options.pageSize));
+    }
+    const queryString = queryParams.toString();
+    const url = `/databases/${databaseId}/query${queryString ? `?${queryString}` : ''}`;
+
     return __request(OpenAPI, {
       method: 'POST',
-      url: `/databases/${databaseId}/query`,
+      url,
       body: { sql },
       mediaType: 'application/json',
       errors: {

@@ -904,14 +904,15 @@ export const validateSqlPermissions = (
 };
 
 /**
- * Execute a SQL query
+ * Execute a SQL query with optional server-side pagination
  */
 export const executeQueryService = async (
   userId: string,
   databaseId: string,
   sql: string,
   permissions?: SharePermissions,
-  isSharedAccess: boolean = false
+  isSharedAccess: boolean = false,
+  paginationOptions?: { page?: number; pageSize?: number }
 ): Promise<QueryResultDto> => {
   // Validate permissions for shared access users
   const permissionError = validateSqlPermissions(sql, permissions, isSharedAccess);
@@ -932,10 +933,31 @@ export const executeQueryService = async (
     throw new ValidationError('This command is not allowed for safety reasons.');
   }
 
+  // Check if pagination is requested and query is a SELECT
+  const isSelectQuery = lowerSql.startsWith('select');
+  const usePagination = paginationOptions && isSelectQuery;
+  const page = paginationOptions?.page ?? 0;
+  const pageSize = paginationOptions?.pageSize ?? 50;
+  const offset = page * pageSize;
+
   if (conn.engine === 'postgres') {
     const pgPool = createPgPool(conn);
     try {
-      const result = await pgPool.query(sql);
+      let totalCount: number | undefined;
+      let paginatedSql = sql;
+
+      // For SELECT queries with pagination, wrap query and get count
+      if (usePagination) {
+        // Get total count first
+        const countSql = `SELECT COUNT(*) as count FROM (${sql.replace(/;$/, '')}) AS count_query`;
+        const countResult = await pgPool.query(countSql);
+        totalCount = parseInt(countResult.rows[0]?.count || '0', 10);
+
+        // Add pagination to original query
+        paginatedSql = `${sql.replace(/;$/, '')} LIMIT ${pageSize} OFFSET ${offset}`;
+      }
+
+      const result = await pgPool.query(paginatedSql);
       const executionTimeMs = Date.now() - startTime;
       await pgPool.end();
 
@@ -956,6 +978,7 @@ export const executeQueryService = async (
           columns: result.fields.map(f => f.name),
           rows: result.rows,
           rowCount: result.rowCount || 0,
+          totalCount: usePagination ? totalCount : undefined,
           executionTimeMs,
         };
       } else {
@@ -997,7 +1020,21 @@ export const executeQueryService = async (
   } else {
     const mysqlConn = await createMysqlConnection(conn);
     try {
-      const [rows, fields] = await mysqlConn.execute(sql);
+      let totalCount: number | undefined;
+      let paginatedSql = sql;
+
+      // For SELECT queries with pagination, wrap query and get count
+      if (usePagination) {
+        // Get total count first
+        const countSql = `SELECT COUNT(*) as count FROM (${sql.replace(/;$/, '')}) AS count_query`;
+        const [countRows] = await mysqlConn.execute(countSql);
+        totalCount = parseInt((countRows as Array<{ count: string }>)[0]?.count || '0', 10);
+
+        // Add pagination to original query
+        paginatedSql = `${sql.replace(/;$/, '')} LIMIT ${pageSize} OFFSET ${offset}`;
+      }
+
+      const [rows, fields] = await mysqlConn.execute(paginatedSql);
       const executionTimeMs = Date.now() - startTime;
       await mysqlConn.end();
 
@@ -1018,6 +1055,7 @@ export const executeQueryService = async (
           columns: (fields as Array<{ name: string }>).map(f => f.name),
           rows: rows as Record<string, unknown>[],
           rowCount: rows.length,
+          totalCount: usePagination ? totalCount : undefined,
           executionTimeMs,
         };
       } else {
