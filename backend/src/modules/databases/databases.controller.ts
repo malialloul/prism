@@ -25,8 +25,9 @@ export const testConnection = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    const userId = req.user?.userId;
     const body = TestConnectionSchema.parse(req.body);
-    const result = await testConnectionService(body);
+    const result = await testConnectionService(body, userId);
 
     res.status(200).json(result);
   } catch (error) {

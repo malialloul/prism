@@ -198,14 +198,33 @@ const testConnectionInternal = async (
  * Test database connection without saving (for API calls with encrypted password)
  */
 export const testConnectionService = async (
-  body: TestConnectionDto
+  body: TestConnectionDto,
+  userId?: string
 ): Promise<TestConnectionResultDto> => {
   const { engine, host, port, username, password, database, ssl } = body;
   
   // Decrypt the password sent from frontend
   const decryptedPassword = decryptTransmission(password);
 
-  return testConnectionInternal(engine, host, port, username, decryptedPassword, database, ssl);
+  // If userId is provided, check if the user is trying to connect to their own hosted database
+  // using the display name and resolve to the actual database name
+  let actualDatabase = database;
+  if (userId) {
+    const userIdShort = String(userId).padStart(8, '0').substring(0, 8);
+    const sanitizedDbName = database.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    const possibleHostedDbName = `db_${userIdShort}_${sanitizedDbName}`.substring(0, 63);
+    
+    const ownHostedDb = await pool.query(
+      'SELECT database FROM database_connections WHERE user_id = $1 AND database = $2 AND is_hosted = true',
+      [userId, possibleHostedDbName]
+    );
+    
+    if (ownHostedDb.rowCount && ownHostedDb.rowCount > 0) {
+      actualDatabase = ownHostedDb.rows[0].database;
+    }
+  }
+
+  return testConnectionInternal(engine, host, port, username, decryptedPassword, actualDatabase, ssl);
 };
 
 /**
@@ -227,13 +246,27 @@ export const connectDatabaseService = async (
     throw new ValidationError(`You already have a connection to this database (${host}:${port}/${database})`);
   }
 
+  // Check if user is trying to connect to their own hosted database using the display name
+  // Hosted databases are stored as db_{userId}_{sanitizedName} but shown to users as just the name
+  const userIdShort = String(userId).padStart(8, '0').substring(0, 8);
+  const sanitizedDbName = database.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+  const possibleHostedDbName = `db_${userIdShort}_${sanitizedDbName}`.substring(0, 63);
+  
+  const ownHostedDb = await pool.query(
+    'SELECT name FROM database_connections WHERE user_id = $1 AND database = $2 AND is_hosted = true',
+    [userId, possibleHostedDbName]
+  );
+  
+  if (ownHostedDb.rowCount && ownHostedDb.rowCount > 0) {
+    throw new ValidationError(`Database "${database}" is already connected as a hosted database. You can find it in your database list as "${ownHostedDb.rows[0].name}".`);
+  }
+
   // Security check: Prevent connecting to another user's hosted database
   // Hosted databases follow the pattern: db_{userId}_{name}
   const hostedDbPattern = /^db_(\d{8})_/;
   const match = database.match(hostedDbPattern);
   if (match) {
     const dbOwnerId = match[1];
-    const userIdShort = String(userId).padStart(8, '0').substring(0, 8);
     if (dbOwnerId !== userIdShort) {
       throw new ValidationError('You cannot connect to a database that belongs to another user');
     }
