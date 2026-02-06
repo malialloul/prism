@@ -1882,13 +1882,16 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
         timestamp: new Date().toLocaleTimeString(),
       });
     } catch (error: any) {
+      // Extract error message from various possible locations
+      const errorMessage = error.message || error.body?.message || 'Query execution failed';
+      
       setApiTestResult({
         success: false,
         status: error.status || 500,
         rowCount: 0,
         executionTime: `${Math.round(performance.now() - startTime)}ms`,
         timestamp: new Date().toLocaleTimeString(),
-        error: error.body?.message || error.message || 'Query execution failed',
+        error: errorMessage,
       });
     } finally {
       setPreviewLoading(false);
@@ -2892,57 +2895,51 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                 )}
 
                 {/* Quick Stats */}
-                {apiTestResult && !apiTestResult.loading && (
-                  <Paper sx={{ p: 1.5, mb: 2, backgroundColor: apiTestResult.success ? (isDark ? 'rgba(76, 175, 80, 0.15)' : '#e8f5e9') : (isDark ? 'rgba(244, 67, 54, 0.15)' : '#ffebee') }}>
+                {apiTestResult && !apiTestResult.loading && apiTestResult.success && (
+                  <Paper sx={{ p: 1.5, mb: 2, backgroundColor: isDark ? 'rgba(76, 175, 80, 0.15)' : '#e8f5e9' }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Box sx={{ flex: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: apiTestResult.success ? '#2e7d32' : '#c62828' }}>
-                          {apiTestResult.success ? '✅ Query Successful' : '❌ Query Failed'}
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#2e7d32' }}>
+                          ✅ Query Successful
                         </Typography>
-                        {apiTestResult.success ? (
-                          <Box>
-                            {apiTestResult.message && (
-                              <Typography variant="body2" sx={{ color: '#2e7d32', fontWeight: 500 }}>
-                                {apiTestResult.message}
+                        <Box>
+                          {apiTestResult.message && (
+                            <Typography variant="body2" sx={{ color: '#2e7d32', fontWeight: 500 }}>
+                              {apiTestResult.message}
+                            </Typography>
+                          )}
+                          {apiTestResult.fullUrl ? (
+                            <Box sx={{ mt: 1 }}>
+                              <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#666', display: 'block' }}>
+                                Test your API in Postman:
                               </Typography>
-                            )}
-                            {apiTestResult.fullUrl ? (
-                              <Box sx={{ mt: 1 }}>
-                                <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#666', display: 'block' }}>
-                                  Test your API in Postman:
+                              <Paper sx={{ p: 1, mt: 0.5, backgroundColor: isDark ? '#252b42' : '#f0f0f0' }}>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    fontFamily: 'monospace',
+                                    color: isDark ? '#f1f5f9' : '#333',
+                                    wordBreak: 'break-all',
+                                    display: 'block'
+                                  }}
+                                >
+                                  GET {apiTestResult.fullUrl}
                                 </Typography>
-                                <Paper sx={{ p: 1, mt: 0.5, backgroundColor: isDark ? '#252b42' : '#f0f0f0' }}>
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      fontFamily: 'monospace',
-                                      color: isDark ? '#f1f5f9' : '#333',
-                                      wordBreak: 'break-all',
-                                      display: 'block'
-                                    }}
-                                  >
-                                    GET {apiTestResult.fullUrl}
-                                  </Typography>
-                                </Paper>
-                                {apiTestResult.parameters && apiTestResult.parameters.length > 0 && (
-                                  <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#666', display: 'block', mt: 1 }}>
-                                    Parameters: {apiTestResult.parameters.map((p: any) => p.name).join(', ')}
-                                  </Typography>
-                                )}
-                              </Box>
-                            ) : (
-                              <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#666' }}>
-                                {apiTestResult.rowCount} rows • {apiTestResult.executionTime} • {apiTestResult.timestamp}
-                              </Typography>
-                            )}
-                          </Box>
-                        ) : (
-                          <Typography variant="caption" sx={{ color: '#c62828', display: 'block', mt: 0.5 }}>
-                            {apiTestResult.error || 'Unknown error'}
-                          </Typography>
-                        )}
+                              </Paper>
+                              {apiTestResult.parameters && apiTestResult.parameters.length > 0 && (
+                                <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#666', display: 'block', mt: 1 }}>
+                                  Parameters: {apiTestResult.parameters.map((p: any) => p.name).join(', ')}
+                                </Typography>
+                              )}
+                            </Box>
+                          ) : (
+                            <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#666' }}>
+                              {apiTestResult.rowCount} rows • {apiTestResult.executionTime} • {apiTestResult.timestamp}
+                            </Typography>
+                          )}
+                        </Box>
                       </Box>
-                      {apiTestResult.success && !apiTestResult.fullUrl && (
+                      {!apiTestResult.fullUrl && (
                         <Button size="small" variant="outlined" onClick={() => setTestResultsOpen(true)} disabled={previewData.length === 0}>
                           View Results
                         </Button>
@@ -2955,6 +2952,8 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Results Preview</Typography>
                 {previewLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={24} /></Box>
+                ) : apiTestResult && !apiTestResult.success && apiTestResult.error ? (
+                  <Alert severity="error" sx={{ fontSize: '0.8rem' }}>{apiTestResult.error}</Alert>
                 ) : previewData.length === 0 ? (
                   <Alert severity="info" sx={{ fontSize: '0.8rem' }}>Click "Run Query" to see results</Alert>
                 ) : (
@@ -3481,7 +3480,15 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
           {/* Results Table */}
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Results ({previewData.length} rows)</Typography>
-            {previewData.length === 0 ? (
+            {apiTestResult?.loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+                <CircularProgress />
+              </Box>
+            ) : apiTestResult && !apiTestResult.success ? (
+              <Alert severity="error" sx={{ whiteSpace: 'pre-wrap' }}>
+                {apiTestResult.error || 'Query execution failed'}
+              </Alert>
+            ) : previewData.length === 0 ? (
               <Alert severity="info">No data returned. Try running the query first.</Alert>
             ) : (
               <TableContainer component={Paper} sx={{ flex: 1, overflow: 'auto' }}>

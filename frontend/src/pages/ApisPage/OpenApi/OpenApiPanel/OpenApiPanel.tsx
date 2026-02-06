@@ -11,6 +11,9 @@ import ErrorIcon from '@mui/icons-material/Error';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import StorageIcon from '@mui/icons-material/Storage';
 import DownloadIcon from '@mui/icons-material/Download';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import CodeIcon from '@mui/icons-material/Code';
 import {
   Box,
   Typography,
@@ -29,12 +32,12 @@ import {
   DialogActions,
   InputAdornment,
   alpha,
-  Divider,
   Menu,
   MenuItem,
   ListItemIcon,
   ListItemText,
   Skeleton,
+  Collapse,
 } from '@mui/material';
 import { AppContext } from '../../../../App';
 import { useSavedQueries, useDeleteSavedQuery } from '../../../../api/entities/schema';
@@ -57,7 +60,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
     onSuccess: () => refetch(),
   });
 
-  const [selectedApi, setSelectedApi] = useState<SavedQueryDto | null>(null);
+  const [expandedApis, setExpandedApis] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMethod, setFilterMethod] = useState<string | null>(null);
   const [testParams, setTestParams] = useState<Record<string, Record<string, string>>>({});
@@ -69,6 +72,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
   const [toggleLoading, setToggleLoading] = useState<Record<string, boolean>>({});
   const [copiedEndpoint, setCopiedEndpoint] = useState<string | null>(null);
   const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null);
+  const [showSqlFor, setShowSqlFor] = useState<string | null>(null);
 
   const savedApis = savedQueriesData?.queries || [];
 
@@ -188,7 +192,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
         ...prev,
         [api.id]: {
           success: false,
-          error: error?.body?.message || error?.message || 'Request failed'
+          error: error?.message || error?.body?.message || 'Request failed'
         }
       }));
     } finally {
@@ -212,19 +216,16 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
     setToggleLoading(prev => ({ ...prev, [api.id]: true }));
     try {
       await SchemaService.toggleApiPublic(databaseId, api.id, !api.isPublic);
-      const result = await refetch();
-      // Update selectedApi with the refreshed data
-      if (result.data?.queries) {
-        const updatedApi = result.data.queries.find(q => q.id === api.id);
-        if (updatedApi) {
-          setSelectedApi(updatedApi);
-        }
-      }
+      await refetch();
     } catch (error: any) {
       console.error('Failed to toggle API public status:', error);
     } finally {
       setToggleLoading(prev => ({ ...prev, [api.id]: false }));
     }
+  };
+
+  const toggleApiExpanded = (apiId: string) => {
+    setExpandedApis(prev => ({ ...prev, [apiId]: !prev[apiId] }));
   };
 
   const getPublicEndpoint = (api: SavedQueryDto) => {
@@ -234,12 +235,12 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
 
   const getMethodColor = (method: string) => {
     switch (method) {
-      case 'GET': return { bg: '#61affe', text: '#fff' };
-      case 'POST': return { bg: '#49cc90', text: '#fff' };
-      case 'PUT': return { bg: '#fca130', text: '#fff' };
-      case 'DELETE': return { bg: '#f93e3e', text: '#fff' };
-      case 'PATCH': return { bg: '#50e3c2', text: '#000' };
-      default: return { bg: '#61affe', text: '#fff' };
+      case 'GET': return { bg: '#61affe', text: '#fff', border: '#61affe' };
+      case 'POST': return { bg: '#49cc90', text: '#fff', border: '#49cc90' };
+      case 'PUT': return { bg: '#fca130', text: '#fff', border: '#fca130' };
+      case 'DELETE': return { bg: '#f93e3e', text: '#fff', border: '#f93e3e' };
+      case 'PATCH': return { bg: '#50e3c2', text: '#000', border: '#50e3c2' };
+      default: return { bg: '#61affe', text: '#fff', border: '#61affe' };
     }
   };
 
@@ -268,34 +269,11 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', height: '100%' }}>
-        {/* Left sidebar skeleton */}
-        <Box sx={{ width: 320, borderRight: `1px solid ${colors.border}`, p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Search skeleton */}
-          <Skeleton variant="rectangular" height={40} sx={{ borderRadius: 1 }} />
-          {/* Method filter skeleton */}
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} variant="rectangular" width={50} height={28} sx={{ borderRadius: 1 }} />
-            ))}
-          </Box>
-          {/* API list skeleton */}
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Box key={i} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Skeleton variant="rectangular" width={50} height={24} sx={{ borderRadius: 1 }} />
-                <Skeleton variant="text" width="70%" height={24} />
-              </Box>
-              <Skeleton variant="text" width="90%" height={16} />
-            </Box>
-          ))}
-        </Box>
-        {/* Main content skeleton */}
-        <Box sx={{ flex: 1, p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Skeleton variant="rectangular" height={60} sx={{ borderRadius: 1 }} />
-          <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 1 }} />
-          <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 1 }} />
-        </Box>
+      <Box sx={{ p: 3 }}>
+        <Skeleton variant="rectangular" height={80} sx={{ borderRadius: 1, mb: 2 }} />
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} variant="rectangular" height={60} sx={{ borderRadius: 1, mb: 1 }} />
+        ))}
       </Box>
     );
   }
@@ -330,173 +308,79 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
         <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400, textAlign: 'center' }}>
           Create custom API endpoints using the Query Builder tab. Your saved queries will appear here as callable REST APIs.
         </Typography>
-        <Box sx={{
-          mt: 2,
-          p: 2,
-          borderRadius: 2,
-          bgcolor: colors.backgroundTertiary,
-          border: `1px solid ${colors.border}`,
-          maxWidth: 400,
-        }}>
-          <Typography variant="body2" sx={{ color: colors.textSecondary, fontWeight: 500, mb: 1 }}>
-            💡 Tip
-          </Typography>
-          <Typography variant="body2" sx={{ color: colors.textMuted }}>
-            Go to "Build Query" tab to write SQL queries and save them as API endpoints with custom parameters.
-          </Typography>
-        </Box>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ display: 'flex', height: '100%', overflow: 'hidden', gap: 0 }}>
-      {/* Left Panel - API List */}
+    <Box sx={{ 
+      height: '100%',
+      width: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      backgroundColor: darkMode ? '#1a1a2e' : '#fafafa',
+    }}>
+      {/* Swagger-style Header */}
       <Box sx={{
-        width: 360,
-        minWidth: 360,
-        display: 'flex',
-        flexDirection: 'column',
-        borderRight: `1px solid ${colors.border}`,
-        backgroundColor: colors.backgroundSecondary,
+        background: darkMode 
+          ? 'linear-gradient(135deg, #1a365d 0%, #2d3748 100%)'
+          : 'linear-gradient(135deg, #89bf04 0%, #547f00 100%)',
+        p: 3,
+        color: '#fff',
       }}>
-        {/* Header */}
-        <Box sx={{
-          p: 2,
-          borderBottom: `1px solid ${colors.border}`,
-          backgroundColor: colors.backgroundTertiary,
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <ApiIcon sx={{ color: colors.primary }} />
-              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1rem' }}>
-                APIs
-              </Typography>
-              <Chip
-                label={savedApis.length}
-                size="small"
-                sx={{
-                  height: 20,
-                  fontSize: '0.7rem',
-                  fontWeight: 600,
-                  backgroundColor: alpha(colors.primary, 0.1),
-                  color: colors.primary,
-                }}
-              />
-            </Box>
-            <Tooltip title="Export Project">
-              <IconButton
-                size="small"
-                onClick={(e) => setExportMenuAnchor(e.currentTarget)}
-                disabled={!!exportLoading}
-                sx={{
-                  backgroundColor: alpha(colors.primary, 0.1),
-                  color: colors.primary,
-                  '&:hover': { backgroundColor: alpha(colors.primary, 0.2) },
-                }}
-              >
-                {exportLoading ? <CircularProgress size={18} /> : <DownloadIcon fontSize="small" />}
-              </IconButton>
-            </Tooltip>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <ApiIcon /> {connectedDatabase?.name || 'Database'} API
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
+              {savedApis.length} endpoints available • Custom APIs
+            </Typography>
           </Box>
+          <Tooltip title="Export Project">
+            <IconButton
+              onClick={(e) => setExportMenuAnchor(e.currentTarget)}
+              disabled={!!exportLoading}
+              sx={{
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                color: '#fff',
+                '&:hover': { backgroundColor: 'rgba(255,255,255,0.25)' },
+              }}
+            >
+              {exportLoading ? <CircularProgress size={20} color="inherit" /> : <DownloadIcon />}
+            </IconButton>
+          </Tooltip>
+        </Box>
 
-          {/* Export Menu */}
-          <Menu
-            anchorEl={exportMenuAnchor}
-            open={Boolean(exportMenuAnchor)}
-            onClose={() => setExportMenuAnchor(null)}
-            PaperProps={{
-              sx: {
-                backgroundColor: colors.backgroundCard,
-                backgroundImage: 'none',
-                minWidth: 280,
-                borderRadius: 2,
-                border: `1px solid ${colors.border}`,
-                boxShadow: darkMode
-                  ? '0 8px 32px rgba(0,0,0,0.4)'
-                  : '0 8px 32px rgba(0,0,0,0.12)',
-              }
-            }}
-          >
-            <Box sx={{ px: 2, py: 1.5, borderBottom: `1px solid ${colors.border}` }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: colors.text }}>
-                Export as Project
-              </Typography>
-              <Typography variant="caption" sx={{ color: colors.textMuted }}>
-                Generate a complete backend project with your APIs
-              </Typography>
-            </Box>
-            {exportOptions.map((option) => (
-              <MenuItem
-                key={option.id}
-                onClick={() => handleExportProject(option)}
-                disabled={!!exportLoading}
-                sx={{
-                  py: 1.5,
-                  px: 2,
-                  '&:hover': {
-                    backgroundColor: alpha(option.color, 0.1),
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ minWidth: 36 }}>
-                  <Box sx={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 1,
-                    backgroundColor: alpha(option.color, 0.15),
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1rem',
-                  }}>
-                    {exportLoading === option.id ? (
-                      <CircularProgress size={16} sx={{ color: option.color }} />
-                    ) : (
-                      option.icon
-                    )}
-                  </Box>
-                </ListItemIcon>
-                <ListItemText
-                  primary={
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: colors.text }}>
-                      {option.name}
-                    </Typography>
-                  }
-                  secondary={
-                    <Typography variant="caption" sx={{ color: colors.textMuted }}>
-                      {option.description}
-                    </Typography>
-                  }
-                />
-              </MenuItem>
-            ))}
-          </Menu>
-
-          {/* Search */}
+        {/* Search and Filters */}
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
           <TextField
             size="small"
             placeholder="Search APIs..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            fullWidth
+            sx={{
+              minWidth: 250,
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                color: '#fff',
+                '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
+                '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
+                '&.Mui-focused fieldset': { borderColor: '#fff' },
+              },
+              '& .MuiInputAdornment-root': { color: 'rgba(255,255,255,0.7)' },
+              '& input::placeholder': { color: 'rgba(255,255,255,0.6)' },
+            }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon sx={{ fontSize: 18, color: colors.textMuted }} />
+                  <SearchIcon sx={{ color: 'rgba(255,255,255,0.7)' }} />
                 </InputAdornment>
               ),
             }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: colors.background,
-                fontSize: '0.85rem',
-              },
-            }}
           />
-
-          {/* Method Filter */}
-          <Box sx={{ display: 'flex', gap: 0.5, mt: 1.5, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
             {['GET', 'POST', 'PUT', 'DELETE'].map(method => (
               <Chip
                 key={method}
@@ -504,572 +388,470 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                 size="small"
                 onClick={() => setFilterMethod(filterMethod === method ? null : method)}
                 sx={{
-                  height: 24,
-                  fontSize: '0.65rem',
                   fontWeight: 700,
+                  fontSize: '0.7rem',
                   backgroundColor: filterMethod === method
                     ? getMethodColor(method).bg
-                    : alpha(getMethodColor(method).bg, 0.1),
-                  color: filterMethod === method
-                    ? getMethodColor(method).text
-                    : getMethodColor(method).bg,
+                    : 'rgba(255,255,255,0.15)',
+                  color: '#fff',
                   cursor: 'pointer',
                   '&:hover': {
                     backgroundColor: filterMethod === method
                       ? getMethodColor(method).bg
-                      : alpha(getMethodColor(method).bg, 0.2),
+                      : 'rgba(255,255,255,0.25)',
                   },
                 }}
               />
             ))}
           </Box>
         </Box>
-
-        {/* API List */}
-        <Box sx={{ flex: 1, overflowY: 'auto', p: 1 }}>
-          {filteredApis.map((api) => (
-            <Box
-              key={api.id}
-              onClick={() => setSelectedApi(api)}
-              sx={{
-                p: 1.5,
-                mb: 0.5,
-                borderRadius: 1,
-                cursor: 'pointer',
-                backgroundColor: selectedApi?.id === api.id ? alpha(colors.primary, 0.1) : 'transparent',
-                border: `1px solid ${selectedApi?.id === api.id ? colors.primary : 'transparent'}`,
-                transition: 'all 0.15s ease',
-                '&:hover': {
-                  backgroundColor: selectedApi?.id === api.id
-                    ? alpha(colors.primary, 0.1)
-                    : colors.backgroundHover,
-                },
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                <Chip
-                  label={api.method || 'GET'}
-                  size="small"
-                  sx={{
-                    height: 20,
-                    fontSize: '0.6rem',
-                    fontWeight: 700,
-                    backgroundColor: getMethodColor(api.method || 'GET').bg,
-                    color: getMethodColor(api.method || 'GET').text,
-                  }}
-                />
-                <Typography sx={{
-                  fontWeight: 600,
-                  fontSize: '0.85rem',
-                  flex: 1,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {api.name}
-                </Typography>
-                {api.isPublic ? (
-                  <PublicIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                ) : (
-                  <LockIcon sx={{ fontSize: 16, color: colors.textMuted }} />
-                )}
-              </Box>
-              <Typography sx={{
-                fontSize: '0.7rem',
-                fontFamily: 'monospace',
-                color: colors.textMuted,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}>
-                {api.endpoint}
-              </Typography>
-            </Box>
-          ))}
-        </Box>
       </Box>
 
-      {/* Right Panel - API Details */}
-      <Box sx={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        minWidth: 0,
-        height: '100%',
-      }}>
-        {!selectedApi ? (
-          <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-            width: '100%',
-            gap: 3,
-            p: 4,
-            boxSizing: 'border-box',
-          }}>
-            {/* Decorative Icon */}
-            <Box sx={{
-              position: 'relative',
-              width: 120,
-              height: 120,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              {/* Background circle */}
+      {/* Export Menu */}
+      <Menu
+        anchorEl={exportMenuAnchor}
+        open={Boolean(exportMenuAnchor)}
+        onClose={() => setExportMenuAnchor(null)}
+        PaperProps={{
+          sx: {
+            backgroundColor: colors.backgroundCard,
+            minWidth: 280,
+            borderRadius: 2,
+            border: `1px solid ${colors.border}`,
+          }
+        }}
+      >
+        <Box sx={{ px: 2, py: 1.5, borderBottom: `1px solid ${colors.border}` }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Export as Project</Typography>
+          <Typography variant="caption" sx={{ color: colors.textMuted }}>
+            Generate a complete backend project
+          </Typography>
+        </Box>
+        {exportOptions.map((option) => (
+          <MenuItem
+            key={option.id}
+            onClick={() => handleExportProject(option)}
+            disabled={!!exportLoading}
+            sx={{ py: 1.5 }}
+          >
+            <ListItemIcon sx={{ minWidth: 36 }}>
               <Box sx={{
-                position: 'absolute',
-                width: 120,
-                height: 120,
-                borderRadius: '50%',
-                background: `linear-gradient(135deg, ${alpha(colors.primary, 0.1)} 0%, ${alpha(colors.primary, 0.05)} 100%)`,
-                border: `2px dashed ${alpha(colors.primary, 0.2)}`,
-              }} />
-              {/* Inner circle */}
-              <Box sx={{
-                position: 'absolute',
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                backgroundColor: alpha(colors.primary, 0.08),
+                width: 28,
+                height: 28,
+                borderRadius: 1,
+                backgroundColor: alpha(option.color, 0.15),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-                <ApiIcon sx={{ fontSize: 40, color: alpha(colors.primary, 0.5) }} />
+                {exportLoading === option.id ? (
+                  <CircularProgress size={16} sx={{ color: option.color }} />
+                ) : (
+                  option.icon
+                )}
               </Box>
-              {/* Decorative dots */}
-              <Box sx={{
-                position: 'absolute',
-                top: 10,
-                right: 15,
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                backgroundColor: '#61affe',
-              }} />
-              <Box sx={{
-                position: 'absolute',
-                bottom: 15,
-                left: 10,
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                backgroundColor: '#49cc90',
-              }} />
-              <Box sx={{
-                position: 'absolute',
-                top: 25,
-                left: 5,
-                width: 5,
-                height: 5,
-                borderRadius: '50%',
-                backgroundColor: '#fca130',
-              }} />
-            </Box>
+            </ListItemIcon>
+            <ListItemText
+              primary={<Typography variant="body2" sx={{ fontWeight: 600 }}>{option.name}</Typography>}
+              secondary={<Typography variant="caption" sx={{ color: colors.textMuted }}>{option.description}</Typography>}
+            />
+          </MenuItem>
+        ))}
+      </Menu>
 
-            {/* Text content */}
-            <Box sx={{ textAlign: 'center', maxWidth: 320 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: colors.text }}>
-                Select an API
-              </Typography>
-              <Typography variant="body2" sx={{ color: colors.textMuted, lineHeight: 1.6 }}>
-                Choose an API from the list on the left to view details, test endpoints, and manage access settings.
-              </Typography>
-            </Box>
+      {/* API List - Swagger Style */}
+      <Box sx={{ 
+        flex: 1,
+        overflow: 'auto',
+        p: 2,
+      }}>
+        {filteredApis.map((api) => {
+          const methodColors = getMethodColor(api.method || 'GET');
+          const isExpanded = expandedApis[api.id];
+          const result = testResults[api.id];
+          const loading = testLoading[api.id];
 
-            {/* Feature hints */}
-            <Box sx={{
-              display: 'flex',
-              gap: 2,
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              mt: 1,
-            }}>
-              {[
-                { icon: <PlayArrowIcon sx={{ fontSize: 16 }} />, label: 'Test endpoints' },
-                { icon: <ContentCopyIcon sx={{ fontSize: 16 }} />, label: 'Copy URLs' },
-                { icon: <PublicIcon sx={{ fontSize: 16 }} />, label: 'Toggle visibility' },
-              ].map((feature, idx) => (
-                <Box
-                  key={idx}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.75,
-                    px: 1.5,
-                    py: 0.75,
-                    borderRadius: 2,
-                    backgroundColor: alpha(colors.primary, 0.05),
-                    border: `1px solid ${alpha(colors.primary, 0.1)}`,
-                  }}
-                >
-                  <Box sx={{ color: colors.primary, display: 'flex' }}>{feature.icon}</Box>
-                  <Typography variant="caption" sx={{ color: colors.textMuted, fontWeight: 500 }}>
-                    {feature.label}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-          </Box>
-        ) : (
-          <>
-            {/* API Header */}
-            <Box sx={{
-              p: 2.5,
-              borderBottom: `1px solid ${colors.border}`,
-              backgroundColor: colors.backgroundSecondary,
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <Box sx={{ flex: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                    <Chip
-                      label={selectedApi.method || 'GET'}
-                      sx={{
-                        height: 28,
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        backgroundColor: getMethodColor(selectedApi.method || 'GET').bg,
-                        color: getMethodColor(selectedApi.method || 'GET').text,
-                      }}
-                    />
-                    <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                      {selectedApi.name}
-                    </Typography>
-                    <Tooltip title={selectedApi.isPublic ? 'Public API' : 'Private API'}>
-                      {selectedApi.isPublic ? (
-                        <Chip
-                          icon={<PublicIcon sx={{ fontSize: 14 }} />}
-                          label="Public"
-                          size="small"
-                          color="success"
-                          variant="outlined"
-                          sx={{ height: 24 }}
-                        />
-                      ) : (
-                        <Chip
-                          icon={<LockIcon sx={{ fontSize: 14 }} />}
-                          label="Private"
-                          size="small"
-                          variant="outlined"
-                          sx={{ height: 24 }}
-                        />
-                      )}
-                    </Tooltip>
-                  </Box>
-                  {selectedApi.description && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      {selectedApi.description}
-                    </Typography>
-                  )}
-                </Box>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    size="small"
-                    startIcon={<DeleteIcon />}
-                    onClick={() => {
-                      setApiToDelete(selectedApi);
-                      setDeleteDialogOpen(true);
-                    }}
-                    sx={{ textTransform: 'none' }}
-                  >
-                    Delete
-                  </Button>
-                </Box>
-              </Box>
-            </Box>
-
-            {/* API Content */}
-            <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5 }}>
-              {/* Public Toggle */}
-              <Box sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                p: 2,
-                mb: 2,
-                borderRadius: 2,
-                backgroundColor: selectedApi.isPublic ? alpha('#49cc90', 0.1) : colors.backgroundSecondary,
-                border: `1px solid ${selectedApi.isPublic ? alpha('#49cc90', 0.3) : colors.border}`,
-              }}>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                    Public Access
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {selectedApi.isPublic
-                      ? 'Anyone can access this API without authentication'
-                      : 'Only authenticated users can access this API'}
-                  </Typography>
-                </Box>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={selectedApi.isPublic || false}
-                      onChange={() => handleTogglePublic(selectedApi)}
-                      disabled={toggleLoading[selectedApi.id]}
-                      color="success"
-                    />
-                  }
-                  label={toggleLoading[selectedApi.id] ? <CircularProgress size={16} /> : ''}
-                />
-              </Box>
-
-              {/* Endpoints */}
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, fontSize: '0.9rem' }}>
-                Endpoints
-              </Typography>
-
-              <Box sx={{
-                p: 2,
-                mb: 2,
-                borderRadius: 2,
-                backgroundColor: colors.backgroundSecondary,
-                border: `1px solid ${colors.border}`,
-              }}>
-                <Typography variant="caption" sx={{ color: colors.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  {selectedApi.isPublic ? 'Authenticated Endpoint' : 'Endpoint (requires auth)'}
-                </Typography>
-                <Box sx={{
+          return (
+            <Box
+              key={api.id}
+              sx={{
+                mb: 1,
+                borderRadius: 1,
+                border: `1px solid ${methodColors.border}`,
+                overflow: 'hidden',
+                backgroundColor: darkMode ? '#1e1e2e' : '#fff',
+              }}
+            >
+              {/* API Header - Clickable to expand */}
+              <Box
+                onClick={() => toggleApiExpanded(api.id)}
+                sx={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 1,
-                  mt: 1,
+                  gap: 2,
                   p: 1.5,
-                  borderRadius: 1,
-                  backgroundColor: colors.backgroundTertiary,
-                  fontFamily: 'monospace',
-                  fontSize: '0.85rem',
-                }}>
-                  <Box sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {window.location.origin}{selectedApi.endpoint}
-                  </Box>
-                  <Tooltip title={copiedEndpoint === `${selectedApi.endpoint}-auth` ? 'Copied!' : 'Copy URL'}>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleCopyEndpoint(selectedApi.endpoint || '', 'auth')}
-                      sx={{ color: copiedEndpoint === `${selectedApi.endpoint}-auth` ? 'success.main' : colors.textMuted }}
-                    >
-                      {copiedEndpoint === `${selectedApi.endpoint}-auth` ? <CheckCircleIcon fontSize="small" /> : <ContentCopyIcon fontSize="small" />}
-                    </IconButton>
-                  </Tooltip>
+                  cursor: 'pointer',
+                  backgroundColor: alpha(methodColors.bg, isExpanded ? 0.15 : 0.08),
+                  '&:hover': {
+                    backgroundColor: alpha(methodColors.bg, 0.15),
+                  },
+                }}
+              >
+                {/* Method Badge */}
+                <Box
+                  sx={{
+                    px: 1.5,
+                    py: 0.5,
+                    borderRadius: 0.5,
+                    backgroundColor: methodColors.bg,
+                    color: methodColors.text,
+                    fontWeight: 700,
+                    fontSize: '0.75rem',
+                    minWidth: 60,
+                    textAlign: 'center',
+                  }}
+                >
+                  {api.method || 'GET'}
                 </Box>
 
-                {selectedApi.isPublic && (
-                  <>
-                    <Divider sx={{ my: 2 }} />
-                    <Typography variant="caption" sx={{ color: 'success.main', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                      Public Endpoint (no auth required)
+                {/* Endpoint Path */}
+                <Typography
+                  sx={{
+                    flex: 1,
+                    fontFamily: 'monospace',
+                    fontSize: '0.9rem',
+                    fontWeight: 500,
+                    color: colors.text,
+                  }}
+                >
+                  {api.endpoint}
+                </Typography>
+
+                {/* API Name */}
+                <Typography
+                  sx={{
+                    color: colors.textMuted,
+                    fontSize: '0.85rem',
+                    maxWidth: 300,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {api.name}
+                </Typography>
+
+                {/* Status Icons */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {api.isPublic ? (
+                    <Tooltip title="Public API">
+                      <PublicIcon sx={{ fontSize: 18, color: '#49cc90' }} />
+                    </Tooltip>
+                  ) : (
+                    <Tooltip title="Private API (requires auth)">
+                      <LockIcon sx={{ fontSize: 18, color: colors.textMuted }} />
+                    </Tooltip>
+                  )}
+                  {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                </Box>
+              </Box>
+
+              {/* Expanded Content */}
+              <Collapse in={isExpanded}>
+                <Box sx={{ p: 2, borderTop: `1px solid ${colors.border}` }}>
+                  {/* Description */}
+                  {api.description && (
+                    <Typography variant="body2" sx={{ color: colors.textSecondary, mb: 2 }}>
+                      {api.description}
                     </Typography>
+                  )}
+
+                  {/* Public Toggle */}
+                  <Box sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    p: 1.5,
+                    mb: 2,
+                    borderRadius: 1,
+                    backgroundColor: api.isPublic ? alpha('#49cc90', 0.1) : colors.backgroundSecondary,
+                    border: `1px solid ${api.isPublic ? alpha('#49cc90', 0.3) : colors.border}`,
+                  }}>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {api.isPublic ? '🌐 Public Access' : '🔒 Private Access'}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {api.isPublic
+                          ? 'Anyone can access without authentication'
+                          : 'Requires authentication token'}
+                      </Typography>
+                    </Box>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={api.isPublic || false}
+                          onChange={() => handleTogglePublic(api)}
+                          disabled={toggleLoading[api.id]}
+                          color="success"
+                          size="small"
+                        />
+                      }
+                      label=""
+                    />
+                  </Box>
+
+                  {/* Endpoints */}
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, fontSize: '0.8rem', textTransform: 'uppercase', color: colors.textMuted }}>
+                    Endpoints
+                  </Typography>
+                  <Box sx={{ mb: 2 }}>
                     <Box sx={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 1,
-                      mt: 1,
-                      p: 1.5,
+                      p: 1,
                       borderRadius: 1,
-                      backgroundColor: alpha('#49cc90', 0.1),
-                      fontFamily: 'monospace',
-                      fontSize: '0.85rem',
+                      backgroundColor: colors.backgroundSecondary,
+                      border: `1px solid ${colors.border}`,
+                      mb: 1,
                     }}>
-                      <PublicIcon sx={{ fontSize: 18, color: 'success.main' }} />
-                      <Box sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {getPublicEndpoint(selectedApi)}
-                      </Box>
-                      <Tooltip title={copiedEndpoint === `${selectedApi.endpoint}-public` ? 'Copied!' : 'Copy Public URL'}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleCopyEndpoint(selectedApi.endpoint || '', 'public')}
-                          sx={{ color: copiedEndpoint === `${selectedApi.endpoint}-public` ? 'success.main' : colors.textMuted }}
-                        >
-                          {copiedEndpoint === `${selectedApi.endpoint}-public` ? <CheckCircleIcon fontSize="small" /> : <ContentCopyIcon fontSize="small" />}
+                      <LockIcon sx={{ fontSize: 16, color: colors.textMuted }} />
+                      <Typography sx={{ flex: 1, fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                        {window.location.origin}{api.endpoint}
+                      </Typography>
+                      <Tooltip title={copiedEndpoint === `${api.endpoint}-auth` ? 'Copied!' : 'Copy'}>
+                        <IconButton size="small" onClick={() => handleCopyEndpoint(api.endpoint || '', 'auth')}>
+                          {copiedEndpoint === `${api.endpoint}-auth` ? <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} /> : <ContentCopyIcon sx={{ fontSize: 16 }} />}
                         </IconButton>
                       </Tooltip>
                     </Box>
-                  </>
-                )}
-              </Box>
+                    {api.isPublic && (
+                      <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        p: 1,
+                        borderRadius: 1,
+                        backgroundColor: alpha('#49cc90', 0.1),
+                        border: `1px solid ${alpha('#49cc90', 0.3)}`,
+                      }}>
+                        <PublicIcon sx={{ fontSize: 16, color: '#49cc90' }} />
+                        <Typography sx={{ flex: 1, fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                          {getPublicEndpoint(api)}
+                        </Typography>
+                        <Tooltip title={copiedEndpoint === `${api.endpoint}-public` ? 'Copied!' : 'Copy'}>
+                          <IconButton size="small" onClick={() => handleCopyEndpoint(api.endpoint || '', 'public')}>
+                            {copiedEndpoint === `${api.endpoint}-public` ? <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} /> : <ContentCopyIcon sx={{ fontSize: 16 }} />}
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    )}
+                  </Box>
 
-              {/* Parameters */}
-              {(selectedApi.parameters || []).length > 0 && (
-                <>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, fontSize: '0.9rem' }}>
-                    Parameters
-                  </Typography>
-                  <Box sx={{
-                    mb: 2,
-                    borderRadius: 2,
-                    backgroundColor: colors.backgroundSecondary,
-                    border: `1px solid ${colors.border}`,
-                    overflow: 'hidden',
-                  }}>
-                    {(selectedApi.parameters || []).map((param, index) => (
-                      <Box
-                        key={param.name}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          p: 1.5,
-                          borderBottom: index < (selectedApi.parameters || []).length - 1 ? `1px solid ${colors.border}` : 'none',
+                  {/* Parameters */}
+                  {(api.parameters || []).length > 0 && (
+                    <>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, fontSize: '0.8rem', textTransform: 'uppercase', color: colors.textMuted }}>
+                        Parameters
+                      </Typography>
+                      <Box sx={{
+                        mb: 2,
+                        borderRadius: 1,
+                        border: `1px solid ${colors.border}`,
+                        overflow: 'hidden',
+                      }}>
+                        {/* Header */}
+                        <Box sx={{
+                          display: 'grid',
+                          gridTemplateColumns: '150px 100px 1fr',
                           gap: 2,
-                        }}
-                      >
-                        <Box sx={{ minWidth: 120 }}>
-                          <Typography sx={{ fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 600 }}>
-                            {param.name}
-                            {param.required && <span style={{ color: '#f93e3e' }}> *</span>}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {param.columnType}
-                          </Typography>
-                        </Box>
-                        <TextField
-                          size="small"
-                          placeholder={param.name === 'pagesize' ? '100' : param.name === 'pagecount' ? '1' : `Enter ${param.name}`}
-                          value={testParams[selectedApi.id]?.[param.name] || ''}
-                          onChange={(e) => handleParamChange(selectedApi.id, param.name, e.target.value)}
-                          sx={{
-                            flex: 1,
-                            '& .MuiOutlinedInput-root': {
-                              backgroundColor: colors.background,
-                              fontSize: '0.85rem',
-                            },
-                          }}
-                        />
-                      </Box>
-                    ))}
-                  </Box>
-                </>
-              )}
-
-              {/* Test Button */}
-              <Button
-                variant="contained"
-                fullWidth
-                startIcon={testLoading[selectedApi.id] ? <CircularProgress size={18} color="inherit" /> : <PlayArrowIcon />}
-                onClick={() => handleTestApi(selectedApi)}
-                disabled={testLoading[selectedApi.id]}
-                sx={{
-                  mb: 2,
-                  py: 1.2,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                }}
-              >
-                {testLoading[selectedApi.id] ? 'Executing...' : 'Test API'}
-              </Button>
-
-              {/* Test Results */}
-              {testResults[selectedApi.id] && (
-                <>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, fontSize: '0.9rem' }}>
-                    Response
-                  </Typography>
-                  <Box sx={{
-                    borderRadius: 2,
-                    backgroundColor: colors.backgroundSecondary,
-                    border: `1px solid ${colors.border}`,
-                    overflow: 'hidden',
-                    mb: 2,
-                  }}>
-                    {/* Response Header */}
-                    <Box sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 1.5,
-                      borderBottom: `1px solid ${colors.border}`,
-                      backgroundColor: testResults[selectedApi.id].success === false
-                        ? alpha('#f93e3e', 0.1)
-                        : alpha('#49cc90', 0.1),
-                    }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {testResults[selectedApi.id].success === false ? (
-                          <ErrorIcon sx={{ color: '#f93e3e', fontSize: 20 }} />
-                        ) : (
-                          <CheckCircleIcon sx={{ color: '#49cc90', fontSize: 20 }} />
-                        )}
-                        <Typography sx={{
-                          fontWeight: 600,
-                          color: testResults[selectedApi.id].success === false ? '#f93e3e' : '#49cc90',
+                          p: 1,
+                          backgroundColor: colors.backgroundSecondary,
+                          borderBottom: `1px solid ${colors.border}`,
                         }}>
-                          {testResults[selectedApi.id].success === false ? 'Error' : 'Success'}
-                        </Typography>
-                      </Box>
-                      {testResults[selectedApi.id].success !== false && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Typography variant="caption" sx={{ color: colors.textMuted }}>
-                            {testResults[selectedApi.id].rowCount} rows
-                          </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <ScheduleIcon sx={{ fontSize: 14, color: colors.textMuted }} />
+                          <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>Name</Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>Type</Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>Value</Typography>
+                        </Box>
+                        {/* Rows */}
+                        {(api.parameters || []).map((param, index) => (
+                          <Box
+                            key={param.name}
+                            sx={{
+                              display: 'grid',
+                              gridTemplateColumns: '150px 100px 1fr',
+                              gap: 2,
+                              p: 1,
+                              alignItems: 'center',
+                              borderBottom: index < (api.parameters || []).length - 1 ? `1px solid ${colors.border}` : 'none',
+                            }}
+                          >
+                            <Box>
+                              <Typography sx={{ fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 600 }}>
+                                {param.name}
+                                {param.required && <span style={{ color: '#f93e3e' }}> *</span>}
+                              </Typography>
+                            </Box>
                             <Typography variant="caption" sx={{ color: colors.textMuted }}>
-                              {testResults[selectedApi.id].executionTimeMs}ms
+                              {param.columnType}
                             </Typography>
+                            <TextField
+                              size="small"
+                              placeholder={param.name === 'pagesize' ? '100' : param.name === 'pagecount' ? '1' : `Enter ${param.name}`}
+                              value={testParams[api.id]?.[param.name] || ''}
+                              onChange={(e) => handleParamChange(api.id, param.name, e.target.value)}
+                              fullWidth
+                              sx={{
+                                '& .MuiOutlinedInput-root': {
+                                  backgroundColor: colors.background,
+                                  fontSize: '0.85rem',
+                                },
+                              }}
+                            />
                           </Box>
-                        </Box>
-                      )}
-                    </Box>
-                    {/* Response Body */}
-                    <Box sx={{
-                      p: 1.5,
-                      maxHeight: 300,
-                      overflowY: 'auto',
-                      backgroundColor: darkMode ? '#1e1e2e' : '#fafafa',
-                    }}>
-                      {testResults[selectedApi.id].success === false ? (
-                        <Typography sx={{ color: '#f93e3e', fontSize: '0.85rem' }}>
-                          {testResults[selectedApi.id].error || 'Request failed'}
-                        </Typography>
-                      ) : (
-                        <pre style={{
-                          margin: 0,
-                          fontSize: '0.75rem',
-                          fontFamily: 'monospace',
-                          color: colors.text,
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-all',
-                        }}>
-                          {JSON.stringify(testResults[selectedApi.id].rows, null, 2)}
-                        </pre>
-                      )}
-                    </Box>
-                  </Box>
-                </>
-              )}
+                        ))}
+                      </Box>
+                    </>
+                  )}
 
-              {/* SQL Preview */}
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, fontSize: '0.9rem' }}>
-                SQL Query
-              </Typography>
-              <Box sx={{
-                p: 2,
-                borderRadius: 2,
-                backgroundColor: darkMode ? '#1e1e2e' : '#fafafa',
-                border: `1px solid ${colors.border}`,
-                maxHeight: 200,
-                overflowY: 'auto',
-              }}>
-                <pre style={{
-                  margin: 0,
-                  fontSize: '0.8rem',
-                  fontFamily: 'monospace',
-                  color: darkMode ? '#d4d4d4' : '#1e1e1e',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-all',
-                }}>
-                  {selectedApi.sql}
-                </pre>
-              </Box>
+                  {/* Actions */}
+                  <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                    <Button
+                      variant="contained"
+                      startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
+                      onClick={() => handleTestApi(api)}
+                      disabled={loading}
+                      sx={{
+                        backgroundColor: methodColors.bg,
+                        '&:hover': { backgroundColor: alpha(methodColors.bg, 0.85) },
+                        textTransform: 'none',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {loading ? 'Executing...' : 'Execute'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      startIcon={<CodeIcon />}
+                      onClick={() => setShowSqlFor(showSqlFor === api.id ? null : api.id)}
+                      sx={{ textTransform: 'none' }}
+                    >
+                      {showSqlFor === api.id ? 'Hide SQL' : 'Show SQL'}
+                    </Button>
+                    <Box sx={{ flex: 1 }} />
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => {
+                        setApiToDelete(api);
+                        setDeleteDialogOpen(true);
+                      }}
+                      sx={{ textTransform: 'none' }}
+                    >
+                      Delete
+                    </Button>
+                  </Box>
+
+                  {/* SQL Preview */}
+                  <Collapse in={showSqlFor === api.id}>
+                    <Box sx={{
+                      p: 2,
+                      mb: 2,
+                      borderRadius: 1,
+                      backgroundColor: darkMode ? '#0d0d14' : '#272822',
+                      border: `1px solid ${colors.border}`,
+                    }}>
+                      <Typography variant="caption" sx={{ color: '#888', fontWeight: 600, textTransform: 'uppercase', display: 'block', mb: 1 }}>
+                        SQL Query
+                      </Typography>
+                      <pre style={{
+                        margin: 0,
+                        fontSize: '0.8rem',
+                        fontFamily: '"Fira Code", "Consolas", monospace',
+                        color: '#f8f8f2',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-all',
+                      }}>
+                        {api.sql}
+                      </pre>
+                    </Box>
+                  </Collapse>
+
+                  {/* Response */}
+                  {result && (
+                    <Box sx={{
+                      borderRadius: 1,
+                      border: `1px solid ${result.success === false ? '#f93e3e' : '#49cc90'}`,
+                      overflow: 'hidden',
+                    }}>
+                      {/* Response Header */}
+                      <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        p: 1.5,
+                        backgroundColor: result.success === false ? alpha('#f93e3e', 0.1) : alpha('#49cc90', 0.1),
+                      }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {result.success === false ? (
+                            <ErrorIcon sx={{ color: '#f93e3e', fontSize: 20 }} />
+                          ) : (
+                            <CheckCircleIcon sx={{ color: '#49cc90', fontSize: 20 }} />
+                          )}
+                          <Typography sx={{
+                            fontWeight: 600,
+                            color: result.success === false ? '#f93e3e' : '#49cc90',
+                          }}>
+                            {result.success === false ? 'Error' : 'Success'}
+                          </Typography>
+                        </Box>
+                        {result.success !== false && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Typography variant="caption" sx={{ color: colors.textMuted }}>
+                              {result.rowCount} rows
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <ScheduleIcon sx={{ fontSize: 14, color: colors.textMuted }} />
+                              <Typography variant="caption" sx={{ color: colors.textMuted }}>
+                                {result.executionTimeMs}ms
+                              </Typography>
+                            </Box>
+                          </Box>
+                        )}
+                      </Box>
+                      {/* Response Body */}
+                      <Box sx={{
+                        p: 2,
+                        maxHeight: 300,
+                        overflowY: 'auto',
+                        backgroundColor: darkMode ? '#0d0d14' : '#fafafa',
+                      }}>
+                        {result.success === false ? (
+                          <Typography sx={{ color: '#f93e3e', fontSize: '0.85rem' }}>
+                            {result.error || 'Request failed'}
+                          </Typography>
+                        ) : (
+                          <pre style={{
+                            margin: 0,
+                            fontSize: '0.75rem',
+                            fontFamily: 'monospace',
+                            color: colors.text,
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-all',
+                          }}>
+                            {JSON.stringify(result.rows, null, 2)}
+                          </pre>
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+              </Collapse>
             </Box>
-          </>
-        )}
+          );
+        })}
       </Box>
 
       {/* Delete Confirmation Dialog */}
@@ -1101,9 +883,6 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
             onClick={() => {
               if (apiToDelete) {
                 deleteQuery(apiToDelete.id);
-                if (selectedApi?.id === apiToDelete.id) {
-                  setSelectedApi(null);
-                }
               }
               setDeleteDialogOpen(false);
               setApiToDelete(null);

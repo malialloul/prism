@@ -66,7 +66,7 @@ export function useRespondPermissionRequest(options: UseRespondPermissionRequest
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['permission-requests'] });
       queryClient.invalidateQueries({ queryKey: ['my-permission-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['shared-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['sharedAccounts'] }); // Refresh shared accounts list to show updated permissions
       queryClient.invalidateQueries({ queryKey: ['notifications'] }); // Remove handled notification
       options.onSuccess?.();
     },

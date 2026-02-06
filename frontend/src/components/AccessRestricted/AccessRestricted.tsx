@@ -5,7 +5,7 @@ import SendIcon from "@mui/icons-material/Send";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import { styled } from "@mui/material/styles";
-import { isSharedAccessSession, getSharedAccessInfo } from "../../api/httpClient";
+import { isSharedAccessSession, getSharedAccessInfo, hasPermission, onPermissionsChange } from "../../api/httpClient";
 import { useCreatePermissionRequest, useMyPermissionRequests } from "../../api/entities/auth";
 import type { SharePermissions } from "../../api/models/SharedAccountDto";
 import { toastService } from "../../services";
@@ -70,9 +70,18 @@ export function AccessRestricted({
     const [showRequestForm, setShowRequestForm] = useState(false);
     const [requestMessage, setRequestMessage] = useState("");
     const [requestSent, setRequestSent] = useState(false);
+    const [, setTrigger] = useState(0);
+
+    // Subscribe to permission changes to re-render when permissions are updated
+    useEffect(() => {
+        return onPermissionsChange(() => setTrigger(t => t + 1));
+    }, []);
 
     const isShared = isSharedAccessSession();
     const shareInfo = getSharedAccessInfo();
+
+    // Check if user now has the permission (owner may have granted it)
+    const nowHasPermission = permission ? hasPermission(permission) : false;
 
     const { data: myRequests, refetch: refetchRequests } = useMyPermissionRequests();
 
@@ -122,6 +131,23 @@ export function AccessRestricted({
     };
 
     const canRequestAccess = isShared && shareInfo && permission && showRequestAccess;
+
+    // If user now has the permission (owner granted it), show success message
+    if (nowHasPermission) {
+        return (
+            <RestrictedContainer>
+                <SuccessIconWrapper>
+                    <CheckCircleOutlineIcon sx={{ fontSize: 40, color: 'success.main' }} />
+                </SuccessIconWrapper>
+                <Typography variant="h6" color="text.primary" gutterBottom>
+                    Access Granted!
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400 }}>
+                    You now have permission to access this feature. Please close and reopen this dialog to continue.
+                </Typography>
+            </RestrictedContainer>
+        );
+    }
 
     // If request was already sent for this permission (pending)
     if (pendingRequest) {

@@ -121,6 +121,53 @@ export const requirePermission = (permission: keyof SharePermissions) => {
 };
 
 /**
+ * Middleware to check if shared user has ALL of the specified permissions
+ * All permissions must be granted for access
+ */
+export const requirePermissions = (...permissions: (keyof SharePermissions)[]) => {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // Non-shared users (account owners) have full access
+      if (!req.user?.isSharedAccess) {
+        next();
+        return;
+      }
+
+      // Fetch current permissions from database to ensure we have the latest
+      const shareId = req.user.shareId;
+      if (!shareId) {
+        throw new AuthorizationError('Invalid shared access session');
+      }
+
+      const result = await pool.query<{ permissions: SharePermissions }>(
+        'SELECT permissions FROM shared_accounts WHERE id = $1 AND status = $2 AND expires_at > NOW()',
+        [shareId, 'accepted']
+      );
+
+      if (result.rows.length === 0) {
+        throw new AuthorizationError('Shared access session is no longer valid');
+      }
+
+      const currentPermissions = result.rows[0].permissions;
+      
+      // Check all required permissions
+      for (const permission of permissions) {
+        if (!currentPermissions || !currentPermissions[permission]) {
+          throw new AuthorizationError(`You do not have permission to ${formatPermissionName(permission)}`);
+        }
+      }
+
+      // Update req.user.permissions with current DB permissions for downstream use
+      req.user.permissions = currentPermissions;
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+};
+
+/**
  * Format permission name for user-friendly error messages
  */
 function formatPermissionName(permission: keyof SharePermissions): string {

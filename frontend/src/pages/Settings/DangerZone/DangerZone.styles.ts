@@ -1,5 +1,5 @@
 import { styled } from '@mui/material/styles';
-import { Box } from '@mui/material';
+import { Box, Button } from '@mui/material';
 import { getDashboardColors } from '../../../styles/theme';
 
 export const DangerContainer = styled(Box)({
@@ -44,7 +44,7 @@ export const DangerDescription = styled('span')(({ theme }) => {
   };
 });
 
-export const DangerButton = styled(Box, {
+export const DangerButton = styled(Button, {
   shouldForwardProp: (prop) => prop !== 'severity',
 })<{ severity?: 'warning' | 'danger' }>(({ theme, severity = 'warning' }) => {
   const colors = getDashboardColors(theme.palette.mode === 'dark');
@@ -53,35 +53,36 @@ export const DangerButton = styled(Box, {
     if (severity === 'danger') {
       return {
         color: colors.error,
-        backgroundColor: colors.errorLight,
-        border: `1px solid ${colors.error}30`,
+        borderColor: colors.error,
         '&:hover': {
-          backgroundColor: colors.error,
-          color: 'white',
+          backgroundColor: `${colors.error}15`,
+          borderColor: colors.error,
         },
       };
     }
     return {
       color: colors.warning,
-      backgroundColor: `${colors.warning}15`,
-      border: `1px solid ${colors.warning}30`,
+      borderColor: colors.warning,
       '&:hover': {
-        backgroundColor: colors.warning,
-        color: 'white',
+        backgroundColor: `${colors.warning}15`,
+        borderColor: colors.warning,
       },
     };
   };
 
   return {
-    display: 'inline-flex',
+    textTransform: 'none',
+    fontSize: '0.8125rem',
+    fontWeight: 500,
+    variant: 'outlined',
+    display: 'flex',
     alignItems: 'center',
     gap: '0.375rem',
     padding: '0.5rem 1rem',
-    borderRadius: '0.5rem',
-    fontSize: '0.8125rem',
-    fontWeight: 500,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
+    whiteSpace: 'nowrap',
+    '& .MuiSvgIcon-root': {
+      fontSize: '1em',
+    },
     ...getStyles(),
   };
 });

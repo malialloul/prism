@@ -65,6 +65,7 @@ export const SharedAccountSchema = registerTable(
     sharedWithEmail: z.string().email(),
     sharedWithUserId: z.number().int().optional(),
     tempPasswordHash: z.string(),
+    tempPassword: z.string().optional(), // Plain text password, cleared after acceptance/expiry
     status: z.enum(['pending', 'accepted', 'revoked']).default('pending'),
     permissions: z.string().default('{}'), // JSONB stored as string
     expiresAt: z.date(),

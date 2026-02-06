@@ -41,6 +41,11 @@ export function useNotifications() {
       });
       // Also invalidate to fetch the real data from server
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+
+      // If share was accepted, refresh shared accounts list to update status
+      if (notification.type === 'share_accepted') {
+        queryClient.invalidateQueries({ queryKey: ['sharedAccounts'] });
+      }
     });
 
     // Handle notification read events
@@ -96,12 +101,19 @@ export function useNotifications() {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     });
 
+    // Handle share status changed (for owner - when shared user accepts/logs in)
+    const unsubShareStatusChanged = websocketService.onShareStatusChanged(() => {
+      // Refresh shared accounts list to update status from pending to accepted
+      queryClient.invalidateQueries({ queryKey: ['sharedAccounts'] });
+    });
+
     return () => {
       unsubNotification();
       unsubRead();
       unsubAllRead();
       unsubShareNotification();
       unsubPermissionsUpdated();
+      unsubShareStatusChanged();
     };
   }, [queryClient]);
 

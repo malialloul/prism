@@ -17,6 +17,12 @@ export interface ForceLogoutPayload {
   shareId?: number; // Include shareId to target specific shared sessions
 }
 
+export interface OwnerAccountActionPayload {
+  reason: 'account_deactivated' | 'account_deleted';
+  message: string;
+  ownerUserId: string;
+}
+
 /**
  * Emit a notification to a specific user via WebSocket
  */
@@ -90,6 +96,12 @@ export interface ShareNotificationPayload {
   metadata: string | null;
 }
 
+export interface ShareStatusChangedPayload {
+  shareId: number;
+  status: 'pending' | 'accepted' | 'revoked';
+  sharedWithEmail: string;
+}
+
 /**
  * Emit a permissions updated event to a specific share via WebSocket
  * Used when shared account permissions are updated (e.g., permission request approved)
@@ -102,9 +114,16 @@ export function emitPermissionsUpdated(userId: string, payload: PermissionsUpdat
     return;
   }
 
+  const roomName = `share:${payload.shareId}`;
+  const room = io.sockets.adapter.rooms.get(roomName);
+  const socketCount = room ? room.size : 0;
+  
+  console.log(`[WebSocket] Emitting permissions_updated to room ${roomName} (${socketCount} sockets in room)`);
+  console.log(`[WebSocket] Payload:`, JSON.stringify(payload));
+
   // Only emit to share-specific room (shared users are in this room)
   // Don't emit to user room to avoid duplicates since shared users join both rooms
-  io.to(`share:${payload.shareId}`).emit('permissions_updated', payload);
+  io.to(roomName).emit('permissions_updated', payload);
   console.log(`[WebSocket] Permissions updated emitted to share ${payload.shareId}`);
 }
 
@@ -121,4 +140,37 @@ export function emitNotificationToShare(shareId: number, payload: ShareNotificat
 
   io.to(`share:${shareId}`).emit('share_notification', payload);
   console.log(`[WebSocket] Notification emitted to share ${shareId}:`, payload.title);
+}
+
+/**
+ * Emit force logout to all shared users of an owner
+ * Used when owner deactivates or deletes their account
+ */
+export function emitOwnerAccountAction(shareIds: number[], payload: OwnerAccountActionPayload): void {
+  const io = getIO();
+  if (!io) {
+    console.warn('[WebSocket] Cannot emit owner account action - WebSocket server not initialized');
+    return;
+  }
+
+  // Emit to each share room
+  for (const shareId of shareIds) {
+    io.to(`share:${shareId}`).emit('owner_account_action', payload);
+    console.log(`[WebSocket] Owner account action emitted to share ${shareId}:`, payload.reason);
+  }
+}
+
+/**
+ * Emit share status changed event to owner
+ * Used when a shared user accepts or the share status changes
+ */
+export function emitShareStatusChanged(ownerUserId: string, payload: ShareStatusChangedPayload): void {
+  const io = getIO();
+  if (!io) {
+    console.warn('[WebSocket] Cannot emit share status changed - WebSocket server not initialized');
+    return;
+  }
+
+  io.to(`user:${ownerUserId}`).emit('share_status_changed', payload);
+  console.log(`[WebSocket] Share status changed emitted to user ${ownerUserId}:`, payload.status);
 }

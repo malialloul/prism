@@ -37,6 +37,8 @@ export function initializeWebSocket(httpServer: HttpServer): SocketIOServer {
       const decoded = jwt.verify(token, config.jwt.secret) as UserPayload;
       socket.data.userId = decoded.userId;
       socket.data.email = decoded.email;
+      socket.data.isSharedAccess = decoded.isSharedAccess;
+      socket.data.shareId = decoded.shareId;
       next();
     } catch {
       next(new Error('Invalid token'));
@@ -45,11 +47,10 @@ export function initializeWebSocket(httpServer: HttpServer): SocketIOServer {
 
   io.on('connection', (socket: Socket) => {
     const userId = socket.data.userId as string;
-    const decoded = socket.handshake.auth.token ? 
-      jwt.verify(socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', ''), config.jwt.secret) as UserPayload :
-      null;
+    const isSharedAccess = socket.data.isSharedAccess as boolean | undefined;
+    const shareId = socket.data.shareId as number | undefined;
     
-    console.log(`[WebSocket] User ${userId} connected (socket: ${socket.id})`);
+    console.log(`[WebSocket] User ${userId} connected (socket: ${socket.id}, isSharedAccess: ${isSharedAccess}, shareId: ${shareId})`);
 
     // Add socket to user's set
     if (!connectedUsers.has(userId)) {
@@ -61,9 +62,9 @@ export function initializeWebSocket(httpServer: HttpServer): SocketIOServer {
     socket.join(`user:${userId}`);
 
     // If this is a shared session, also join the share-specific room
-    if (decoded?.isSharedAccess && decoded?.shareId) {
-      console.log(`[WebSocket] User ${userId} joined share room share:${decoded.shareId}`);
-      socket.join(`share:${decoded.shareId}`);
+    if (isSharedAccess && shareId) {
+      console.log(`[WebSocket] User ${userId} joined share room share:${shareId}`);
+      socket.join(`share:${shareId}`);
     }
 
     socket.on('disconnect', () => {

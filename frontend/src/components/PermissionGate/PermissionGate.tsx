@@ -12,12 +12,20 @@ interface PermissionGateProps {
 /**
  * Wraps a component and disables it if user lacks permission.
  * Shows a tooltip explaining the restriction.
+ * Re-renders when permissions are updated via WebSocket.
  */
 export function PermissionGate({
     permission,
     children,
     tooltipText = "You're not permitted to do this action"
 }: PermissionGateProps) {
+    const [, setTrigger] = useState(0);
+
+    // Subscribe to permission changes and re-render when updated
+    useEffect(() => {
+        return onPermissionsChange(() => setTrigger(t => t + 1));
+    }, []);
+
     const allowed = hasPermission(permission);
 
     if (allowed) {

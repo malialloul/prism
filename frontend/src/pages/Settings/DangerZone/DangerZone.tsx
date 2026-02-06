@@ -44,8 +44,8 @@ const DangerZone = ({ onDeactivateSuccess, onDeleteSuccess }: DangerZoneProps) =
               Temporarily disable your account. You can reactivate it anytime by logging in.
             </DangerDescription>
           </DangerInfo>
-          <DangerButton severity="warning" onClick={() => setDeactivateModalOpen(true)}>
-            <PauseIcon sx={{ fontSize: 14 }} />
+          <DangerButton severity="warning" variant="outlined" onClick={() => setDeactivateModalOpen(true)}>
+            <PauseIcon />
             Deactivate
           </DangerButton>
         </DangerItem>
@@ -57,8 +57,8 @@ const DangerZone = ({ onDeactivateSuccess, onDeleteSuccess }: DangerZoneProps) =
               Permanently delete your account and all associated data. This cannot be undone.
             </DangerDescription>
           </DangerInfo>
-          <DangerButton severity="danger" onClick={() => setDeleteModalOpen(true)}>
-            <DeleteIcon sx={{ fontSize: 14 }} />
+          <DangerButton severity="danger" variant="outlined" onClick={() => setDeleteModalOpen(true)}>
+            <DeleteIcon />
             Delete Account
           </DangerButton>
         </DangerItem>

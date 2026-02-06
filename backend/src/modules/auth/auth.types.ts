@@ -256,6 +256,7 @@ export interface DbSharedAccountDto {
   shared_with_email: string;
   shared_with_user_id: number | null;
   temp_password_hash: string;
+  temp_password: string | null;
   status: 'pending' | 'accepted' | 'revoked';
   permissions: SharePermissions;
   expires_at: Date;

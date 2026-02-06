@@ -201,7 +201,8 @@ httpClient.interceptors.response.use(
       clearAuthToken();
       
       if (!window.location.pathname.includes('/signin') && 
-          !window.location.pathname.includes('/signup')) {
+          !window.location.pathname.includes('/signup') &&
+          !window.location.pathname.includes('/shared-login')) {
         window.location.href = '/signin';
       }
     }

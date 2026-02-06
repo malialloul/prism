@@ -731,11 +731,28 @@ export const deactivateAccountService = async (
     throw new ValidationError('Account is already deactivated');
   }
 
+  // Get all active shared accounts for this owner to notify them
+  const sharesResult = await pool.query<{ id: number }>(
+    `SELECT id FROM shared_accounts WHERE owner_user_id = $1 AND status = 'accepted'`,
+    [userId],
+  );
+  const shareIds = sharesResult.rows.map(row => row.id);
+
   // Deactivate the account
   await pool.query(
     'UPDATE users SET deactivated_at = NOW(), updated_at = NOW() WHERE id = $1',
     [userId],
   );
+
+  // Notify all shared users to log out
+  if (shareIds.length > 0) {
+    const { emitOwnerAccountAction } = await import('../../websocket/notificationEmitter');
+    emitOwnerAccountAction(shareIds, {
+      reason: 'account_deactivated',
+      message: 'The account owner has deactivated their account. You have been logged out.',
+      ownerUserId: userId,
+    });
+  }
 
   return { message: 'Account deactivated successfully. You can reactivate by logging in again.' };
 };
@@ -784,11 +801,63 @@ export const deleteAccountService = async (
     throw new ValidationError('Password is incorrect');
   }
 
-  // Delete related data first (foreign key constraints)
+  // Get all shared accounts for this owner to notify them BEFORE deleting
+  const sharesResult = await pool.query<{ id: number }>(
+    `SELECT id FROM shared_accounts WHERE owner_user_id = $1`,
+    [userId],
+  );
+  const shareIds = sharesResult.rows.map(row => row.id);
+
+  // Notify all shared users to log out BEFORE deleting data
+  if (shareIds.length > 0) {
+    const { emitOwnerAccountAction } = await import('../../websocket/notificationEmitter');
+    emitOwnerAccountAction(shareIds, {
+      reason: 'account_deleted',
+      message: 'The account owner has deleted their account. You have been logged out.',
+      ownerUserId: userId,
+    });
+  }
+
+  // Get all database connections for this user (needed to delete related data)
+  const dbResult = await pool.query<{ id: number }>(
+    'SELECT id FROM database_connections WHERE user_id = $1',
+    [userId],
+  );
+  const dbIds = dbResult.rows.map(row => row.id);
+
+  // Delete related data in correct order (respecting foreign key constraints)
+  
+  // 1. Delete permission requests (references shared_accounts and users)
+  await pool.query('DELETE FROM permission_requests WHERE owner_user_id = $1 OR requested_by = $1', [userId]);
+  
+  // 2. Delete shared accounts (references users)
+  await pool.query('DELETE FROM shared_accounts WHERE owner_user_id = $1 OR shared_with_user_id = $1', [userId]);
+  
+  // 3. Delete notifications (references users)
+  await pool.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
+  
+  // 4. Delete query execution logs (references database_connections and users)
+  if (dbIds.length > 0) {
+    await pool.query('DELETE FROM query_execution_logs WHERE database_id = ANY($1::int[])', [dbIds]);
+  }
+  await pool.query('DELETE FROM query_execution_logs WHERE user_id = $1', [userId]);
+  
+  // 5. Delete saved queries (references database_connections and users)
+  if (dbIds.length > 0) {
+    await pool.query('DELETE FROM saved_queries WHERE database_id = ANY($1::int[])', [dbIds]);
+  }
+  await pool.query('DELETE FROM saved_queries WHERE user_id = $1', [userId]);
+  
+  // 6. Delete database connections (references users)
+  await pool.query('DELETE FROM database_connections WHERE user_id = $1', [userId]);
+  
+  // 7. Delete backup codes (references users)
   await pool.query('DELETE FROM backup_codes WHERE user_id = $1', [userId]);
+  
+  // 8. Delete password reset tokens (references users)
   await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [userId]);
 
-  // Delete the user
+  // Finally delete the user
   await pool.query('DELETE FROM users WHERE id = $1', [userId]);
 
   return { message: 'Account deleted permanently' };
@@ -842,13 +911,18 @@ export const shareAccountService = async (
     throw new ValidationError('You cannot share your account with yourself');
   }
 
-  // Check if target user exists
+  // Check if target user exists - must be a registered user
   const targetResult = await pool.query<DbUserDto>(
     'SELECT id, email, full_name FROM users WHERE LOWER(email) = LOWER($1)',
     [email],
   );
 
-  const targetUserId = targetResult.rowCount ? targetResult.rows[0].id : null;
+  if (!targetResult.rowCount) {
+    throw new NotFoundError('No account found with this email. The user must be registered first.');
+  }
+
+  const targetUser = targetResult.rows[0];
+  const targetUserId = targetUser.id;
 
   // Check for existing pending/accepted share
   const existingShare = await pool.query<DbSharedAccountDto>(
@@ -872,50 +946,48 @@ export const shareAccountService = async (
 
   // Create the share record with permissions
   const shareResult = await pool.query<DbSharedAccountDto>(
-    `INSERT INTO shared_accounts (owner_user_id, shared_with_email, shared_with_user_id, temp_password_hash, status, permissions, expires_at)
-     VALUES ($1, $2, $3, $4, 'pending', $5, $6)
+    `INSERT INTO shared_accounts (owner_user_id, shared_with_email, shared_with_user_id, temp_password_hash, temp_password, status, permissions, expires_at)
+     VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7)
      RETURNING *`,
-    [userId, email, targetUserId, tempPasswordHash, JSON.stringify(permissions), expiresAt],
+    [userId, email, targetUserId, tempPasswordHash, tempPassword, JSON.stringify(permissions), expiresAt],
   );
 
   const share = shareResult.rows[0];
 
-  // Create notification for the target user if they exist
-  if (targetUserId) {
-    await pool.query(
-      `INSERT INTO notifications (user_id, type, title, message, metadata)
-       VALUES ($1, 'account_shared', $2, $3, $4)`,
-      [
-        targetUserId,
-        'Account Shared With You',
-        `${owner.full_name || owner.email} has shared their account with you.`,
-        JSON.stringify({ 
-          shareId: share.id, 
-          ownerEmail: owner.email, 
-          ownerName: owner.full_name,
-          tempPassword, // Include temp password in notification
-        }),
-      ],
-    );
-
-    // Emit real-time notification via WebSocket
-    const { emitNotification } = await import('../../websocket/notificationEmitter');
-    emitNotification(targetUserId.toString(), {
-      id: 0, // Will be updated with actual ID
-      userId: Number(targetUserId),
-      type: 'account_shared',
-      title: 'Account Shared With You',
-      message: `${owner.full_name || owner.email} has shared their account with you.`,
-      metadata: JSON.stringify({ 
+  // Create notification for the target user
+  await pool.query(
+    `INSERT INTO notifications (user_id, type, title, message, metadata)
+     VALUES ($1, 'account_shared', $2, $3, $4)`,
+    [
+      targetUserId,
+      'Account Shared With You',
+      `${owner.full_name || owner.email} has shared their account with you.`,
+      JSON.stringify({ 
         shareId: share.id, 
         ownerEmail: owner.email, 
         ownerName: owner.full_name,
-        tempPassword,
+        tempPassword, // Include temp password in notification
       }),
-      readAt: null,
-      createdAt: new Date(),
-    });
-  }
+    ],
+  );
+
+  // Emit real-time notification via WebSocket
+  const { emitNotification } = await import('../../websocket/notificationEmitter');
+  emitNotification(targetUserId.toString(), {
+    id: 0, // Will be updated with actual ID
+    userId: Number(targetUserId),
+    type: 'account_shared',
+    title: 'Account Shared With You',
+    message: `${owner.full_name || owner.email} has shared their account with you.`,
+    metadata: JSON.stringify({ 
+      shareId: share.id, 
+      ownerEmail: owner.email, 
+      ownerName: owner.full_name,
+      tempPassword,
+    }),
+    readAt: null,
+    createdAt: new Date(),
+  });
 
   return {
     share: {
@@ -984,6 +1056,7 @@ export const getSharedAccountsService = async (
     sharedWithUserId: row.shared_with_user_id ? Number(row.shared_with_user_id) : null,
     status: row.status,
     permissions: typeof row.permissions === 'string' ? JSON.parse(row.permissions) : (row.permissions || DEFAULT_SHARE_PERMISSIONS),
+    tempPassword: row.temp_password || undefined,
     expiresAt: row.expires_at,
     acceptedAt: row.accepted_at,
     revokedAt: row.revoked_at,
@@ -1110,39 +1183,46 @@ export const updateSharePermissionsService = async (
   );
   const owner = ownerResult.rows[0];
 
-  // Notify the shared user if they have accepted the share
-  if (share.shared_with_user_id && share.status === 'accepted') {
-    // Insert notification into database
-    const notificationResult = await pool.query<DbNotificationDto>(
-      `INSERT INTO notifications (user_id, type, title, message, metadata)
-       VALUES ($1, 'permissions_updated', $2, $3, $4)
-       RETURNING *`,
-      [
-        share.shared_with_user_id,
-        'Permissions Updated',
-        `${owner.full_name || owner.email} has updated your access permissions.`,
-        JSON.stringify({ shareId, ownerEmail: owner.email, permissions }),
-      ],
-    );
-    const notification = notificationResult.rows[0];
+  console.log(`[updateSharePermissions] Share ID: ${share.id}, Status: ${share.status}, shared_with_user_id: ${share.shared_with_user_id}`);
 
-    // Emit real-time notification for the bell icon
+  // Notify the shared user if the share has been accepted
+  // Note: shared_with_user_id may be null if the shared user doesn't have a Prism account
+  if (share.status === 'accepted') {
+    console.log(`[updateSharePermissions] Sending WebSocket event to share ${share.id}`);
+    
     const { emitNotification, emitPermissionsUpdated } = await import('../../websocket/notificationEmitter');
     
-    // Emit notification for the bell
-    emitNotification(String(share.shared_with_user_id), {
-      id: notification.id,
-      userId: notification.user_id,
-      type: notification.type as 'account_shared' | 'share_accepted' | 'share_revoked' | 'permissions_updated' | 'general',
-      title: notification.title,
-      message: notification.message,
-      metadata: notification.metadata,
-      readAt: notification.read_at,
-      createdAt: notification.created_at,
-    });
+    // Insert notification into database only if shared_with_user_id exists
+    if (share.shared_with_user_id) {
+      const notificationResult = await pool.query<DbNotificationDto>(
+        `INSERT INTO notifications (user_id, type, title, message, metadata)
+         VALUES ($1, 'permissions_updated', $2, $3, $4)
+         RETURNING *`,
+        [
+          share.shared_with_user_id,
+          'Permissions Updated',
+          `${owner.full_name || owner.email} has updated your access permissions.`,
+          JSON.stringify({ shareId, ownerEmail: owner.email, permissions }),
+        ],
+      );
+      const notification = notificationResult.rows[0];
 
-    // Emit permissions update for auto-refresh of UI
-    emitPermissionsUpdated(String(share.shared_with_user_id), {
+      // Emit notification for the bell
+      emitNotification(String(share.shared_with_user_id), {
+        id: notification.id,
+        userId: notification.user_id,
+        type: notification.type as 'account_shared' | 'share_accepted' | 'share_revoked' | 'permissions_updated' | 'general',
+        title: notification.title,
+        message: notification.message,
+        metadata: notification.metadata,
+        readAt: notification.read_at,
+        createdAt: notification.created_at,
+      });
+    }
+
+    // Always emit permissions update for auto-refresh of UI (works even without shared_with_user_id)
+    // The shared user is connected to the share room via their shareId in the JWT
+    emitPermissionsUpdated('', {
       shareId: share.id,
       permissions: permissions as unknown as Record<string, boolean>,
       message: `${owner.full_name || owner.email} has updated your access permissions.`,
@@ -1268,10 +1348,10 @@ export const sharedLoginService = async (
     throw new AuthenticationError('Invalid credentials');
   }
 
-  // Update share status to accepted if pending
+  // Update share status to accepted if pending and clear temp password
   if (validShare.status === 'pending') {
     await pool.query(
-      `UPDATE shared_accounts SET status = 'accepted', accepted_at = NOW(), updated_at = NOW() WHERE id = $1`,
+      `UPDATE shared_accounts SET status = 'accepted', accepted_at = NOW(), temp_password = NULL, updated_at = NOW() WHERE id = $1`,
       [validShare.id],
     );
 
@@ -1286,6 +1366,26 @@ export const sharedLoginService = async (
         JSON.stringify({ shareId: validShare.id, sharedWithEmail: validShare.shared_with_email }),
       ],
     );
+
+    // Emit real-time notification to owner via WebSocket
+    const { emitNotification, emitShareStatusChanged } = await import('../../websocket/notificationEmitter');
+    emitNotification(owner.id.toString(), {
+      id: 0,
+      userId: Number(owner.id),
+      type: 'share_accepted',
+      title: 'Account Access Accepted',
+      message: `${validShare.shared_with_email} has accepted access to your account.`,
+      metadata: JSON.stringify({ shareId: validShare.id, sharedWithEmail: validShare.shared_with_email }),
+      readAt: null,
+      createdAt: new Date(),
+    });
+
+    // Also emit share status changed event for UI refresh
+    emitShareStatusChanged(owner.id.toString(), {
+      shareId: validShare.id,
+      status: 'accepted',
+      sharedWithEmail: validShare.shared_with_email,
+    });
   }
 
   // Parse permissions from the share

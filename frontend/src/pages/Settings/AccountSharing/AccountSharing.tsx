@@ -26,7 +26,6 @@ import {
   ShareMeta,
   StatusBadge,
   RevokeButton,
-  TempPasswordBox,
   TempPasswordLabel,
   TempPasswordValue,
   SectionDivider,
@@ -202,45 +201,6 @@ function ShareAccountForm({ onShareCreated }: ShareAccountFormProps) {
   );
 }
 
-interface TempPasswordDisplayProps {
-  share: SharedAccountDto;
-  tempPassword: string;
-  onClose: () => void;
-}
-
-function TempPasswordDisplay({ share, tempPassword, onClose }: TempPasswordDisplayProps) {
-  const copyPassword = () => {
-    navigator.clipboard.writeText(tempPassword);
-    toastService.success('Password copied to clipboard');
-  };
-
-  return (
-    <TempPasswordBox>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <TempPasswordLabel>
-          Temporary password for {share.sharedWithEmail}
-        </TempPasswordLabel>
-        <Tooltip title="Close">
-          <RevokeButton onClick={onClose} size="small">
-            <CloseIcon fontSize="small" />
-          </RevokeButton>
-        </Tooltip>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <TempPasswordValue>{tempPassword}</TempPasswordValue>
-        <Tooltip title="Copy password">
-          <ShareButton onClick={copyPassword} variant="outlined" size="small">
-            <ContentCopyIcon fontSize="small" />
-          </ShareButton>
-        </Tooltip>
-      </div>
-      <ShareMeta>
-        Share this password with {share.sharedWithEmail}. They will use it to access your account.
-      </ShareMeta>
-    </TempPasswordBox>
-  );
-}
-
 interface ShareCardItemProps {
   share: SharedAccountDto;
   isOwner: boolean;
@@ -248,9 +208,10 @@ interface ShareCardItemProps {
   onUpdatePermissions?: (shareId: number, permissions: SharePermissions) => Promise<void>;
   isRevoking?: boolean;
   isUpdating?: boolean;
+  tempPassword?: string;
 }
 
-function ShareCardItem({ share, isOwner, onRevoke, onUpdatePermissions, isRevoking, isUpdating }: ShareCardItemProps) {
+function ShareCardItem({ share, isOwner, onRevoke, onUpdatePermissions, isRevoking, isUpdating, tempPassword }: ShareCardItemProps) {
   const status = getShareStatus(share);
   const canRevoke = isOwner && (status === 'pending' || status === 'accepted');
   const canEditPermissions = isOwner && (status === 'pending' || status === 'accepted');
@@ -323,6 +284,45 @@ function ShareCardItem({ share, isOwner, onRevoke, onUpdatePermissions, isRevoki
           )}
         </div>
       </div>
+
+      {/* Temp Password Display (inline in card) */}
+      {tempPassword && (
+        <Box sx={{
+          mt: 2,
+          pt: 2,
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          backgroundColor: 'rgba(76, 175, 80, 0.08)',
+          borderRadius: 1,
+          p: 1.5,
+          mx: -1.5,
+          mb: -1.5,
+        }}>
+          <Box sx={{ mb: 1 }}>
+            <TempPasswordLabel sx={{ m: 0 }}>
+              Temporary Password
+            </TempPasswordLabel>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <TempPasswordValue>{tempPassword}</TempPasswordValue>
+            <Tooltip title="Copy password">
+              <ShareButton
+                onClick={() => {
+                  navigator.clipboard.writeText(tempPassword);
+                  toastService.success('Password copied to clipboard');
+                }}
+                variant="outlined"
+                size="small"
+              >
+                <ContentCopyIcon fontSize="small" />
+              </ShareButton>
+            </Tooltip>
+          </Box>
+          <ShareMeta sx={{ mt: 1 }}>
+            Share this password with {share.sharedWithEmail}. They will use it to access your account.
+          </ShareMeta>
+        </Box>
+      )}
 
       {/* Expandable Permissions Section */}
       {isOwner && (
@@ -533,7 +533,7 @@ function PermissionRequestsPanel() {
 }
 
 export default function AccountSharing() {
-  const { data: sharesData, isLoading: loadingShares } = useSharedAccounts();
+  const { data: sharesData, isLoading: loadingShares, refetch: refetchShares } = useSharedAccounts();
   const { revokeShare, isLoading: revoking } = useRevokeShare({
     onSuccess: () => {
       toastService.success('Access revoked successfully');
@@ -556,15 +556,15 @@ export default function AccountSharing() {
     },
   });
 
-  const [newShare, setNewShare] = useState<{ share: SharedAccountDto; tempPassword: string } | null>(null);
   const [clearDialogOpen, setClearDialogOpen] = useState<'active' | 'inactive' | 'all' | null>(null);
   const [isRevoking, setIsRevoking] = useState(false);
 
   const sharedByMe = sharesData?.data?.sharedByMe || [];
   const sharedWithMe = sharesData?.data?.sharedWithMe || [];
 
-  const handleShareCreated = (share: SharedAccountDto, tempPassword: string) => {
-    setNewShare({ share, tempPassword });
+  const handleShareCreated = () => {
+    // Trigger a refetch of shares to ensure the newly created share with tempPassword is loaded
+    refetchShares();
   };
 
   // Get active shares (not revoked/expired)
@@ -624,14 +624,6 @@ export default function AccountSharing() {
       <PermissionRequestsPanel />
 
       <ShareAccountForm onShareCreated={handleShareCreated} />
-
-      {newShare && (
-        <TempPasswordDisplay
-          share={newShare.share}
-          tempPassword={newShare.tempPassword}
-          onClose={() => setNewShare(null)}
-        />
-      )}
 
       <SectionSubtitle>Accounts I've Shared</SectionSubtitle>
       {loadingShares ? (
@@ -705,6 +697,7 @@ export default function AccountSharing() {
                     onUpdatePermissions={handleUpdatePermissions}
                     isRevoking={revoking}
                     isUpdating={updatingPermissions}
+                    tempPassword={share.tempPassword}
                   />
                 ))}
               </ShareList>

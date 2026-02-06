@@ -808,14 +808,117 @@ export const getFunctionDetailsService = async (
   }
 };
 
+import type { SharePermissions } from '../../auth/auth.types';
+
+/**
+ * Validate SQL query against user permissions for shared access users
+ * Returns error message if permission is denied, null if allowed
+ */
+export const validateSqlPermissions = (
+  sql: string,
+  permissions: SharePermissions | undefined,
+  isSharedAccess: boolean
+): string | null => {
+  // Non-shared users have full access
+  if (!isSharedAccess || !permissions) {
+    return null;
+  }
+
+  const lowerSql = sql.toLowerCase().trim();
+  
+  // Remove comments and normalize whitespace
+  const normalizedSql = lowerSql
+    .replace(/--.*$/gm, '') // Remove single-line comments
+    .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Check for DDL operations that require specific permissions
+  
+  // CREATE TABLE
+  if (/\bcreate\s+table\b/.test(normalizedSql)) {
+    if (!permissions.createTable) {
+      return 'You do not have permission to create tables. This operation requires the "Create Table" permission.';
+    }
+  }
+
+  // DROP TABLE
+  if (/\bdrop\s+table\b/.test(normalizedSql)) {
+    if (!permissions.deleteTable) {
+      return 'You do not have permission to delete tables. This operation requires the "Delete Table" permission.';
+    }
+  }
+
+  // ALTER TABLE - need to check what kind of alteration
+  if (/\balter\s+table\b/.test(normalizedSql)) {
+    // ADD COLUMN
+    if (/\badd\s+(column\s+)?\w+/.test(normalizedSql) && !/\bdrop\b/.test(normalizedSql)) {
+      if (!permissions.addColumn) {
+        return 'You do not have permission to add columns. This operation requires the "Add Column" permission.';
+      }
+    }
+    // DROP COLUMN
+    if (/\bdrop\s+(column\s+)?\w+/.test(normalizedSql)) {
+      if (!permissions.deleteColumn) {
+        return 'You do not have permission to delete columns. This operation requires the "Delete Column" permission.';
+      }
+    }
+    // MODIFY/ALTER/CHANGE COLUMN (rename, change type, etc.)
+    if (/\b(modify|alter\s+column|change|rename)\b/.test(normalizedSql)) {
+      if (!permissions.editColumn) {
+        return 'You do not have permission to modify columns. This operation requires the "Edit Column" permission.';
+      }
+    }
+  }
+
+  // CREATE INDEX, DROP INDEX (treat as schema modification)
+  if (/\bcreate\s+(unique\s+)?index\b/.test(normalizedSql) || /\bdrop\s+index\b/.test(normalizedSql)) {
+    if (!permissions.editColumn) {
+      return 'You do not have permission to manage indexes. This operation requires the "Edit Column" permission.';
+    }
+  }
+
+  // TRUNCATE TABLE (data modification)
+  if (/\btruncate\s+table\b/.test(normalizedSql)) {
+    if (!permissions.editTableData) {
+      return 'You do not have permission to truncate tables. This operation requires the "Edit Table Data" permission.';
+    }
+  }
+
+  // INSERT, UPDATE, DELETE (data modification)
+  if (/\b(insert\s+into|update\s+\w+\s+set|delete\s+from)\b/.test(normalizedSql)) {
+    if (!permissions.editTableData) {
+      return 'You do not have permission to modify table data. This operation requires the "Edit Table Data" permission.';
+    }
+  }
+
+  // SELECT requires viewTableData permission
+  if (/\bselect\b/.test(normalizedSql) && !/\bcreate\b/.test(normalizedSql)) {
+    // Exclude CREATE ... AS SELECT statements which need createTable permission (already checked above)
+    if (!permissions.viewTableData) {
+      return 'You do not have permission to view table data. This operation requires the "View Table Data" permission.';
+    }
+  }
+
+  return null; // Permission granted
+};
+
 /**
  * Execute a SQL query
  */
 export const executeQueryService = async (
   userId: string,
   databaseId: string,
-  sql: string
+  sql: string,
+  permissions?: SharePermissions,
+  isSharedAccess: boolean = false
 ): Promise<QueryResultDto> => {
+  // Validate permissions for shared access users
+  const permissionError = validateSqlPermissions(sql, permissions, isSharedAccess);
+  if (permissionError) {
+    throw new ValidationError(permissionError);
+  }
+
   const conn = await getDatabaseConnection(userId, databaseId);
   const startTime = Date.now();
   const queryType = detectQueryType(sql);
@@ -1122,8 +1225,17 @@ export const saveQueryService = async (
   description?: string,
   parameters?: any[],
   method: string = 'GET',
-  isPublic: boolean = false
+  isPublic: boolean = false,
+  permissions?: SharePermissions,
+  isSharedAccess: boolean = false
 ): Promise<SavedQueryDto> => {
+  // Validate permissions for shared access users
+  // Users should only be able to create APIs for operations they have permission to execute
+  const permissionError = validateSqlPermissions(sql, permissions, isSharedAccess);
+  if (permissionError) {
+    throw new ValidationError(`Cannot create API: ${permissionError}`);
+  }
+
   // Verify database belongs to user
   const dbCheck = await pool.query(
     'SELECT 1 FROM database_connections WHERE id = $1 AND user_id = $2',
@@ -1184,7 +1296,9 @@ export const executeSavedQueryService = async (
   userId: string,
   databaseId: string,
   queryIdOrSlug: string,
-  params: Record<string, any>
+  params: Record<string, any>,
+  permissions?: SharePermissions,
+  isSharedAccess: boolean = false
 ): Promise<QueryResultDto> => {
   // Get the saved query - try by slug first, then by ID
   const isNumeric = /^\d+$/.test(queryIdOrSlug);
@@ -1218,6 +1332,14 @@ export const executeSavedQueryService = async (
 
   const savedQuery = queryResult.rows[0];
   let sql = savedQuery.sql;
+  
+  // Validate permissions for shared access users
+  // The saved query SQL should be checked against permissions
+  const permissionError = validateSqlPermissions(sql, permissions, isSharedAccess);
+  if (permissionError) {
+    throw new ValidationError(permissionError);
+  }
+
   const parameters: any[] = savedQuery.parameters ? JSON.parse(savedQuery.parameters) : [];
 
   // Handle pagination only if the SQL contains pagination placeholders
@@ -2472,8 +2594,22 @@ function detectSqlDialect(sql: string): 'mysql' | 'postgres' | 'unknown' {
 export const importSqlService = async (
   userId: string,
   databaseId: string,
-  sql: string
+  sql: string,
+  permissions?: SharePermissions,
+  isSharedAccess: boolean = false
 ): Promise<{ success: boolean; message: string; executedStatements: number; errors: string[] }> => {
+  // Validate permissions for shared access users
+  // Import SQL can contain DDL/DML, so we need to check each statement
+  const permissionError = validateSqlPermissions(sql, permissions, isSharedAccess);
+  if (permissionError) {
+    return {
+      success: false,
+      message: `Permission denied: ${permissionError}`,
+      executedStatements: 0,
+      errors: [permissionError],
+    };
+  }
+
   const conn = await getDatabaseConnection(userId, databaseId);
   const errors: string[] = [];
   let executedStatements = 0;

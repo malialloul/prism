@@ -27,10 +27,22 @@ export interface ForceLogoutPayload {
   shareId?: number; // The shareId that was revoked
 }
 
+export interface OwnerAccountActionPayload {
+  reason: 'account_deactivated' | 'account_deleted';
+  message: string;
+  ownerUserId: string;
+}
+
 export interface PermissionsUpdatedPayload {
   shareId: number;
   permissions: Record<string, boolean>;
   message: string;
+}
+
+export interface ShareStatusChangedPayload {
+  shareId: number;
+  status: 'pending' | 'accepted' | 'revoked';
+  sharedWithEmail: string;
 }
 
 type NotificationCallback = (notification: NotificationPayload) => void;
@@ -39,6 +51,8 @@ type AllNotificationsReadCallback = () => void;
 type ForceLogoutCallback = (payload: ForceLogoutPayload) => void;
 type PermissionsUpdatedCallback = (payload: PermissionsUpdatedPayload) => void;
 type ShareNotificationCallback = (payload: ShareNotificationPayload) => void;
+type OwnerAccountActionCallback = (payload: OwnerAccountActionPayload) => void;
+type ShareStatusChangedCallback = (payload: ShareStatusChangedPayload) => void;
 
 class WebSocketService {
   private socket: Socket | null = null;
@@ -48,6 +62,8 @@ class WebSocketService {
   private forceLogoutCallbacks: Set<ForceLogoutCallback> = new Set();
   private permissionsUpdatedCallbacks: Set<PermissionsUpdatedCallback> = new Set();
   private shareNotificationCallbacks: Set<ShareNotificationCallback> = new Set();
+  private ownerAccountActionCallbacks: Set<OwnerAccountActionCallback> = new Set();
+  private shareStatusChangedCallbacks: Set<ShareStatusChangedCallback> = new Set();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   // Deduplication: track last shown toast to prevent duplicates
@@ -96,6 +112,8 @@ class WebSocketService {
     this.socket.off('force_logout');
     this.socket.off('permissions_updated');
     this.socket.off('share_notification');
+    this.socket.off('owner_account_action');
+    this.socket.off('share_status_changed');
 
     // Handle incoming notifications
     this.socket.on('notification', (notification: NotificationPayload) => {
@@ -170,6 +188,33 @@ class WebSocketService {
         console.log('[WebSocket] Duplicate toast suppressed');
       }
     });
+
+    // Handle owner account action (when owner deactivates or deletes their account)
+    this.socket.on('owner_account_action', (payload: OwnerAccountActionPayload) => {
+      console.log('[WebSocket] Received owner account action:', payload);
+      this.ownerAccountActionCallbacks.forEach((callback) => callback(payload));
+      
+      // Store message in sessionStorage to persist through redirect
+      sessionStorage.setItem('forceLogoutMessage', payload.message);
+      
+      // Show the message briefly before redirect
+      toastService.error(payload.message, { duration: 3000 });
+      
+      // Clear auth and redirect to shared-login (since this is for shared users)
+      clearAuthToken();
+      this.disconnect();
+      
+      // Redirect to shared-login after short delay to allow user to see toast
+      setTimeout(() => {
+        window.location.href = '/shared-login';
+      }, 3000);
+    });
+
+    // Handle share status changed (when shared user accepts/logs in)
+    this.socket.on('share_status_changed', (payload: ShareStatusChangedPayload) => {
+      console.log('[WebSocket] Received share status changed:', payload);
+      this.shareStatusChangedCallbacks.forEach((callback) => callback(payload));
+    });
   }
 
   disconnect(): void {
@@ -219,6 +264,20 @@ class WebSocketService {
     this.shareNotificationCallbacks.add(callback);
     return () => {
       this.shareNotificationCallbacks.delete(callback);
+    };
+  }
+
+  onOwnerAccountAction(callback: OwnerAccountActionCallback): () => void {
+    this.ownerAccountActionCallbacks.add(callback);
+    return () => {
+      this.ownerAccountActionCallbacks.delete(callback);
+    };
+  }
+
+  onShareStatusChanged(callback: ShareStatusChangedCallback): () => void {
+    this.shareStatusChangedCallbacks.add(callback);
+    return () => {
+      this.shareStatusChangedCallbacks.delete(callback);
     };
   }
 

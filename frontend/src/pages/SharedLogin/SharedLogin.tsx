@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import { Box, Typography, InputAdornment, IconButton } from '@mui/material';
@@ -7,6 +7,7 @@ import { Api, ArrowBack } from '../../assets/icons';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
 import { useSharedLogin } from '../../api/entities/auth';
+import { toastService } from '../../services/toastService';
 import {
   AuthWrapper,
   LeftPanel,
@@ -42,6 +43,15 @@ export default function SharedLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const { sharedLogin, isLoading, error: apiError } = useSharedLogin();
 
+  // Show force logout message if redirected from owner account action
+  useEffect(() => {
+    const forceLogoutMessage = sessionStorage.getItem('forceLogoutMessage');
+    if (forceLogoutMessage) {
+      toastService.error(forceLogoutMessage);
+      sessionStorage.removeItem('forceLogoutMessage');
+    }
+  }, []);
+
   const handleSubmit = (values: { ownerEmail: string; tempPassword: string }): void => {
     sharedLogin({
       ownerEmail: values.ownerEmail,
@@ -49,10 +59,8 @@ export default function SharedLogin() {
     });
   };
 
-  const errorMessage = typeof apiError === 'string' 
-    ? apiError 
-    : apiError ? 'Invalid credentials. Please check the email and temporary password.' 
-    : '';
+  // Display the actual error message from the API
+  const errorMessage = apiError || '';
 
   return (
     <AuthWrapper>

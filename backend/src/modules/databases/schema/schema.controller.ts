@@ -82,7 +82,14 @@ export const executeQuery = async (
       return;
     }
 
-    const result = await executeQueryService(userId, databaseId, sql);
+    // Pass permissions for shared access validation
+    const result = await executeQueryService(
+      userId,
+      databaseId,
+      sql,
+      req.user!.permissions,
+      req.user!.isSharedAccess
+    );
 
     res.status(200).json(result);
   } catch (error) {
@@ -162,6 +169,7 @@ export const saveQuery = async (
       return;
     }
 
+    // Pass permissions for shared access validation
     const query = await saveQueryService(
       userId, 
       databaseId, 
@@ -170,7 +178,9 @@ export const saveQuery = async (
       description,
       parameters,
       method || 'GET',
-      isPublic || false
+      isPublic || false,
+      req.user!.permissions,
+      req.user!.isSharedAccess
     );
 
     res.status(201).json({ 
@@ -221,7 +231,15 @@ export const executeSavedQuery = async (
     // Get parameters from query string (GET) or body (POST)
     const params = req.method === 'GET' ? req.query : req.body;
     
-    const result = await executeSavedQueryService(userId, databaseId, slugOrId, params as Record<string, any>);
+    // Pass permissions for shared access validation
+    const result = await executeSavedQueryService(
+      userId,
+      databaseId,
+      slugOrId,
+      params as Record<string, any>,
+      req.user!.permissions,
+      req.user!.isSharedAccess
+    );
 
     res.status(200).json(result);
   } catch (error) {
@@ -496,7 +514,14 @@ export const importSql = async (
       return;
     }
 
-    const result = await importSqlService(userId, databaseId, sql);
+    // Pass permissions for shared access validation
+    const result = await importSqlService(
+      userId,
+      databaseId,
+      sql,
+      req.user!.permissions,
+      req.user!.isSharedAccess
+    );
 
     res.status(200).json(result);
   } catch (error) {

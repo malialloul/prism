@@ -264,7 +264,9 @@ export const catchErrorCodes = (options: ApiRequestOptions, result: ApiResult): 
 
     const error = errors[result.status];
     if (error) {
-        throw new ApiError(options, result, error);
+        // Prefer the actual error message from response body if available
+        const actualMessage = result.body?.message || error;
+        throw new ApiError(options, result, actualMessage);
     }
 
     if (!result.ok) {

@@ -1,11 +1,40 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AccountSharingService } from '../../services/AccountSharingService';
 import { ApiError } from '../../core/ApiError';
 import type { SharedAccountsResponseDto } from '../../models/SharedAccountsResponseDto';
 import type { PasswordActionResponseDto } from '../../models/PasswordActionResponseDto';
 import type { SharePermissions, SharedAccountDto } from '../../models/SharedAccountDto';
+import { websocketService } from '../../../services';
 
 export function useSharedAccounts() {
+  const queryClient = useQueryClient();
+
+  // Listen for share status changes via WebSocket
+  useEffect(() => {
+    // Make sure WebSocket is connected
+    websocketService.connect();
+
+    // When share status changes (e.g., shared user accepts), refresh the list
+    const unsubShareStatusChanged = websocketService.onShareStatusChanged(() => {
+      console.log('[useSharedAccounts] Share status changed, refreshing...');
+      queryClient.invalidateQueries({ queryKey: ['sharedAccounts'] });
+    });
+
+    // Also listen for share_accepted notifications
+    const unsubNotification = websocketService.onNotification((notification) => {
+      if (notification.type === 'share_accepted') {
+        console.log('[useSharedAccounts] Share accepted notification, refreshing...');
+        queryClient.invalidateQueries({ queryKey: ['sharedAccounts'] });
+      }
+    });
+
+    return () => {
+      unsubShareStatusChanged();
+      unsubNotification();
+    };
+  }, [queryClient]);
+
   return useQuery<SharedAccountsResponseDto, ApiError>({
     queryKey: ['sharedAccounts'],
     queryFn: () => AccountSharingService.getSharedAccounts(),
