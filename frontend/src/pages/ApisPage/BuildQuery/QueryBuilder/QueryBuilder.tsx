@@ -438,6 +438,7 @@ interface FieldRowProps {
   hasAggregation: string | null;
   sortOrder: "asc" | "desc" | null;
   isGrouped: boolean;
+  isAutoGrouped: boolean;
   alias?: string;
   hasDuplicateName: boolean;
   connectionMode: ConnectionMode;
@@ -453,6 +454,7 @@ interface FieldRowProps {
   onOpenFilter: () => void;
   onOpenAggregation: () => void;
   onToggleGroup: () => void;
+  isGroupToggleDisabled: boolean;
   onSetAlias: (alias: string) => void;
   hasExistingJoin: boolean;
   hasExistingInclude: boolean;
@@ -468,6 +470,7 @@ const FieldRow: React.FC<FieldRowProps> = ({
   hasAggregation,
   sortOrder,
   isGrouped,
+  isAutoGrouped,
   alias,
   hasDuplicateName,
   connectionMode,
@@ -479,6 +482,7 @@ const FieldRow: React.FC<FieldRowProps> = ({
   onOpenFilter,
   onOpenAggregation,
   onToggleGroup,
+  isGroupToggleDisabled,
   onSetAlias,
   hasExistingJoin,
   hasExistingInclude,
@@ -616,12 +620,12 @@ const FieldRow: React.FC<FieldRowProps> = ({
           )}
           {isGrouped && (
             <Chip
-              label="GRP"
+              label={isAutoGrouped ? "Grouped (auto)" : "Grouped"}
               size="small"
               sx={{
                 height: 18,
                 fontSize: "0.55rem",
-                backgroundColor: "#ff5722",
+                backgroundColor: isAutoGrouped ? "#ff5722" : "#ff9800",
                 color: "white",
               }}
             />
@@ -824,32 +828,36 @@ const FieldRow: React.FC<FieldRowProps> = ({
               <FunctionsIcon sx={{ fontSize: 16 }} />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Group By">
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleGroup();
-              }}
-              sx={{
-                p: 0.5,
-                backgroundColor: isGrouped
-                  ? "#ff5722"
-                  : isDark
-                    ? "#1a1f35"
-                    : "#f5f5f5",
-                color: isGrouped ? "white" : isDark ? "#94a3b8" : "#666",
-                "&:hover": {
+          <Tooltip title={isGroupToggleDisabled ? "Auto-grouped (required by calculations)" : isGrouped ? "Remove from Group By" : "Add to Group By"}>
+            <span>
+              <IconButton
+                size="small"
+                disabled={isGroupToggleDisabled}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleGroup();
+                }}
+                sx={{
+                  p: 0.5,
                   backgroundColor: isGrouped
-                    ? "#e64a19"
+                    ? "#ff5722"
                     : isDark
-                      ? "#252b42"
-                      : "#e0e0e0",
-                },
-              }}
-            >
-              <GroupIcon sx={{ fontSize: 16 }} />
-            </IconButton>
+                      ? "#1a1f35"
+                      : "#f5f5f5",
+                  color: isGrouped ? "white" : isDark ? "#94a3b8" : "#666",
+                  opacity: isGroupToggleDisabled ? 0.5 : 1,
+                  "&:hover": {
+                    backgroundColor: isGrouped
+                      ? "#e64a19"
+                      : isDark
+                        ? "#252b42"
+                        : "#e0e0e0",
+                  },
+                }}
+              >
+                <GroupIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </span>
           </Tooltip>
         </Box>
       )}
@@ -908,6 +916,7 @@ interface TableCardComponentProps {
   selectedFields: SelectedField[];
   visualFilters: VisualFilter[];
   groupingRules: GroupingRule[];
+  autoGroupedFields: GroupingRule[];
   tableConnections: TableConnection[];
   referenceFilters: ReferenceFilter[];
   connectionMode: ConnectionMode;
@@ -939,6 +948,7 @@ const TableCardComponent: React.FC<TableCardComponentProps> = ({
   selectedFields,
   visualFilters,
   groupingRules,
+  autoGroupedFields,
   tableConnections,
   referenceFilters,
   connectionMode,
@@ -1088,6 +1098,9 @@ const TableCardComponent: React.FC<TableCardComponentProps> = ({
           const isGrouped = groupingRules.some(
             (g) => g.tableId === table.id && g.columnName === field.name,
           );
+          const isAutoGrouped = autoGroupedFields.some(
+            (g) => g.tableId === table.id && g.columnName === field.name,
+          );
 
           const hasExistingJoin = tableConnections.some(
             (c) =>
@@ -1148,6 +1161,7 @@ const TableCardComponent: React.FC<TableCardComponentProps> = ({
               hasAggregation={fieldData?.aggregation || null}
               sortOrder={fieldData?.sortOrder || null}
               isGrouped={isGrouped}
+              isAutoGrouped={isAutoGrouped}
               alias={fieldData?.alias}
               hasDuplicateName={duplicateColumnNames.has(field.name)}
               connectionMode={connectionMode}
@@ -1165,6 +1179,7 @@ const TableCardComponent: React.FC<TableCardComponentProps> = ({
                 onOpenAggregation(field.name, field.type)
               }
               onToggleGroup={() => onToggleGroup(field.name)}
+              isGroupToggleDisabled={isAutoGrouped}
               onSetAlias={(alias) => onSetAlias(field.name, alias)}
               hasExistingJoin={hasExistingJoin}
               hasExistingInclude={hasExistingInclude}
@@ -1340,7 +1355,6 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
 
   // Fields & Aggregations
   const [selectedFields, setSelectedFields] = useState<SelectedField[]>([]);
-  const [groupingRules, setGroupingRules] = useState<GroupingRule[]>([]);
 
   // Filters & References
   const [visualFilters, setVisualFilters] = useState<VisualFilter[]>([]);
@@ -1403,6 +1417,9 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
   const [computedAggregation, setComputedAggregation] = useState<
     "sum" | "avg" | "min" | "max" | "count" | ""
   >("sum");
+
+  // Manual GROUP BY fields (user-added, not auto-required)
+  const [manualGroupByFields, setManualGroupByFields] = useState<GroupingRule[]>([]);
 
   // Pagination Settings
   const [paginationEnabled, setPaginationEnabled] = useState(false);
@@ -1467,6 +1484,33 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
       })) || [],
     [schemaData],
   );
+
+  // Compute tables that are joined to the main table (for calculated fields)
+  const joinedTables = useMemo(() => {
+    if (selectedTables.length === 0) return [];
+    if (tableConnections.length === 0) return [selectedTables[0]];
+    
+    const mainTableId = selectedTables[0]?.id;
+    const connectedTableIds = new Set<string>([mainTableId]);
+    
+    // BFS to find all tables connected to main table
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const conn of tableConnections) {
+        if (connectedTableIds.has(conn.sourceTableId) && !connectedTableIds.has(conn.targetTableId)) {
+          connectedTableIds.add(conn.targetTableId);
+          changed = true;
+        }
+        if (connectedTableIds.has(conn.targetTableId) && !connectedTableIds.has(conn.sourceTableId)) {
+          connectedTableIds.add(conn.sourceTableId);
+          changed = true;
+        }
+      }
+    }
+    
+    return selectedTables.filter((t) => connectedTableIds.has(t.id));
+  }, [selectedTables, tableConnections]);
 
   // Detect type mismatches in table connections
   const connectionTypeErrors = useMemo(() => {
@@ -1564,6 +1608,62 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
     connectionTypeErrors.length > 0 ||
     aggregationErrors.length > 0 ||
     computedFieldErrors.length > 0;
+
+  // Check if there's any aggregation (computed fields with aggregation or regular field aggregation)
+  const hasAnyAggregation = useMemo(() => {
+    const hasComputedAggregation = computedFields.some((cf) => cf.aggregation);
+    const hasFieldAggregation = selectedFields.some((f) => f.aggregation);
+    return hasComputedAggregation || hasFieldAggregation;
+  }, [computedFields, selectedFields]);
+
+  // Auto-calculate required GROUP BY fields when there's aggregation
+  // Rule: All non-aggregated SELECT columns must be in GROUP BY
+  const requiredGroupByFields = useMemo(() => {
+    if (!hasAnyAggregation) return [];
+    
+    // All selected fields without aggregation need to be in GROUP BY
+    return selectedFields
+      .filter((f) => !f.aggregation)
+      .map((f) => ({ tableId: f.tableId, columnName: f.columnName }));
+  }, [hasAnyAggregation, selectedFields]);
+
+  // Combine auto-required and manual GROUP BY fields (deduplicated)
+  const allGroupByFields = useMemo(() => {
+    const combined = [...requiredGroupByFields];
+    for (const manual of manualGroupByFields) {
+      const exists = combined.some(
+        (g) => g.tableId === manual.tableId && g.columnName === manual.columnName
+      );
+      if (!exists) {
+        combined.push(manual);
+      }
+    }
+    return combined;
+  }, [requiredGroupByFields, manualGroupByFields]);
+
+  // Toggle GROUP BY for a field (manual only - auto-required fields can't be toggled)
+  const toggleGroupBy = useCallback((tableId: string, columnName: string) => {
+    // Check if it's auto-required - if so, don't allow toggle
+    const isAutoRequired = requiredGroupByFields.some(
+      (g) => g.tableId === tableId && g.columnName === columnName
+    );
+    if (isAutoRequired) {
+      return; // Can't toggle auto-required fields
+    }
+
+    setManualGroupByFields((prev) => {
+      const exists = prev.some(
+        (g) => g.tableId === tableId && g.columnName === columnName
+      );
+      if (exists) {
+        return prev.filter(
+          (g) => !(g.tableId === tableId && g.columnName === columnName)
+        );
+      } else {
+        return [...prev, { tableId, columnName }];
+      }
+    });
+  }, [requiredGroupByFields]);
 
   const apiEndpoint = useMemo(() => {
     if (selectedTables.length === 0) return "";
@@ -1726,10 +1826,11 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
       lines.push(`WHERE ${whereClauses.join("\n  AND ")}`);
     }
 
-    // GROUP BY clause
-    if (groupingRules.length > 0) {
-      const groupCols = groupingRules.map(
-        (g) => `${g.tableId}.${g.columnName}`,
+    // GROUP BY clause - auto-generated when there's aggregation, plus manual groups
+    // Rule: All non-aggregated SELECT columns must be in GROUP BY
+    if (allGroupByFields.length > 0) {
+      const groupCols = allGroupByFields.map(
+        (g) => `${g.tableId}.${g.columnName}`
       );
       lines.push(`GROUP BY ${groupCols.join(", ")}`);
     }
@@ -1747,12 +1848,12 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
     if (paginationEnabled) {
       // Use :param syntax that backend will replace with actual values
       if (allowPageSizeParam) {
-        lines.push(`LIMIT :pagesize`);
+        lines.push(`LIMIT :pageSize`);
       } else {
         lines.push(`LIMIT ${defaultPageSize}`);
       }
       if (allowPageCountParam) {
-        // pagecount is 1-indexed page number, backend calculates offset = (pagecount - 1) * pagesize
+        // pageCount is 1-indexed page number, backend calculates offset = (pageCount - 1) * pageSize
         lines.push(`OFFSET :offset`);
       }
     }
@@ -1764,7 +1865,8 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
     tableConnections,
     visualFilters,
     referenceFilters,
-    groupingRules,
+    allGroupByFields,
+    computedFields,
     paginationEnabled,
     defaultPageSize,
     allowPageSizeParam,
@@ -1920,7 +2022,6 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
         (r) => r.sourceTableId !== tableId && r.targetTableId !== tableId,
       ),
     );
-    setGroupingRules((prev) => prev.filter((g) => g.tableId !== tableId));
     setSelectedTables((prev) => {
       const updated = prev.filter((t) => t.id !== tableId);
       // Rearrange remaining tables after removal
@@ -2059,9 +2160,16 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
       (f) => f.tableId === tableId && f.columnName === columnName,
     );
     if (exists) {
+      // Remove from selected fields (also auto-removes from GROUP BY since it's computed)
       setSelectedFields((prev) =>
         prev.filter(
           (f) => !(f.tableId === tableId && f.columnName === columnName),
+        ),
+      );
+      // Also remove from manual GROUP BY if present
+      setManualGroupByFields((prev) =>
+        prev.filter(
+          (g) => !(g.tableId === tableId && g.columnName === columnName),
         ),
       );
     } else {
@@ -2112,21 +2220,6 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
       Object.keys(columnCounts).filter((name) => columnCounts[name] > 1),
     );
   }, [selectedTables]);
-
-  const toggleGrouping = (tableId: string, columnName: string) => {
-    const exists = groupingRules.find(
-      (g) => g.tableId === tableId && g.columnName === columnName,
-    );
-    if (exists) {
-      setGroupingRules((prev) =>
-        prev.filter(
-          (g) => !(g.tableId === tableId && g.columnName === columnName),
-        ),
-      );
-    } else {
-      setGroupingRules((prev) => [...prev, { tableId, columnName }]);
-    }
-  };
 
   // ============================================================================
   // FILTER & AGGREGATION
@@ -2211,10 +2304,10 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
 
   const openComputedFieldDialog = () => {
     setComputedFieldName("");
-    setComputedLeftTable(selectedTables[0]?.id || "");
+    setComputedLeftTable(joinedTables[0]?.id || "");
     setComputedLeftColumn("");
     setComputedOperator("*");
-    setComputedRightTable(selectedTables[0]?.id || "");
+    setComputedRightTable(joinedTables[0]?.id || "");
     setComputedRightColumn("");
     setComputedAggregation("sum");
     setComputedFieldDialogOpen(true);
@@ -2277,6 +2370,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
         timestamp: new Date().toLocaleTimeString(),
         error: !databaseId ? "No database connected" : "No SQL query generated",
       });
+      setTestResultsOpen(true);
       return;
     }
 
@@ -2290,6 +2384,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
         timestamp: new Date().toLocaleTimeString(),
         error: `Type mismatch in JOIN: ${connectionTypeErrors.map((e) => e.message).join("; ")}`,
       });
+      setTestResultsOpen(true);
       return;
     }
 
@@ -2303,6 +2398,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
         timestamp: new Date().toLocaleTimeString(),
         error: `Invalid aggregation: ${aggregationErrors.map((e) => e.message).join("; ")}`,
       });
+      setTestResultsOpen(true);
       return;
     }
 
@@ -2316,6 +2412,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
         timestamp: new Date().toLocaleTimeString(),
         error: `Missing table: ${computedFieldErrors.map((e) => e.message).join("; ")}`,
       });
+      setTestResultsOpen(true);
       return;
     }
 
@@ -2335,6 +2432,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
         timestamp: new Date().toLocaleTimeString(),
         error: `Missing parameter values: ${missingParams.map((p) => p.parameterName).join(", ")}`,
       });
+      setTestResultsOpen(true);
       return;
     }
 
@@ -2396,26 +2494,26 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
       });
 
       // Handle pagination parameters - only apply if user provides values
-      const userPagesize = testParamValues["pagesize"]?.trim();
-      const userPagecount = testParamValues["pagecount"]?.trim();
+      const userPageSize = testParamValues["pageSize"]?.trim();
+      const userPageCount = testParamValues["pageCount"]?.trim();
 
-      if (testSql.includes(":pagesize")) {
-        if (userPagesize) {
-          const pagesize = parseInt(userPagesize) || 100;
-          testSql = testSql.split(":pagesize").join(String(pagesize));
+      if (testSql.includes(":pageSize")) {
+        if (userPageSize) {
+          const pageSize = parseInt(userPageSize) || 100;
+          testSql = testSql.split(":pageSize").join(String(pageSize));
         } else {
-          // Remove LIMIT clause if no pagesize provided
+          // Remove LIMIT clause if no pageSize provided
           testSql = testSql
-            .replace(/\nLIMIT\s+:pagesize/i, "")
-            .replace(/LIMIT\s+:pagesize/i, "");
+            .replace(/\nLIMIT\s+:pageSize/i, "")
+            .replace(/LIMIT\s+:pageSize/i, "");
         }
       }
 
       if (testSql.includes(":offset")) {
-        if (userPagecount && userPagesize) {
-          const pagesize = parseInt(userPagesize) || 100;
-          const pagecount = parseInt(userPagecount) || 1;
-          const offset = (pagecount - 1) * pagesize;
+        if (userPageCount && userPageSize) {
+          const pageSize = parseInt(userPageSize) || 100;
+          const pageCount = parseInt(userPageCount) || 1;
+          const offset = (pageCount - 1) * pageSize;
           testSql = testSql.split(":offset").join(String(offset));
         } else {
           // Remove OFFSET clause if no pagecount provided
@@ -2486,7 +2584,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
     if (paginationEnabled) {
       if (allowPageSizeParam) {
         parameters.push({
-          name: "pagesize",
+          name: "pageSize",
           columnName: "_pagination",
           columnType: "integer",
           operator: "equals",
@@ -2495,7 +2593,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
       }
       if (allowPageCountParam) {
         parameters.push({
-          name: "pagecount",
+          name: "pageCount",
           columnName: "_pagination",
           columnType: "integer",
           operator: "equals",
@@ -3108,7 +3206,8 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                       position={{ x: 0, y: 0 }}
                       selectedFields={selectedFields}
                       visualFilters={visualFilters}
-                      groupingRules={groupingRules}
+                      groupingRules={allGroupByFields}
+                      autoGroupedFields={requiredGroupByFields}
                       tableConnections={tableConnections}
                       referenceFilters={referenceFilters}
                       connectionMode={connectionMode}
@@ -3133,7 +3232,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                       onOpenAggregation={(col, colType) =>
                         openAggDialog(table.id, col, colType)
                       }
-                      onToggleGroup={(col) => toggleGrouping(table.id, col)}
+                      onToggleGroup={(col) => toggleGroupBy(table.id, col)}
                       onSetAlias={(col, alias) =>
                         handleSetAlias(table.id, col, alias)
                       }
@@ -3226,7 +3325,14 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                   <Box
                     sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}
                   >
-                    {selectedFields.map((f) => (
+                    {selectedFields.map((f) => {
+                      const isInGroupBy = allGroupByFields.some(
+                        (g) => g.tableId === f.tableId && g.columnName === f.columnName
+                      );
+                      const isAutoGrouped = requiredGroupByFields.some(
+                        (g) => g.tableId === f.tableId && g.columnName === f.columnName
+                      );
+                      return (
                       <Paper
                         key={`${f.tableId}-${f.columnName}`}
                         sx={{
@@ -3234,6 +3340,9 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
+                          ...(isInGroupBy && {
+                            borderLeft: `3px solid ${isAutoGrouped ? "#ff5722" : "#ff9800"}`,
+                          }),
                         }}
                       >
                         <Box>
@@ -3247,6 +3356,19 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                             sx={{ color: isDark ? "#64748b" : "#999" }}
                           >
                             {f.tableId}
+                            {isInGroupBy && (
+                              <Chip
+                                label={isAutoGrouped ? "Grouped (auto)" : "Grouped"}
+                                size="small"
+                                sx={{
+                                  ml: 0.5,
+                                  height: 16,
+                                  fontSize: "0.65rem",
+                                  backgroundColor: isAutoGrouped ? "#ff5722" : "#ff9800",
+                                  color: "white",
+                                }}
+                              />
+                            )}
                           </Typography>
                         </Box>
                         <Box sx={{ display: "flex", gap: 0.25 }}>
@@ -3266,7 +3388,8 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                           </IconButton>
                         </Box>
                       </Paper>
-                    ))}
+                      );
+                    })}
                   </Box>
                 )}
 
@@ -3346,27 +3469,60 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                   </Box>
                 )}
 
-                {groupingRules.length > 0 && (
+                {/* Auto GROUP BY - shown when there's aggregation */}
+                {hasAnyAggregation && requiredGroupByFields.length > 0 && (
                   <Box sx={{ mt: 2 }}>
                     <Typography
                       variant="subtitle2"
                       sx={{ fontWeight: 600, mb: 1 }}
                     >
-                      Group By
+                      Grouped Columns (auto)
                     </Typography>
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {groupingRules.map((g) => (
+                      {requiredGroupByFields.map((g) => (
                         <Chip
                           key={`${g.tableId}-${g.columnName}`}
                           label={g.columnName}
-                          onDelete={() =>
-                            toggleGrouping(g.tableId, g.columnName)
-                          }
                           size="small"
                           sx={{ backgroundColor: "#ff5722", color: "white" }}
                         />
                       ))}
                     </Box>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: isDark ? "#94a3b8" : "#666", mt: 0.5, display: "block" }}
+                    >
+                      These columns are automatically grouped because you're using calculations
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Manual GROUP BY - user-added */}
+                {manualGroupByFields.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 600, mb: 1 }}
+                    >
+                      Grouped Columns (manual)
+                    </Typography>
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                      {manualGroupByFields.map((g) => (
+                        <Chip
+                          key={`manual-${g.tableId}-${g.columnName}`}
+                          label={g.columnName}
+                          size="small"
+                          onDelete={() => toggleGroupBy(g.tableId, g.columnName)}
+                          sx={{ backgroundColor: "#ff9800", color: "white" }}
+                        />
+                      ))}
+                    </Box>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: isDark ? "#94a3b8" : "#666", mt: 0.5, display: "block" }}
+                    >
+                      Click the Group button on fields to add/remove manual grouping
+                    </Typography>
                   </Box>
                 )}
 
@@ -3404,7 +3560,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                             alignItems: "flex-start",
                           }}
                         >
-                          <Box>
+                          <Box sx={{ flex: 1 }}>
                             <Typography
                               variant="body2"
                               sx={{ fontWeight: 600, color: "#9c27b0" }}
@@ -3575,7 +3731,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                                       borderRadius: 3,
                                     }}
                                   >
-                                    ?pagesize=N
+                                    ?pageSize=N
                                   </code>{" "}
                                   parameter
                                 </Typography>
@@ -3606,7 +3762,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                                       borderRadius: 3,
                                     }}
                                   >
-                                    ?pagecount=N
+                                    ?pageCount=N
                                   </code>{" "}
                                   parameter
                                 </Typography>
@@ -3619,7 +3775,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                             sx={{ py: 0.5, fontSize: "0.75rem" }}
                           >
                             API will support:{" "}
-                            <code>?pagesize=50&pagecount=2</code>
+                            <code>?pageSize=50&pageCount=2</code>
                           </Alert>
                         </Box>
                       </Paper>
@@ -3942,9 +4098,9 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                       sx={{ alignSelf: "flex-start" }}
                     />
                   )}
-                  {groupingRules.length > 0 && (
+                  {allGroupByFields.length > 0 && (
                     <Chip
-                      label={`Grouped by ${groupingRules.length} field(s)`}
+                      label={`Grouped by ${allGroupByFields.length} field(s)`}
                       size="small"
                       sx={{
                         alignSelf: "flex-start",
@@ -4187,6 +4343,34 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                           </Button>
                         )}
                       </Box>
+                    </Paper>
+                  )}
+
+                {/* Error Display */}
+                {apiTestResult &&
+                  !apiTestResult.loading &&
+                  !apiTestResult.success && (
+                    <Paper
+                      sx={{
+                        p: 1.5,
+                        mb: 2,
+                        backgroundColor: isDark
+                          ? "rgba(244, 67, 54, 0.15)"
+                          : "#ffebee",
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 600, color: "#d32f2f" }}
+                      >
+                        ❌ Query Failed
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "#d32f2f", mt: 0.5 }}
+                      >
+                        {apiTestResult.error || "An error occurred"}
+                      </Typography>
                     </Paper>
                   )}
 
@@ -4713,7 +4897,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                   }}
                   label="Table"
                 >
-                  {selectedTables.map((t) => (
+                  {joinedTables.map((t) => (
                     <MenuItem key={t.id} value={t.id}>
                       {t.name}
                     </MenuItem>
@@ -4728,7 +4912,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                   label="Column"
                   disabled={!computedLeftTable}
                 >
-                  {selectedTables
+                  {joinedTables
                     .find((t) => t.id === computedLeftTable)
                     ?.columns.filter((c) => {
                       const t = c.type.toLowerCase();
@@ -4780,7 +4964,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                   }}
                   label="Table"
                 >
-                  {selectedTables.map((t) => (
+                  {joinedTables.map((t) => (
                     <MenuItem key={t.id} value={t.id}>
                       {t.name}
                     </MenuItem>
@@ -4795,7 +4979,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                   label="Column"
                   disabled={!computedRightTable}
                 >
-                  {selectedTables
+                  {joinedTables
                     .find((t) => t.id === computedRightTable)
                     ?.columns.filter((c) => {
                       const t = c.type.toLowerCase();
