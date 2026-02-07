@@ -73,6 +73,7 @@ import {
   MoreVert as MoreIcon,
   Delete as DeleteIcon,
   Search as SearchIcon,
+  Edit as EditIcon,
 } from "@mui/icons-material";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFullSchema } from "../../../../api/entities/schema/useFullSchema";
@@ -88,6 +89,7 @@ import {
   EmptyStateMessage,
 } from "./QueryBuilder.styles";
 import type { TableConnection } from "./QueryBuilder.types";
+import { toastService } from "../../../../services";
 
 // ============================================================================
 // TYPES
@@ -130,13 +132,44 @@ interface VisualFilter {
   parameterName?: string;
 }
 
+// Subquery filter for the lookup condition (e.g., filter which orders to look up)
+interface SubqueryFilter {
+  id: string;
+  columnName: string;
+  operator: string;
+  value: string;
+}
+
+// Subquery join for combining tables in the lookup
+interface SubqueryJoin {
+  id: string;
+  targetTableId: string;
+  sourceColumn: string;
+  targetColumn: string;
+}
+
+// Having condition for aggregated subqueries
+interface SubqueryHaving {
+  id: string;
+  aggregation: "count" | "sum" | "avg" | "min" | "max";
+  columnName: string;
+  operator: string;
+  value: string;
+}
+
 interface ReferenceFilter {
   id: string;
   sourceTableId: string;
   sourceColumn: string;
+  sourceAggregation?: "count" | "sum" | "avg" | "min" | "max"; // Aggregate the selected column
   targetTableId: string;
   targetColumn: string;
   filterType: "include" | "exclude";
+  // Advanced subquery options
+  subqueryFilters?: SubqueryFilter[];
+  subqueryJoins?: SubqueryJoin[];
+  subqueryGroupBy?: string[];
+  subqueryHaving?: SubqueryHaving[];
 }
 
 interface ComputedField {
@@ -229,7 +262,15 @@ const formatSqlValue = (op: string, value: any): string => {
   if (op === "ends_with") return `'%${value}'`;
   if (op === "between" && Array.isArray(value))
     return `${value[0]} AND ${value[1]}`;
-  if (typeof value === "string") return `'${value}'`;
+  // Check if string value is a number - don't quote numeric values
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    // Check if it's a valid number (integer or decimal)
+    if (trimmed !== "" && !isNaN(Number(trimmed)) && isFinite(Number(trimmed))) {
+      return trimmed;
+    }
+    return `'${value}'`;
+  }
   return String(value);
 };
 
@@ -1403,6 +1444,31 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
   } | null>(null);
   const [aggType, setAggType] = useState("count");
 
+  // Reference Filter Dialog State (Keep/Remove if found)
+  const [refFilterDialogOpen, setRefFilterDialogOpen] = useState(false);
+  const [editingRefFilterId, setEditingRefFilterId] = useState<string | null>(null);
+  const [pendingRefFilter, setPendingRefFilter] = useState<{
+    sourceTableId: string;
+    sourceColumn: string;
+    targetTableId: string;
+    targetColumn: string;
+    filterType: "include" | "exclude";
+  } | null>(null);
+  const [refSubqueryFilters, setRefSubqueryFilters] = useState<SubqueryFilter[]>([]);
+  const [refSubqueryJoins, setRefSubqueryJoins] = useState<SubqueryJoin[]>([]);
+  const [refSubqueryGroupBy, setRefSubqueryGroupBy] = useState<string[]>([]);
+  const [refSubqueryHaving, setRefSubqueryHaving] = useState<SubqueryHaving[]>([]);
+  const [refSourceAggregation, setRefSourceAggregation] = useState<"" | "count" | "sum" | "avg" | "min" | "max">("");
+  // Condition input state
+  const [refFilterColumn, setRefFilterColumn] = useState("");
+  const [refFilterOperator, setRefFilterOperator] = useState("equals");
+  const [refFilterValue, setRefFilterValue] = useState("");
+  // Having input state
+  const [refHavingAgg, setRefHavingAgg] = useState<"count" | "sum" | "avg" | "min" | "max">("count");
+  const [refHavingColumn, setRefHavingColumn] = useState("");
+  const [refHavingOperator, setRefHavingOperator] = useState("gt");
+  const [refHavingValue, setRefHavingValue] = useState("");
+
   // Computed Fields
   const [computedFields, setComputedFields] = useState<ComputedField[]>([]);
   const [computedFieldDialogOpen, setComputedFieldDialogOpen] = useState(false);
@@ -1671,6 +1737,58 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
     return `/api/v1/custom/${base}${visualFilters.length ? "-filtered" : ""}`;
   }, [selectedTables, visualFilters]);
 
+  // Helper to build subquery SQL for reference filters
+  const buildSubquerySql = useCallback((ref: ReferenceFilter): string => {
+    const parts: string[] = [];
+    
+    // SELECT with optional aggregation
+    const selectCol = `${ref.sourceTableId}.${ref.sourceColumn}`;
+    if (ref.sourceAggregation) {
+      parts.push(`SELECT ${ref.sourceAggregation.toUpperCase()}(${selectCol})`);
+    } else {
+      parts.push(`SELECT ${selectCol}`);
+    }
+    
+    parts.push(`FROM ${ref.sourceTableId}`);
+    
+    // Add joins if any
+    if (ref.subqueryJoins && ref.subqueryJoins.length > 0) {
+      ref.subqueryJoins.forEach((j) => {
+        parts.push(`INNER JOIN ${j.targetTableId} ON ${ref.sourceTableId}.${j.sourceColumn} = ${j.targetTableId}.${j.targetColumn}`);
+      });
+    }
+    
+    // Add WHERE filters if any
+    if (ref.subqueryFilters && ref.subqueryFilters.length > 0) {
+      const subWhere = ref.subqueryFilters.map((f) => {
+        const col = `${ref.sourceTableId}.${f.columnName}`;
+        const op = getSqlOperator(f.operator);
+        const val = formatSqlValue(f.operator, f.value);
+        return `${col} ${op} ${val}`;
+      });
+      parts.push(`WHERE ${subWhere.join(" AND ")}`);
+    }
+    
+    // Add GROUP BY if any
+    if (ref.subqueryGroupBy && ref.subqueryGroupBy.length > 0) {
+      const groupCols = ref.subqueryGroupBy.map((col) => `${ref.sourceTableId}.${col}`);
+      parts.push(`GROUP BY ${groupCols.join(", ")}`);
+    }
+    
+    // Add HAVING if any
+    if (ref.subqueryHaving && ref.subqueryHaving.length > 0) {
+      const havingClauses = ref.subqueryHaving.map((h) => {
+        const col = `${ref.sourceTableId}.${h.columnName}`;
+        const aggExpr = `${h.aggregation.toUpperCase()}(${col})`;
+        const op = getSqlOperator(h.operator);
+        return `${aggExpr} ${op} ${h.value}`;
+      });
+      parts.push(`HAVING ${havingClauses.join(" AND ")}`);
+    }
+    
+    return parts.join(" ");
+  }, []);
+
   const generatedSql = useMemo(() => {
     if (selectedTables.length === 0) return "";
 
@@ -1813,8 +1931,34 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
     });
 
     referenceFilters.forEach((r) => {
-      const targetCol = `${r.targetTableId}.${r.targetColumn}`;
-      const subquery = `(SELECT ${r.sourceColumn} FROM ${r.sourceTableId})`;
+      // Determine which column to use for the IN clause
+      // Check if target/source tables are actually in the FROM/JOIN chain (joinedTables), not just on canvas
+      const targetInQuery = joinedTables.has(r.targetTableId);
+      const sourceInQuery = joinedTables.has(r.sourceTableId);
+      
+      console.log('Reference filter check:', {
+        sourceTableId: r.sourceTableId,
+        targetTableId: r.targetTableId,
+        joinedTables: Array.from(joinedTables),
+        targetInQuery,
+        sourceInQuery
+      });
+      
+      let targetCol: string;
+      if (targetInQuery) {
+        targetCol = `${r.targetTableId}.${r.targetColumn}`;
+      } else if (sourceInQuery) {
+        // Use source table/column since target isn't in query
+        targetCol = `${r.sourceTableId}.${r.sourceColumn}`;
+      } else {
+        // Neither table is in the main query, skip this filter
+        return;
+      }
+      
+      // Build the subquery
+      const subquerySql = buildSubquerySql(r);
+      const subquery = `(${subquerySql})`;
+      
       if (r.filterType === "include") {
         whereClauses.push(`${targetCol} IN ${subquery}`);
       } else {
@@ -1871,6 +2015,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
     defaultPageSize,
     allowPageSizeParam,
     allowPageCountParam,
+    buildSubquerySql,
   ]);
 
   // ============================================================================
@@ -2128,15 +2273,21 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
         return;
       }
 
-      const ref: ReferenceFilter = {
-        id: `ref-${Date.now()}`,
+      // Open dialog to configure the lookup condition
+      setPendingRefFilter({
         sourceTableId: connectingFrom.tableId,
         sourceColumn: connectingFrom.column,
         targetTableId: targetTableId,
         targetColumn: targetColumn,
         filterType: connectionMode,
-      };
-      setReferenceFilters((prev) => [...prev, ref]);
+      });
+      setRefSubqueryFilters([]);
+      setRefSubqueryJoins([]);
+      setRefSubqueryGroupBy([]);
+      setRefFilterColumn("");
+      setRefFilterOperator("equals");
+      setRefFilterValue("");
+      setRefFilterDialogOpen(true);
     }
 
     resetConnection();
@@ -2145,6 +2296,114 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
   const resetConnection = () => {
     setConnectionMode("none");
     setConnectingFrom(null);
+  };
+
+  // Open reference filter for editing
+  const handleEditRefFilter = (refId: string) => {
+    const ref = referenceFilters.find((r) => r.id === refId);
+    if (!ref) return;
+
+    setEditingRefFilterId(refId);
+    setPendingRefFilter({
+      sourceTableId: ref.sourceTableId,
+      sourceColumn: ref.sourceColumn,
+      targetTableId: ref.targetTableId,
+      targetColumn: ref.targetColumn,
+      filterType: ref.filterType,
+    });
+    setRefSubqueryFilters(ref.subqueryFilters || []);
+    setRefSubqueryJoins(ref.subqueryJoins || []);
+    setRefSubqueryGroupBy(ref.subqueryGroupBy || []);
+    setRefSubqueryHaving(ref.subqueryHaving || []);
+    setRefSourceAggregation(ref.sourceAggregation || "");
+    setRefFilterColumn("");
+    setRefFilterOperator("equals");
+    setRefFilterValue("");
+    setRefHavingAgg("count");
+    setRefHavingColumn("");
+    setRefHavingOperator("gt");
+    setRefHavingValue("");
+    setRefFilterDialogOpen(true);
+  };
+
+  // Save reference filter from dialog
+  const handleSaveRefFilter = () => {
+    if (!pendingRefFilter) return;
+
+    const ref: ReferenceFilter = {
+      id: editingRefFilterId || `ref-${Date.now()}`,
+      sourceTableId: pendingRefFilter.sourceTableId,
+      sourceColumn: pendingRefFilter.sourceColumn,
+      sourceAggregation: refSourceAggregation || undefined,
+      targetTableId: pendingRefFilter.targetTableId,
+      targetColumn: pendingRefFilter.targetColumn,
+      filterType: pendingRefFilter.filterType,
+      subqueryFilters: refSubqueryFilters.length > 0 ? refSubqueryFilters : undefined,
+      subqueryJoins: refSubqueryJoins.length > 0 ? refSubqueryJoins : undefined,
+      subqueryGroupBy: refSubqueryGroupBy.length > 0 ? refSubqueryGroupBy : undefined,
+      subqueryHaving: refSubqueryHaving.length > 0 ? refSubqueryHaving : undefined,
+    };
+
+    if (editingRefFilterId) {
+      // Update existing
+      setReferenceFilters((prev) => prev.map((r) => r.id === editingRefFilterId ? ref : r));
+    } else {
+      // Add new
+      setReferenceFilters((prev) => [...prev, ref]);
+    }
+    
+    setRefFilterDialogOpen(false);
+    setPendingRefFilter(null);
+    setEditingRefFilterId(null);
+  };
+
+  // Add a filter condition to the lookup
+  const handleAddRefSubqueryFilter = () => {
+    if (!refFilterColumn || !refFilterValue) return;
+    
+    const newFilter: SubqueryFilter = {
+      id: `subfilter-${Date.now()}`,
+      columnName: refFilterColumn,
+      operator: refFilterOperator,
+      value: refFilterValue,
+    };
+    
+    setRefSubqueryFilters((prev) => [...prev, newFilter]);
+    setRefFilterColumn("");
+    setRefFilterOperator("equals");
+    setRefFilterValue("");
+  };
+
+  // Add a having condition to the lookup
+  const handleAddRefSubqueryHaving = () => {
+    if (!refHavingColumn || !refHavingValue) return;
+    
+    const newHaving: SubqueryHaving = {
+      id: `subhaving-${Date.now()}`,
+      aggregation: refHavingAgg,
+      columnName: refHavingColumn,
+      operator: refHavingOperator,
+      value: refHavingValue,
+    };
+    
+    setRefSubqueryHaving((prev) => [...prev, newHaving]);
+    setRefHavingAgg("count");
+    setRefHavingColumn("");
+    setRefHavingOperator("gt");
+    setRefHavingValue("");
+  };
+
+  // Add a table to combine in the lookup
+  const handleAddRefSubqueryJoin = (targetTableId: string, sourceColumn: string, targetColumn: string) => {
+    setRefSubqueryJoins((prev) => [
+      ...prev,
+      {
+        id: `subjoin-${Date.now()}`,
+        targetTableId,
+        sourceColumn,
+        targetColumn,
+      },
+    ]);
   };
 
   // ============================================================================
@@ -2536,20 +2795,24 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
       setPreviewData(rows);
 
       setApiTestResult({
-        success: true,
+        success: result.success,
+        message: result.message,
         status: 200,
         rowCount: rows.length,
         executionTime: `${Math.round(endTime - startTime)}ms`,
         timestamp: new Date().toLocaleTimeString(),
       });
     } catch (error: any) {
-      // Extract error message from various possible locations
+      // Extract error message from various possible locations in the API response
       const errorMessage =
-        error.message || error.body?.message || "Query execution failed";
+        error.body?.message || 
+        error.message || 
+        error.response?.data?.message ||
+        "Query execution failed";
 
       setApiTestResult({
         success: false,
-        status: error.status || 500,
+        status: error.status || error.response?.status || 500,
         rowCount: 0,
         executionTime: `${Math.round(performance.now() - startTime)}ms`,
         timestamp: new Date().toLocaleTimeString(),
@@ -2710,7 +2973,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
         </g>,
       );
     });
-
+    console.log('apiTestResult' , apiTestResult)
     // Draw reference filters (green/red)
     referenceFilters.forEach((ref) => {
       const from = tablePositions[ref.sourceTableId];
@@ -3867,24 +4130,63 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
                         sx={{
                           display: "flex",
                           justifyContent: "space-between",
-                          alignItems: "center",
+                          alignItems: "flex-start",
                         }}
                       >
-                        <Typography variant="caption">
-                          {r.filterType === "include" ? "✅ Keep" : "🚫 Remove"}{" "}
-                          {r.targetTableId} rows where {r.targetColumn} matches{" "}
-                          {r.sourceTableId}.{r.sourceColumn}
-                        </Typography>
-                        <IconButton
-                          size="small"
-                          onClick={() =>
-                            setReferenceFilters((prev) =>
-                              prev.filter((x) => x.id !== r.id),
-                            )
-                          }
-                        >
-                          <CloseIcon sx={{ fontSize: 12 }} />
-                        </IconButton>
+                        <Box>
+                          <Typography variant="caption" sx={{ display: "block" }}>
+                            {r.filterType === "include" ? "✅ Keep" : "🚫 Remove"}{" "}
+                            {r.targetTableId} rows where {r.targetColumn} matches{" "}
+                            {r.sourceAggregation ? `${r.sourceAggregation.toUpperCase()}(${r.sourceTableId}.${r.sourceColumn})` : `${r.sourceTableId}.${r.sourceColumn}`}
+                          </Typography>
+                          {/* Show advanced options if any */}
+                          {r.subqueryFilters && r.subqueryFilters.length > 0 && (
+                            <Typography variant="caption" sx={{ color: isDark ? "#94a3b8" : "#666", display: "block", ml: 2 }}>
+                              📌 Conditions: {r.subqueryFilters.map((f) => 
+                                `${f.columnName} ${getOperatorLabel(f.operator)} ${f.value}`
+                              ).join(", ")}
+                            </Typography>
+                          )}
+                          {r.subqueryJoins && r.subqueryJoins.length > 0 && (
+                            <Typography variant="caption" sx={{ color: isDark ? "#94a3b8" : "#666", display: "block", ml: 2 }}>
+                              🔗 Combined with: {r.subqueryJoins.map((j) => j.targetTableId).join(", ")}
+                            </Typography>
+                          )}
+                          {r.subqueryGroupBy && r.subqueryGroupBy.length > 0 && (
+                            <Typography variant="caption" sx={{ color: isDark ? "#94a3b8" : "#666", display: "block", ml: 2 }}>
+                              📊 Grouped by: {r.subqueryGroupBy.join(", ")}
+                            </Typography>
+                          )}
+                          {r.subqueryHaving && r.subqueryHaving.length > 0 && (
+                            <Typography variant="caption" sx={{ color: isDark ? "#94a3b8" : "#666", display: "block", ml: 2 }}>
+                              📈 Having: {r.subqueryHaving.map((h) => 
+                                `${h.aggregation.toUpperCase()}(${h.columnName}) ${getOperatorLabel(h.operator)} ${h.value}`
+                              ).join(", ")}
+                            </Typography>
+                          )}
+                        </Box>
+                        <Box sx={{ display: "flex", gap: 0.5 }}>
+                          <Tooltip title="Edit filter">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleEditRefFilter(r.id)}
+                            >
+                              <EditIcon sx={{ fontSize: 12 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Remove filter">
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                setReferenceFilters((prev) =>
+                                  prev.filter((x) => x.id !== r.id),
+                                )
+                              }
+                            >
+                              <CloseIcon sx={{ fontSize: 12 }} />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
                       </Box>
                     </Paper>
                   ))
@@ -5063,6 +5365,409 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
         </DialogActions>
       </Dialog>
 
+      {/* Reference Filter Dialog (Keep/Remove if found with conditions) */}
+      <Dialog
+        open={refFilterDialogOpen}
+        onClose={() => {
+          setRefFilterDialogOpen(false);
+          setPendingRefFilter(null);
+          setEditingRefFilterId(null);
+        }}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            {editingRefFilterId && (
+              <Typography variant="caption" sx={{ mr: 1, color: isDark ? "#94a3b8" : "#666" }}>
+                (Editing)
+              </Typography>
+            )}
+            {pendingRefFilter?.filterType === "include" ? (
+              <>
+                <IncludeIcon sx={{ color: "#4CAF50" }} />
+                Keep Rows That Match
+              </>
+            ) : (
+              <>
+                <ExcludeIcon sx={{ color: "#f44336" }} />
+                Remove Rows That Match
+              </>
+            )}
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {pendingRefFilter && (
+            <Box sx={{ pt: 1 }}>
+              {/* Basic explanation */}
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  {pendingRefFilter.filterType === "include" 
+                    ? `This will only show rows from "${pendingRefFilter.targetTableId}" where the "${pendingRefFilter.targetColumn}" value exists in "${pendingRefFilter.sourceTableId}"`
+                    : `This will hide rows from "${pendingRefFilter.targetTableId}" where the "${pendingRefFilter.targetColumn}" value exists in "${pendingRefFilter.sourceTableId}"`
+                  }
+                </Typography>
+              </Alert>
+
+              {/* Connection summary */}
+              <Paper
+                sx={{
+                  p: 2,
+                  mb: 2,
+                  backgroundColor: isDark ? "rgba(33, 150, 243, 0.1)" : "#e3f2fd",
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                  📋 Looking up values from:
+                </Typography>
+                <Typography variant="body2">
+                  Table: <strong>{pendingRefFilter.sourceTableId}</strong> → Column: <strong>{pendingRefFilter.sourceColumn}</strong>
+                </Typography>
+              </Paper>
+
+              {/* Optional conditions section */}
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                🔍 Add Conditions (Optional)
+              </Typography>
+              <Typography variant="body2" sx={{ color: isDark ? "#94a3b8" : "#666", mb: 2 }}>
+                Filter which values to look up. For example, only look up orders from the last month.
+              </Typography>
+
+              {/* Existing subquery filters */}
+              {refSubqueryFilters.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  {refSubqueryFilters.map((f) => (
+                    <Chip
+                      key={f.id}
+                      label={`${f.columnName} ${getOperatorLabel(f.operator)} ${f.value}`}
+                      onDelete={() => 
+                        setRefSubqueryFilters((prev) => prev.filter((x) => x.id !== f.id))
+                      }
+                      sx={{ mr: 0.5, mb: 0.5 }}
+                    />
+                  ))}
+                </Box>
+              )}
+
+              {/* Add new filter */}
+              <Box sx={{ display: "flex", gap: 1, mb: 2, flexWrap: "wrap", alignItems: "center" }}>
+                <FormControl size="small" sx={{ minWidth: 150 }}>
+                  <InputLabel>Column</InputLabel>
+                  <Select
+                    value={refFilterColumn}
+                    label="Column"
+                    onChange={(e) => setRefFilterColumn(e.target.value)}
+                  >
+                    {selectedTables
+                      .find((t) => t.id === pendingRefFilter.sourceTableId)
+                      ?.columns.map((col) => (
+                        <MenuItem key={col.name} value={col.name}>
+                          {col.name}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+                <FormControl size="small" sx={{ minWidth: 100 }}>
+                  <InputLabel>Condition</InputLabel>
+                  <Select
+                    value={refFilterOperator}
+                    label="Condition"
+                    onChange={(e) => setRefFilterOperator(e.target.value)}
+                  >
+                    <MenuItem value="equals">equals</MenuItem>
+                    <MenuItem value="not_equals">not equals</MenuItem>
+                    <MenuItem value="gt">greater than</MenuItem>
+                    <MenuItem value="lt">less than</MenuItem>
+                    <MenuItem value="gte">at least</MenuItem>
+                    <MenuItem value="lte">at most</MenuItem>
+                    <MenuItem value="contains">contains</MenuItem>
+                    <MenuItem value="starts_with">starts with</MenuItem>
+                    <MenuItem value="in">is in list</MenuItem>
+                  </Select>
+                </FormControl>
+                
+                <TextField
+                  size="small"
+                  label="Value"
+                  value={refFilterValue}
+                  onChange={(e) => setRefFilterValue(e.target.value)}
+                  sx={{ minWidth: 120 }}
+                />
+                
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => handleAddRefSubqueryFilter()}
+                  disabled={!refFilterColumn || !refFilterValue}
+                >
+                  Add Condition
+                </Button>
+              </Box>
+
+              {/* Aggregation option */}
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, mt: 3 }}>
+                📊 Aggregation (Optional)
+              </Typography>
+              <Typography variant="body2" sx={{ color: isDark ? "#94a3b8"  : "#666", mb: 2 }}>
+                Apply an aggregation to the lookup column. For example, use SUM to get total amounts or COUNT to count matching rows.
+              </Typography>
+              
+              <FormControl size="small" sx={{ minWidth: 150, mb: 2 }}>
+                <InputLabel>Aggregation</InputLabel>
+                <Select
+                  value={refSourceAggregation}
+                  label="Aggregation"
+                  onChange={(e) => setRefSourceAggregation(e.target.value as any)}
+                >
+                  <MenuItem value="">None (return values)</MenuItem>
+                  <MenuItem value="count">COUNT</MenuItem>
+                  <MenuItem value="sum">SUM</MenuItem>
+                  <MenuItem value="avg">AVG</MenuItem>
+                  <MenuItem value="min">MIN</MenuItem>
+                  <MenuItem value="max">MAX</MenuItem>
+                </Select>
+              </FormControl>
+
+              {/* Combine with other tables section */}
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, mt: 3 }}>
+                🔗 Combine with Other Tables (Optional)
+              </Typography>
+              <Typography variant="body2" sx={{ color: isDark ? "#94a3b8" : "#666", mb: 2 }}>
+                Include data from related tables in the lookup. For example, combine orders with customers to filter by customer name.
+              </Typography>
+
+              {/* Existing subquery joins */}
+              {refSubqueryJoins.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  {refSubqueryJoins.map((j) => (
+                    <Chip
+                      key={j.id}
+                      label={`+ ${j.targetTableId} (on ${j.sourceColumn} = ${j.targetColumn})`}
+                      onDelete={() => 
+                        setRefSubqueryJoins((prev) => prev.filter((x) => x.id !== j.id))
+                      }
+                      color="primary"
+                      sx={{ mr: 0.5, mb: 0.5 }}
+                    />
+                  ))}
+                </Box>
+              )}
+
+              {/* Add join - simplified UI */}
+              {selectedTables.filter((t) => 
+                t.id !== pendingRefFilter.sourceTableId && 
+                !refSubqueryJoins.some((j) => j.targetTableId === t.id)
+              ).length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="caption" sx={{ color: isDark ? "#64748b" : "#999", display: "block", mb: 1 }}>
+                    Available tables to combine:
+                  </Typography>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                    {selectedTables
+                      .filter((t) => 
+                        t.id !== pendingRefFilter.sourceTableId && 
+                        !refSubqueryJoins.some((j) => j.targetTableId === t.id)
+                      )
+                      .map((t) => {
+                        // Find matching columns between source and this table
+                        const sourceTable = selectedTables.find((st) => st.id === pendingRefFilter.sourceTableId);
+                        const matchingCols = sourceTable?.columns.filter((sc) =>
+                          t.columns.some((tc) => tc.name === sc.name || tc.name === `${pendingRefFilter.sourceTableId}_id` || sc.name === `${t.id}_id`)
+                        );
+                        
+                        return (
+                          <Tooltip
+                            key={t.id}
+                            title={matchingCols && matchingCols.length > 0 
+                              ? `Click to combine with ${t.name}`
+                              : "No obvious matching columns found - click to manually configure"
+                            }
+                          >
+                            <Chip
+                              label={t.name}
+                              variant="outlined"
+                              onClick={() => {
+                                // Try to find a matching column automatically
+                                const sourceIdCol = sourceTable?.columns.find((c) => c.name === `${t.id}_id` || c.name === `${t.name}_id`);
+                                const targetIdCol = t.columns.find((c) => c.name === 'id');
+                                
+                                if (sourceIdCol && targetIdCol) {
+                                  handleAddRefSubqueryJoin(t.id, sourceIdCol.name, targetIdCol.name);
+                                } else {
+                                  // Fall back to first matching column name
+                                  const matchCol = sourceTable?.columns.find((sc) =>
+                                    t.columns.some((tc) => tc.name === sc.name)
+                                  );
+                                  if (matchCol) {
+                                    handleAddRefSubqueryJoin(t.id, matchCol.name, matchCol.name);
+                                  } else if (sourceTable?.columns[0] && t.columns.find((c) => c.name === 'id')) {
+                                    // Use first column of source and id of target
+                                    handleAddRefSubqueryJoin(t.id, sourceTable.columns.find((c) => c.name.includes('id'))?.name || sourceTable.columns[0].name, 'id');
+                                  }
+                                }
+                              }}
+                              sx={{ cursor: "pointer" }}
+                            />
+                          </Tooltip>
+                        );
+                      })}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Group by section */}
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, mt: 3 }}>
+                📊 Group Values (Optional)
+              </Typography>
+              <Typography variant="body2" sx={{ color: isDark ? "#94a3b8" : "#666", mb: 2 }}>
+                Get unique values only. Useful for lookups with duplicates.
+              </Typography>
+
+              {/* Group by chips */}
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mb: 1 }}>
+                {selectedTables
+                  .find((t) => t.id === pendingRefFilter.sourceTableId)
+                  ?.columns.slice(0, 10).map((col) => {
+                    const isGrouped = refSubqueryGroupBy.includes(col.name);
+                    return (
+                      <Chip
+                        key={col.name}
+                        label={col.name}
+                        variant={isGrouped ? "filled" : "outlined"}
+                        color={isGrouped ? "primary" : "default"}
+                        size="small"
+                        onClick={() => {
+                          if (isGrouped) {
+                            setRefSubqueryGroupBy((prev) => prev.filter((c) => c !== col.name));
+                          } else {
+                            setRefSubqueryGroupBy((prev) => [...prev, col.name]);
+                          }
+                        }}
+                        sx={{ cursor: "pointer" }}
+                      />
+                    );
+                  })}
+              </Box>
+
+              {/* Having section (only when GROUP BY is used) */}
+              {refSubqueryGroupBy.length > 0 && (
+                <>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, mt: 3 }}>
+                    📈 Having Conditions (Optional)
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: isDark ? "#94a3b8" : "#666", mb: 2 }}>
+                    Filter grouped results. For example, only show customers with more than 5 orders.
+                  </Typography>
+
+                  {/* Existing having conditions */}
+                  {refSubqueryHaving.length > 0 && (
+                    <Box sx={{ mb: 2 }}>
+                      {refSubqueryHaving.map((h) => (
+                        <Chip
+                          key={h.id}
+                          label={`${h.aggregation.toUpperCase()}(${h.columnName}) ${getOperatorLabel(h.operator)} ${h.value}`}
+                          onDelete={() => 
+                            setRefSubqueryHaving((prev) => prev.filter((x) => x.id !== h.id))
+                          }
+                          color="secondary"
+                          sx={{ mr: 0.5, mb: 0.5 }}
+                        />
+                      ))}
+                    </Box>
+                  )}
+
+                  {/* Add HAVING condition */}
+                  <Box sx={{ display: "flex", gap: 1, mb: 2, flexWrap: "wrap", alignItems: "center" }}>
+                    <FormControl size="small" sx={{ minWidth: 100 }}>
+                      <InputLabel>Function</InputLabel>
+                      <Select
+                        value={refHavingAgg}
+                        label="Function"
+                        onChange={(e) => setRefHavingAgg(e.target.value as any)}
+                      >
+                        <MenuItem value="count">COUNT</MenuItem>
+                        <MenuItem value="sum">SUM</MenuItem>
+                        <MenuItem value="avg">AVG</MenuItem>
+                        <MenuItem value="min">MIN</MenuItem>
+                        <MenuItem value="max">MAX</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <FormControl size="small" sx={{ minWidth: 120 }}>
+                      <InputLabel>Column</InputLabel>
+                      <Select
+                        value={refHavingColumn}
+                        label="Column"
+                        onChange={(e) => setRefHavingColumn(e.target.value)}
+                      >
+                        {selectedTables
+                          .find((t) => t.id === pendingRefFilter.sourceTableId)
+                          ?.columns.map((col) => (
+                            <MenuItem key={col.name} value={col.name}>
+                              {col.name}
+                            </MenuItem>
+                          ))}
+                      </Select>
+                    </FormControl>
+                    <FormControl size="small" sx={{ minWidth: 80 }}>
+                      <InputLabel>Op</InputLabel>
+                      <Select
+                        value={refHavingOperator}
+                        label="Op"
+                        onChange={(e) => setRefHavingOperator(e.target.value)}
+                      >
+                        <MenuItem value="gt">&gt;</MenuItem>
+                        <MenuItem value="gte">≥</MenuItem>
+                        <MenuItem value="lt">&lt;</MenuItem>
+                        <MenuItem value="lte">≤</MenuItem>
+                        <MenuItem value="equals">=</MenuItem>
+                        <MenuItem value="not_equals">≠</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <TextField
+                      size="small"
+                      label="Value"
+                      value={refHavingValue}
+                      onChange={(e) => setRefHavingValue(e.target.value)}
+                      sx={{ minWidth: 80 }}
+                    />
+                    <Button
+                      variant="text"
+                      size="small"
+                      onClick={handleAddRefSubqueryHaving}
+                      disabled={!refHavingColumn || !refHavingValue}
+                    >
+                      + Add
+                    </Button>
+                  </Box>
+                </>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => {
+              setRefFilterDialogOpen(false);
+              setPendingRefFilter(null);
+              setEditingRefFilterId(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleSaveRefFilter}
+            color={pendingRefFilter?.filterType === "include" ? "success" : "error"}
+          >
+            {editingRefFilterId 
+              ? "Update Filter" 
+              : pendingRefFilter?.filterType === "include" 
+                ? "Keep Matching Rows" 
+                : "Remove Matching Rows"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Save API Dialog */}
       <SaveApiDialog
         open={saveDialogOpen}
@@ -5107,6 +5812,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
               size="small"
               variant="outlined"
               startIcon={<CopyIcon />}
+              disabled={previewData.length === 0 || (apiTestResult && !apiTestResult.success)}
               onClick={() => {
                 const csv =
                   previewData.length > 0
@@ -5201,7 +5907,7 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
               </Box>
             ) : apiTestResult && !apiTestResult.success ? (
               <Alert severity="error" sx={{ whiteSpace: "pre-wrap" }}>
-                {apiTestResult.error || "Query execution failed"}
+                {apiTestResult.message || "Query execution failed"}
               </Alert>
             ) : previewData.length === 0 ? (
               <Alert severity="info">
