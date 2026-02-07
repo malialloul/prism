@@ -1743,8 +1743,10 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
     
     // SELECT with optional aggregation
     const selectCol = `${ref.sourceTableId}.${ref.sourceColumn}`;
-    if (ref.sourceAggregation) {
-      parts.push(`SELECT ${ref.sourceAggregation.toUpperCase()}(${selectCol})`);
+    const hasAggregation = !!ref.sourceAggregation;
+    
+    if (hasAggregation) {
+      parts.push(`SELECT ${ref.sourceAggregation!.toUpperCase()}(${selectCol})`);
     } else {
       parts.push(`SELECT ${selectCol}`);
     }
@@ -1769,15 +1771,28 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
       parts.push(`WHERE ${subWhere.join(" AND ")}`);
     }
     
-    // Add GROUP BY if any
-    if (ref.subqueryGroupBy && ref.subqueryGroupBy.length > 0) {
-      const groupCols = ref.subqueryGroupBy.map((col) => `${ref.sourceTableId}.${col}`);
-      parts.push(`GROUP BY ${groupCols.join(", ")}`);
+    // Add GROUP BY if any - also ensure SELECT column is included when not aggregated
+    const hasGroupBy = ref.subqueryGroupBy && ref.subqueryGroupBy.length > 0;
+    const hasHaving = ref.subqueryHaving && ref.subqueryHaving.length > 0;
+    
+    if (hasGroupBy || hasHaving) {
+      // Build GROUP BY columns - include the select column if it's not aggregated
+      const groupBySet = new Set<string>(ref.subqueryGroupBy || []);
+      
+      // If SELECT column is not aggregated, it must be in GROUP BY
+      if (!hasAggregation) {
+        groupBySet.add(ref.sourceColumn);
+      }
+      
+      if (groupBySet.size > 0) {
+        const groupCols = Array.from(groupBySet).map((col) => `${ref.sourceTableId}.${col}`);
+        parts.push(`GROUP BY ${groupCols.join(", ")}`);
+      }
     }
     
     // Add HAVING if any
-    if (ref.subqueryHaving && ref.subqueryHaving.length > 0) {
-      const havingClauses = ref.subqueryHaving.map((h) => {
+    if (hasHaving) {
+      const havingClauses = ref.subqueryHaving!.map((h) => {
         const col = `${ref.sourceTableId}.${h.columnName}`;
         const aggExpr = `${h.aggregation.toUpperCase()}(${col})`;
         const op = getSqlOperator(h.operator);
