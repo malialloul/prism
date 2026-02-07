@@ -1951,14 +1951,6 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
       const targetInQuery = joinedTables.has(r.targetTableId);
       const sourceInQuery = joinedTables.has(r.sourceTableId);
       
-      console.log('Reference filter check:', {
-        sourceTableId: r.sourceTableId,
-        targetTableId: r.targetTableId,
-        joinedTables: Array.from(joinedTables),
-        targetInQuery,
-        sourceInQuery
-      });
-      
       let targetCol: string;
       if (targetInQuery) {
         targetCol = `${r.targetTableId}.${r.targetColumn}`;
@@ -2988,7 +2980,6 @@ function QueryBuilder({ connectedDatabase, onApiSaved }: QueryBuilderProps) {
         </g>,
       );
     });
-    console.log('apiTestResult' , apiTestResult)
     // Draw reference filters (green/red)
     referenceFilters.forEach((ref) => {
       const from = tablePositions[ref.sourceTableId];

@@ -163,12 +163,10 @@ export const getCrudEndpoints = (databaseId: number, tableName: string): ApiEndp
   {
     id: `update-${tableName}`,
     method: 'PUT',
-    path: `/databases/${databaseId}/api/${tableName}/:recordId`,
+    path: `/databases/${databaseId}/api/${tableName}`,
     summary: `Update`,
-    description: `Update an existing record in the ${tableName} table (full replacement).`,
-    pathParams: [
-      { name: 'recordId', type: 'string', required: true, description: 'Record primary key value', example: '1' },
-    ],
+    description: `Update existing records in the ${tableName} table matching the specified filters (full replacement).`,
+    pathParams: [],
     queryParams: [],
     requestBody: {
       required: true,
@@ -181,16 +179,15 @@ export const getCrudEndpoints = (databaseId: number, tableName: string): ApiEndp
       { status: 401, description: 'Unauthorized' },
       { status: 404, description: 'Record not found' },
     ],
+    supportsFilters: true,
   },
   {
     id: `patch-${tableName}`,
     method: 'PATCH',
-    path: `/databases/${databaseId}/api/${tableName}/:recordId`,
+    path: `/databases/${databaseId}/api/${tableName}`,
     summary: `Partial update`,
-    description: `Partially update an existing record in the ${tableName} table.`,
-    pathParams: [
-      { name: 'recordId', type: 'string', required: true, description: 'Record primary key value', example: '1' },
-    ],
+    description: `Partially update existing records in the ${tableName} table matching the specified filters.`,
+    pathParams: [],
     queryParams: [],
     requestBody: {
       required: true,
@@ -203,6 +200,7 @@ export const getCrudEndpoints = (databaseId: number, tableName: string): ApiEndp
       { status: 401, description: 'Unauthorized' },
       { status: 404, description: 'Record not found' },
     ],
+    supportsFilters: true,
   },
   {
     id: `delete-${tableName}`,

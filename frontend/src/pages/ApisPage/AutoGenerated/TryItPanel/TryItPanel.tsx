@@ -353,6 +353,7 @@ export default function TryItPanelComponent({ endpoint, columns }: TryItPanelPro
                                             value={state.queryParams[param.name] || ''}
                                             onChange={(e) => handleQueryParamChange(param.name, e.target.value)}
                                             style={{ flex: 1 }}
+                                            disabled={param.name === 'sortOrder' && !state.queryParams['sortBy']}
                                         >
                                             <option value="">-</option>
                                             {param.enum.map((opt) => (
@@ -388,29 +389,32 @@ export default function TryItPanelComponent({ endpoint, columns }: TryItPanelPro
                             <TryItSection sx={{ py: 1, borderBottom: 1, borderColor: 'divider' }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <SectionTitle sx={{ mb: 0 }}>Request Body</SectionTitle>
-                                    <Tabs
-                                        value={bodyMode}
-                                        onChange={(_, v) => setBodyMode(v)}
-                                        sx={{
-                                            minHeight: 'auto',
-                                            ml: 'auto',
-                                            '& .MuiTab-root': {
+                                    {/* Only show JSON option for POST */}
+                                    {endpoint.method === 'POST' && (
+                                        <Tabs
+                                            value={bodyMode}
+                                            onChange={(_, v) => setBodyMode(v)}
+                                            sx={{
                                                 minHeight: 'auto',
-                                                py: 0.5,
-                                                px: 1.5,
-                                                fontSize: '0.7rem',
-                                                minWidth: 'auto'
-                                            },
-                                            '& .MuiTabs-indicator': { height: 2 }
-                                        }}
-                                    >
-                                        <Tab label="Form" value="form" />
-                                        <Tab label="JSON" value="json" />
-                                    </Tabs>
+                                                ml: 'auto',
+                                                '& .MuiTab-root': {
+                                                    minHeight: 'auto',
+                                                    py: 0.5,
+                                                    px: 1.5,
+                                                    fontSize: '0.7rem',
+                                                    minWidth: 'auto'
+                                                },
+                                                '& .MuiTabs-indicator': { height: 2 }
+                                            }}
+                                        >
+                                            <Tab label="Form" value="form" />
+                                            <Tab label="JSON" value="json" />
+                                        </Tabs>
+                                    )}
                                 </Box>
                             </TryItSection>
 
-                            {bodyMode === 'form' ? (
+                            {(bodyMode === 'form' || endpoint.method === 'PUT' || endpoint.method === 'PATCH') ? (
                                 <ColumnInputForm
                                     columns={columns}
                                     values={columnValues}

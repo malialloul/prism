@@ -687,6 +687,71 @@ export const updateRecord = async (
 };
 
 /**
+ * Update records by filters
+ */
+export const updateRecordsByFilters = async (
+  userId: string,
+  databaseId: string,
+  tableName: string,
+  filters: FilterCondition[],
+  data: Record<string, unknown>
+): Promise<number> => {
+  const conn = await getDatabaseConnection(userId, databaseId);
+  const sanitizedTable = sanitizeIdentifier(tableName);
+
+  if (Object.keys(data).length === 0) {
+    throw new ValidationError('No data provided');
+  }
+
+  if (!filters || filters.length === 0) {
+    throw new ValidationError('At least one filter is required to update records');
+  }
+
+  const columns = Object.keys(data).map(sanitizeIdentifier);
+  const values = Object.values(data);
+
+  if (conn.engine === 'postgres') {
+    const pgPool = createPgPool(conn);
+    try {
+      const setClause = columns.map((c, i) => `"${c}" = $${i + 1}`).join(', ');
+      const filterResult = buildWhereClause(filters, 'postgres', columns.length + 1);
+
+      const result = await pgPool.query(
+        `UPDATE "${sanitizedTable}" SET ${setClause} ${filterResult.clause}`,
+        [...values, ...filterResult.values]
+      );
+
+      await pgPool.end();
+      return result.rowCount || 0;
+    } catch (error) {
+      await pgPool.end();
+      if (error instanceof ValidationError) throw error;
+      const message = error instanceof Error ? error.message : 'Failed to update records';
+      throw new ValidationError(message);
+    }
+  } else {
+    const mysqlConn = await createMysqlConnection(conn);
+    try {
+      const setClause = columns.map(c => `\`${c}\` = ?`).join(', ');
+      const filterResult = buildWhereClause(filters, 'mysql', 1);
+
+      const [updateResult] = await mysqlConn.execute(
+        `UPDATE \`${sanitizedTable}\` SET ${setClause} ${filterResult.clause}`,
+        [...values, ...filterResult.values]
+      );
+
+      await mysqlConn.end();
+      return (updateResult as mysql.ResultSetHeader).affectedRows;
+    } catch (error) {
+      await mysqlConn.end();
+      if (error instanceof ValidationError) throw error;
+      const message = error instanceof Error ? error.message : 'Failed to update records';
+      throw new ValidationError(message);
+    }
+  }
+};
+
+/**
  * Delete records by filters
  */
 export const deleteRecord = async (

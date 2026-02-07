@@ -6,6 +6,7 @@ import {
   getRecord,
   createRecord,
   updateRecord,
+  updateRecordsByFilters,
   deleteRecord,
   getTableRelations,
   getRelatedRecords,
@@ -185,25 +186,34 @@ export const createRecordHandler = async (
 };
 
 /**
- * PUT /databases/:id/api/:table/:recordId
- * Update a record (full replacement)
+ * PUT /databases/:id/api/:table
+ * Update records by filters (full replacement)
  */
 export const updateRecordHandler = async (
-  req: Request<RecordParams>,
+  req: Request<TableParams>,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
     const userId = req.user!.userId;
-    const { id: databaseId, table: tableName, recordId } = req.params;
+    const { id: databaseId, table: tableName } = req.params;
+    const params = parseListParams(req.query);
     const data = req.body;
 
-    const record = await updateRecord(userId, databaseId, tableName, recordId, data);
+    if (!params.filters || params.filters.length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'At least one filter is required to update records',
+      });
+      return;
+    }
+
+    const updatedCount = await updateRecordsByFilters(userId, databaseId, tableName, params.filters, data);
 
     res.json({
       success: true,
-      record,
-      message: 'Record updated successfully',
+      message: `${updatedCount} record(s) updated successfully`,
+      updatedCount,
     });
   } catch (error) {
     next(error);
@@ -211,25 +221,34 @@ export const updateRecordHandler = async (
 };
 
 /**
- * PATCH /databases/:id/api/:table/:recordId
- * Partially update a record
+ * PATCH /databases/:id/api/:table
+ * Partially update records by filters
  */
 export const patchRecordHandler = async (
-  req: Request<RecordParams>,
+  req: Request<TableParams>,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
     const userId = req.user!.userId;
-    const { id: databaseId, table: tableName, recordId } = req.params;
+    const { id: databaseId, table: tableName } = req.params;
+    const params = parseListParams(req.query);
     const data = req.body;
 
-    const record = await updateRecord(userId, databaseId, tableName, recordId, data);
+    if (!params.filters || params.filters.length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'At least one filter is required to update records',
+      });
+      return;
+    }
+
+    const updatedCount = await updateRecordsByFilters(userId, databaseId, tableName, params.filters, data);
 
     res.json({
       success: true,
-      record,
-      message: 'Record updated successfully',
+      message: `${updatedCount} record(s) updated successfully`,
+      updatedCount,
     });
   } catch (error) {
     next(error);
