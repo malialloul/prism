@@ -78,15 +78,23 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     // Fetch current permissions from DB on mount for shared users
     useEffect(() => {
         const fetchPermissions = async () => {
-            if (!isSharedAccessSession()) return;
+            // Double-check if this is a shared access session (token might have changed)
+            if (!isSharedAccessSession()) {
+                // Not a shared user - no need to fetch, just ensure loading is false
+                if (state.isLoading) {
+                    dispatch({ type: 'UPDATE_PERMISSIONS', payload: DEFAULT_SHARE_PERMISSIONS });
+                }
+                return;
+            }
             
             try {
                 const response = await httpClient.get<{ data: { permissions: SharePermissions } }>('/auth/my-permissions');
                 console.log('[PermissionsContext] Fetched permissions from DB:', response.data.data.permissions);
                 dispatch({ type: 'UPDATE_PERMISSIONS', payload: response.data.data.permissions });
-            } catch (error) {
-                console.error('[PermissionsContext] Failed to fetch permissions:', error);
-                // Fall back to token permissions (already set in initial state)
+            } catch (error: any) {
+                // If 404, user is not actually a shared user (token may be stale)
+                // Silently fall back to default permissions
+                console.warn('[PermissionsContext] Failed to fetch permissions, using defaults:', error?.response?.status);
                 dispatch({ type: 'UPDATE_PERMISSIONS', payload: getPermissionsFromToken() || DEFAULT_SHARE_PERMISSIONS });
             }
         };

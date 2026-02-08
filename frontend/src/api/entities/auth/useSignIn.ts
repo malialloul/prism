@@ -20,6 +20,7 @@ interface UseSignInOptions {
 interface UseSignInReturn {
   signIn: (credentials: LoginDto, rememberMe?: boolean) => void;
   isLoading: boolean;
+  error: ApiError | null;
   reset: () => void;
 }
 
@@ -76,6 +77,7 @@ export function useSignIn(options: UseSignInOptions = {}): UseSignInReturn {
   return {
     signIn,
     isLoading: mutation.isPending,
+    error: mutation.error,
     reset: () => {
       mutation.reset();
     },

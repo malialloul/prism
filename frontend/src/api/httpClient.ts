@@ -42,7 +42,11 @@ export const getAuthToken = (): string | null => {
 };
 
 export const clearAuthToken = (): void => {
+  // Clear with multiple variations to ensure removal regardless of how it was set
   document.cookie = `${TOKEN_COOKIE_NAME}=; path=/; max-age=0`;
+  document.cookie = `${TOKEN_COOKIE_NAME}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+  document.cookie = `${TOKEN_COOKIE_NAME}=; path=/; max-age=0; SameSite=Strict`;
+  document.cookie = `${TOKEN_COOKIE_NAME}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict`;
 };
 
 /**

@@ -31,6 +31,10 @@ import {
   respondPermissionRequestHandler,
   cancelPermissionRequestHandler,
   getMyPermissionsHandler,
+  googleOAuthHandler,
+  googleOAuthCallbackHandler,
+  githubOAuthHandler,
+  githubOAuthCallbackHandler,
 } from './auth.controller';
 import { authMiddleware, blockSharedAccess, requireSharedAccess } from '../../middleware/auth';
 
@@ -44,6 +48,12 @@ router.post('/login/shared', sharedLoginHandler);
 router.post('/forgot-password', forgotPasswordHandler);
 router.post('/verify-reset-code', verifyResetCodeHandler);
 router.post('/reset-password', resetPasswordHandler);
+
+// OAuth routes (public)
+router.get('/oauth/google', googleOAuthHandler);
+router.get('/oauth/google/callback', googleOAuthCallbackHandler);
+router.get('/oauth/github', githubOAuthHandler);
+router.get('/oauth/github/callback', githubOAuthCallbackHandler);
 
 // Protected routes - blocked for shared access users (settings)
 router.post('/change-password', authMiddleware, blockSharedAccess, changePasswordHandler);

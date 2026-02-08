@@ -231,6 +231,7 @@ export const HomeLink = styled(Box)({
   zIndex: 10,
   transition: 'all 0.2s ease',
   textDecoration: 'none',
+  whiteSpace: 'nowrap',
   '&:hover': {
     color: colors.primary,
     transform: 'translateX(-2px)',

@@ -105,6 +105,14 @@ export const loginService = async (
 
   const user = result.rows[0];
 
+  // Check if user registered via OAuth (no password)
+  if (!user.password_hash) {
+    const provider = user.oauth_provider || 'OAuth';
+    throw new AuthenticationError(
+      `This account was created with ${provider}. Please sign in with ${provider}.`
+    );
+  }
+
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) throw new AuthenticationError('Invalid email or password');
 
@@ -321,6 +329,11 @@ export const changePasswordService = async (
 
   const user = userResult.rows[0];
 
+  // Check if user has a password (OAuth users don't)
+  if (!user.password_hash) {
+    throw new ValidationError('Cannot change password for OAuth accounts. Please manage your password through your OAuth provider.');
+  }
+
   // Verify current password
   const validCurrentPassword = await bcrypt.compare(currentPassword, user.password_hash);
   if (!validCurrentPassword) {
@@ -365,6 +378,11 @@ export const changeEmailService = async (
   }
 
   const user = userResult.rows[0];
+
+  // Check if user has a password (OAuth users don't)
+  if (!user.password_hash) {
+    throw new ValidationError('Cannot change email for OAuth accounts. Please manage your email through your OAuth provider.');
+  }
 
   // Verify password
   const validPassword = await bcrypt.compare(password, user.password_hash);
@@ -445,6 +463,11 @@ export const setup2FAService = async (
   }
 
   const user = userResult.rows[0];
+
+  // Check if user has a password (OAuth users don't)
+  if (!user.password_hash) {
+    throw new ValidationError('Two-factor authentication is not available for OAuth accounts.');
+  }
 
   // Verify password
   const validPassword = await bcrypt.compare(password, user.password_hash);
@@ -562,6 +585,11 @@ export const disable2FAService = async (
   }
 
   const user = userResult.rows[0];
+
+  // Check if user has a password (OAuth users don't)
+  if (!user.password_hash) {
+    throw new ValidationError('Two-factor authentication is not available for OAuth accounts.');
+  }
 
   // Verify password
   const validPassword = await bcrypt.compare(password, user.password_hash);
@@ -720,6 +748,11 @@ export const deactivateAccountService = async (
 
   const user = userResult.rows[0];
 
+  // Check if user has a password (OAuth users don't)
+  if (!user.password_hash) {
+    throw new ValidationError('Please enter your password to deactivate your account.');
+  }
+
   // Verify password
   const validPassword = await bcrypt.compare(password, user.password_hash);
   if (!validPassword) {
@@ -794,6 +827,11 @@ export const deleteAccountService = async (
   }
 
   const user = userResult.rows[0];
+
+  // Check if user has a password (OAuth users don't)
+  if (!user.password_hash) {
+    throw new ValidationError('Please enter your password to delete your account.');
+  }
 
   // Verify password
   const validPassword = await bcrypt.compare(password, user.password_hash);
@@ -1942,4 +1980,237 @@ export const getMyPermissionsService = async (
   }
 
   return { permissions: result.rows[0].permissions || DEFAULT_SHARE_PERMISSIONS };
+};
+
+// OAuth Service Functions
+
+export interface OAuthUserData {
+  email: string;
+  name: string;
+  provider: 'google' | 'github';
+  providerId: string;
+  avatarUrl?: string;
+}
+
+/**
+ * Handle OAuth login/signup
+ * If user exists with this OAuth provider, log them in
+ * If user exists with email but different provider, link the account
+ * If user doesn't exist, create a new account
+ */
+export const oauthLoginService = async (
+  userData: OAuthUserData,
+): Promise<TokenResponseDto> => {
+  const { email, name, provider, providerId, avatarUrl } = userData;
+
+  // Check if user exists with this OAuth provider
+  let userResult = await pool.query<DbUserDto>(
+    'SELECT * FROM users WHERE oauth_provider = $1 AND oauth_provider_id = $2',
+    [provider, providerId],
+  );
+
+  let user = userResult.rows[0];
+
+  if (!user) {
+    // Check if user exists with this email (may have registered with password or different OAuth)
+    userResult = await pool.query<DbUserDto>(
+      'SELECT * FROM users WHERE email = $1',
+      [email],
+    );
+
+    user = userResult.rows[0];
+
+    if (user) {
+      // User exists but with different auth method
+      if (user.oauth_provider && user.oauth_provider !== provider) {
+        throw new ConflictError(
+          `This email is already registered with ${user.oauth_provider}. Please sign in with ${user.oauth_provider}.`
+        );
+      }
+
+      // User exists with password auth - link the OAuth provider
+      if (!user.oauth_provider) {
+        await pool.query(
+          `UPDATE users SET 
+            oauth_provider = $1, 
+            oauth_provider_id = $2, 
+            avatar_url = COALESCE($3, avatar_url),
+            full_name = COALESCE(full_name, $4)
+          WHERE id = $5`,
+          [provider, providerId, avatarUrl, name, user.id],
+        );
+      }
+    } else {
+      // Create new user
+      const insertResult = await pool.query<DbUserDto>(
+        `INSERT INTO users (email, full_name, oauth_provider, oauth_provider_id, avatar_url)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`,
+        [email, name, provider, providerId, avatarUrl],
+      );
+      user = insertResult.rows[0];
+    }
+  }
+
+  // Check if account is deactivated
+  if (user.deactivated_at) {
+    throw new AuthenticationError('This account has been deactivated');
+  }
+
+  // Generate JWT token
+  const token = jwt.sign(
+    {
+      userId: user.id,
+      email: user.email,
+      fullName: user.full_name ?? undefined,
+    },
+    config.jwt.secret,
+    { expiresIn: config.jwt.expiresIn },
+  );
+
+  return { token };
+};
+
+/**
+ * Exchange OAuth authorization code for access token (Google)
+ */
+export const exchangeGoogleCodeService = async (code: string): Promise<OAuthUserData> => {
+  const { oauthConfig } = await import('../../config/oauth');
+
+  // Exchange code for tokens
+  const tokenResponse = await fetch(oauthConfig.google.tokenUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      code,
+      client_id: oauthConfig.google.clientId,
+      client_secret: oauthConfig.google.clientSecret,
+      redirect_uri: oauthConfig.google.redirectUri,
+      grant_type: 'authorization_code',
+    }),
+  });
+
+  if (!tokenResponse.ok) {
+    const error = await tokenResponse.text();
+    console.error('Google token exchange error:', error);
+    throw new AuthenticationError('Failed to exchange authorization code');
+  }
+
+  const tokens = await tokenResponse.json() as { access_token: string };
+
+  // Get user info
+  const userInfoResponse = await fetch(oauthConfig.google.userInfoUrl, {
+    headers: {
+      Authorization: `Bearer ${tokens.access_token}`,
+    },
+  });
+
+  if (!userInfoResponse.ok) {
+    throw new AuthenticationError('Failed to get user info from Google');
+  }
+
+  const userInfo = await userInfoResponse.json() as {
+    id: string;
+    email: string;
+    name: string;
+    picture?: string;
+  };
+
+  return {
+    email: userInfo.email,
+    name: userInfo.name,
+    provider: 'google',
+    providerId: userInfo.id,
+    avatarUrl: userInfo.picture,
+  };
+};
+
+/**
+ * Exchange OAuth authorization code for access token (GitHub)
+ */
+export const exchangeGithubCodeService = async (code: string): Promise<OAuthUserData> => {
+  const { oauthConfig } = await import('../../config/oauth');
+
+  // Exchange code for tokens
+  const tokenResponse = await fetch(oauthConfig.github.tokenUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json',
+    },
+    body: new URLSearchParams({
+      code,
+      client_id: oauthConfig.github.clientId,
+      client_secret: oauthConfig.github.clientSecret,
+      redirect_uri: oauthConfig.github.redirectUri,
+    }),
+  });
+
+  if (!tokenResponse.ok) {
+    const error = await tokenResponse.text();
+    console.error('GitHub token exchange error:', error);
+    throw new AuthenticationError('Failed to exchange authorization code');
+  }
+
+  const tokens = await tokenResponse.json() as { access_token: string; error?: string };
+
+  if (tokens.error) {
+    console.error('GitHub token error:', tokens.error);
+    throw new AuthenticationError('Failed to exchange authorization code');
+  }
+
+  // Get user info
+  const userInfoResponse = await fetch(oauthConfig.github.userInfoUrl, {
+    headers: {
+      Authorization: `Bearer ${tokens.access_token}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!userInfoResponse.ok) {
+    throw new AuthenticationError('Failed to get user info from GitHub');
+  }
+
+  const userInfo = await userInfoResponse.json() as {
+    id: number;
+    login: string;
+    name: string | null;
+    email: string | null;
+    avatar_url?: string;
+  };
+
+  // If email is private, fetch from emails endpoint
+  let email = userInfo.email;
+  if (!email) {
+    const emailsResponse = await fetch(oauthConfig.github.userEmailsUrl, {
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    if (emailsResponse.ok) {
+      const emails = await emailsResponse.json() as Array<{
+        email: string;
+        primary: boolean;
+        verified: boolean;
+      }>;
+      const primaryEmail = emails.find((e) => e.primary && e.verified);
+      email = primaryEmail?.email || emails[0]?.email;
+    }
+  }
+
+  if (!email) {
+    throw new AuthenticationError('Could not get email from GitHub. Please ensure your email is public or grant email access.');
+  }
+
+  return {
+    email,
+    name: userInfo.name || userInfo.login,
+    provider: 'github',
+    providerId: String(userInfo.id),
+    avatarUrl: userInfo.avatar_url,
+  };
 };

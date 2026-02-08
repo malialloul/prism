@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthenticationService } from '../../services/AuthenticationService';
 import { ApiError } from '../../core/ApiError';
 import { setAuthToken } from '../../httpClient';
+import { toastService } from '../../../services';
 import type { SignupDto } from '../../models/SignupDto';
 import type { TokenResponseDto } from '../../models/TokenResponseDto';
 
@@ -13,6 +14,7 @@ interface UseSignUpOptions {
 interface UseSignUpReturn {
   signUp: (data: SignupDto) => void;
   isLoading: boolean;
+  error: ApiError | null;
   reset: () => void;
 }
 
@@ -30,6 +32,9 @@ export function useSignUp(options: UseSignUpOptions = {}): UseSignUpReturn {
       }
       navigate(redirectTo);
     },
+    onError: (error) => {
+      toastService.error(error.body?.message || 'Sign up failed. Please try again.');
+    },
   });
 
   const signUp = (data: SignupDto): void => {
@@ -39,6 +44,7 @@ export function useSignUp(options: UseSignUpOptions = {}): UseSignUpReturn {
   return {
     signUp,
     isLoading: mutation.isPending,
+    error: mutation.error,
     reset: () => {
       mutation.reset();
     },

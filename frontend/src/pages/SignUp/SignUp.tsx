@@ -1,15 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import { Box, Typography, InputAdornment, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { ButtonLoadingSkeleton } from '../../components';
-import { Google, Microsoft, Api, ArrowBack, DatabaseIcon, BrushIcon, LightningIcon, DocumentationIcon } from '../../assets/icons';
+import { Google, GitHub, Api, ArrowBack, DatabaseIcon, BrushIcon, LightningIcon, DocumentationIcon } from '../../assets/icons';
 import { Visibility, VisibilityOff, Check, Close } from '@mui/icons-material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { authColors } from '../../styles/theme';
 import { useSignUp } from '../../api/entities/auth';
 import { hashPassword } from '../../utils/crypto';
+import { toastService } from '../../services';
 import {
   AuthWrapper,
   LeftPanel,
@@ -176,6 +177,18 @@ export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showTermsDialog, setShowTermsDialog] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Check for OAuth error in URL params
+  useEffect(() => {
+    const error = searchParams.get('error');
+    if (error) {
+      toastService.error(decodeURIComponent(error));
+      // Clear the error from URL
+      searchParams.delete('error');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleSubmit = async (values: FormValues): Promise<void> => {
     const hashedPassword = await hashPassword(values.password);
@@ -565,15 +578,23 @@ export default function SignUp() {
                       variant="outlined"
                       startIcon={<Google sx={{ fontSize: 18, color: '#DB4437' }} />}
                       disabled={isLoading}
+                      onClick={() => {
+                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+                        window.location.href = `${apiUrl}/auth/oauth/google`;
+                      }}
                     >
                       Google
                     </OAuthButton>
                     <OAuthButton
                       variant="outlined"
-                      startIcon={<Microsoft sx={{ fontSize: 18, color: '#00A4EF' }} />}
+                      startIcon={<GitHub sx={{ fontSize: 18 }} />}
                       disabled={isLoading}
+                      onClick={() => {
+                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+                        window.location.href = `${apiUrl}/auth/oauth/github`;
+                      }}
                     >
-                      Microsoft
+                      GitHub
                     </OAuthButton>
                   </OAuthButtonsContainer>
 

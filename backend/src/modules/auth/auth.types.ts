@@ -295,11 +295,14 @@ export interface MessageResponseDto {
 export interface DbUserDto {
   id: string;
   email: string;
-  password_hash: string;
+  password_hash: string | null;
   full_name: string | null;
   two_factor_secret: string | null;
   two_factor_enabled: boolean;
   deactivated_at: Date | null;
+  oauth_provider: 'google' | 'github' | null;
+  oauth_provider_id: string | null;
+  avatar_url: string | null;
   created_at: Date;
   updated_at: Date;
 }

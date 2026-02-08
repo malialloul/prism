@@ -6,11 +6,14 @@ export const UserSchema = registerTable(
   "users",
   z.object({
     email: z.string().email(),
-    passwordHash: z.string(),
+    passwordHash: z.string().optional(), // Optional for OAuth users
     fullName: z.string().optional(),
     twoFactorSecret: z.string().optional(),
     twoFactorEnabled: z.boolean().default(false),
     deactivatedAt: z.date().optional(),
+    oauthProvider: z.enum(['google', 'github']).optional(),
+    oauthProviderId: z.string().optional(),
+    avatarUrl: z.string().optional(),
   }),
   {
     withId: true,

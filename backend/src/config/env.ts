@@ -78,6 +78,18 @@ export const config = {
     apiKey: process.env.NEON_API_KEY || '',
     orgId: process.env.NEON_ORG_ID || '',
   },
+  oauth: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    },
+    github: {
+      clientId: process.env.GITHUB_CLIENT_ID || '',
+      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
+    },
+    callbackBaseUrl: process.env.OAUTH_CALLBACK_BASE_URL || 'http://localhost:4000',
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  },
   // Feature flags based on environment
   features: {
     enableHostedDatabases: process.env.ENABLE_HOSTED_DBS === 'true' || !isProduction,

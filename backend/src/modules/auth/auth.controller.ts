@@ -564,3 +564,116 @@ export const getMyPermissionsHandler = asyncHandler(async (
     data,
   });
 });
+
+// OAuth Handlers
+
+/**
+ * Redirect to Google OAuth
+ */
+export const googleOAuthHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const { oauthConfig } = await import('../../config/oauth');
+  
+  const params = new URLSearchParams({
+    client_id: oauthConfig.google.clientId,
+    redirect_uri: oauthConfig.google.redirectUri,
+    response_type: 'code',
+    scope: oauthConfig.google.scope,
+    access_type: 'offline',
+    prompt: 'consent',
+  });
+
+  res.redirect(`${oauthConfig.google.authUrl}?${params.toString()}`);
+});
+
+/**
+ * Handle Google OAuth callback
+ */
+export const googleOAuthCallbackHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const { oauthConfig } = await import('../../config/oauth');
+  const { exchangeGoogleCodeService, oauthLoginService } = await import('./auth.service');
+  
+  const code = req.query.code as string;
+  const error = req.query.error as string;
+
+  if (error) {
+    return res.redirect(`${oauthConfig.frontendUrl}/signin?error=${encodeURIComponent(error)}`);
+  }
+
+  if (!code) {
+    return res.redirect(`${oauthConfig.frontendUrl}/signin?error=missing_code`);
+  }
+
+  try {
+    const userData = await exchangeGoogleCodeService(code);
+    const { token } = await oauthLoginService(userData);
+    
+    // Redirect to frontend with token
+    res.redirect(`${oauthConfig.frontendUrl}/oauth/callback?token=${token}`);
+  } catch (err: any) {
+    console.error('Google OAuth error:', err);
+    const errorMessage = err.message || 'Authentication failed';
+    res.redirect(`${oauthConfig.frontendUrl}/signin?error=${encodeURIComponent(errorMessage)}`);
+  }
+});
+
+/**
+ * Redirect to GitHub OAuth
+ */
+export const githubOAuthHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const { oauthConfig } = await import('../../config/oauth');
+  
+  const params = new URLSearchParams({
+    client_id: oauthConfig.github.clientId,
+    redirect_uri: oauthConfig.github.redirectUri,
+    scope: oauthConfig.github.scope,
+  });
+
+  res.redirect(`${oauthConfig.github.authUrl}?${params.toString()}`);
+});
+
+/**
+ * Handle GitHub OAuth callback
+ */
+export const githubOAuthCallbackHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const { oauthConfig } = await import('../../config/oauth');
+  const { exchangeGithubCodeService, oauthLoginService } = await import('./auth.service');
+  
+  const code = req.query.code as string;
+  const error = req.query.error as string;
+
+  if (error) {
+    return res.redirect(`${oauthConfig.frontendUrl}/signin?error=${encodeURIComponent(error)}`);
+  }
+
+  if (!code) {
+    return res.redirect(`${oauthConfig.frontendUrl}/signin?error=missing_code`);
+  }
+
+  try {
+    const userData = await exchangeGithubCodeService(code);
+    const { token } = await oauthLoginService(userData);
+    
+    // Redirect to frontend with token
+    res.redirect(`${oauthConfig.frontendUrl}/oauth/callback?token=${token}`);
+  } catch (err: any) {
+    console.error('GitHub OAuth error:', err);
+    const errorMessage = err.message || 'Authentication failed';
+    res.redirect(`${oauthConfig.frontendUrl}/signin?error=${encodeURIComponent(errorMessage)}`);
+  }
+});

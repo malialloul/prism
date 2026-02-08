@@ -3,9 +3,9 @@ import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import { Box, Typography, InputAdornment, IconButton } from '@mui/material';
 import { ButtonLoadingSkeleton } from '../../components';
-import { Google, Microsoft, Api, ArrowBack, DatabaseIcon, SparklesIcon, RocketIcon, SecurityIcon } from '../../assets/icons';
+import { Google, GitHub, Api, ArrowBack, DatabaseIcon, SparklesIcon, RocketIcon, SecurityIcon } from '../../assets/icons';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { useSignIn } from '../../api/entities/auth';
 import { hashPassword } from '../../utils/crypto';
 import { toastService } from '../../services';
@@ -56,12 +56,24 @@ export default function SignIn() {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [twoFactorData, setTwoFactorData] = useState<{ email: string; tempToken: string } | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { signIn, isLoading } = useSignIn({
     on2FARequired: (data) => {
       setTwoFactorData(data);
     },
   });
+
+  // Check for OAuth error in URL params
+  useEffect(() => {
+    const error = searchParams.get('error');
+    if (error) {
+      toastService.error(decodeURIComponent(error));
+      // Clear the error from URL
+      searchParams.delete('error');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Check for force logout message from previous session
   useEffect(() => {
@@ -231,15 +243,23 @@ export default function SignIn() {
                     variant="outlined"
                     startIcon={<Google sx={{ fontSize: 18, color: '#DB4437' }} />}
                     disabled={isLoading}
+                    onClick={() => {
+                      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+                      window.location.href = `${apiUrl}/auth/oauth/google`;
+                    }}
                   >
                     Google
                   </OAuthButton>
                   <OAuthButton
                     variant="outlined"
-                    startIcon={<Microsoft sx={{ fontSize: 18, color: '#00A4EF' }} />}
+                    startIcon={<GitHub sx={{ fontSize: 18 }} />}
                     disabled={isLoading}
+                    onClick={() => {
+                      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+                      window.location.href = `${apiUrl}/auth/oauth/github`;
+                    }}
                   >
-                    Microsoft
+                    GitHub
                   </OAuthButton>
                 </OAuthButtonsContainer>
 
