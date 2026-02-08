@@ -29,24 +29,6 @@ interface TokenPayload {
 
 // Cookie utilities
 const TOKEN_COOKIE_NAME = 'auth_token';
-// Storage key for runtime permission overrides (updated via WebSocket)
-const PERMISSIONS_OVERRIDE_KEY = 'shared_permissions_override';
-
-// Subscribers for permission updates
-type PermissionUpdateCallback = () => void;
-const permissionSubscribers = new Set<PermissionUpdateCallback>();
-
-/**
- * Subscribe to permission updates. Returns unsubscribe function.
- */
-export const onPermissionsChange = (callback: PermissionUpdateCallback): (() => void) => {
-  permissionSubscribers.add(callback);
-  return () => permissionSubscribers.delete(callback);
-};
-
-const notifyPermissionSubscribers = (): void => {
-  permissionSubscribers.forEach(cb => cb());
-};
 
 export const setAuthToken = (token: string, rememberMe: boolean = false): void => {
   const maxAge = rememberMe ? 60 * 60 * 24 * 30 : undefined; // 30 days if remember me
@@ -61,8 +43,6 @@ export const getAuthToken = (): string | null => {
 
 export const clearAuthToken = (): void => {
   document.cookie = `${TOKEN_COOKIE_NAME}=; path=/; max-age=0`;
-  // Also clear any permissions override
-  localStorage.removeItem(PERMISSIONS_OVERRIDE_KEY);
 };
 
 /**
@@ -81,35 +61,10 @@ const decodeToken = (): TokenPayload | null => {
 };
 
 /**
- * Update permissions at runtime (called when WebSocket receives permissions_updated)
+ * Get permissions from the JWT token
+ * Note: Backend always validates against the database for actual enforcement
  */
-export const updateSharedPermissions = (permissions: SharePermissions): void => {
-  localStorage.setItem(PERMISSIONS_OVERRIDE_KEY, JSON.stringify(permissions));
-  // Notify all subscribers
-  notifyPermissionSubscribers();
-};
-
-/**
- * Clear the permissions override (called on logout)
- */
-export const clearPermissionsOverride = (): void => {
-  localStorage.removeItem(PERMISSIONS_OVERRIDE_KEY);
-};
-
-/**
- * Get the current effective permissions (override takes precedence over token)
- */
-const getEffectivePermissions = (): SharePermissions | undefined => {
-  // Check for runtime override first
-  const override = localStorage.getItem(PERMISSIONS_OVERRIDE_KEY);
-  if (override) {
-    try {
-      return JSON.parse(override);
-    } catch {
-      // Invalid JSON, fall through to token
-    }
-  }
-  // Fall back to token permissions
+const getTokenPermissions = (): SharePermissions | undefined => {
   const payload = decodeToken();
   return payload?.permissions;
 };
@@ -143,20 +98,21 @@ export const getSharedAccessInfo = (): { shareId: number; sharedWithEmail: strin
   return {
     shareId: payload.shareId!,
     sharedWithEmail: payload.sharedWithEmail!,
-    permissions: getEffectivePermissions() || DEFAULT_SHARE_PERMISSIONS,
+    permissions: getTokenPermissions() || DEFAULT_SHARE_PERMISSIONS,
   };
 };
 
 /**
- * Check if shared user has specific permission
+ * Check if shared user has specific permission (based on JWT token)
  * Returns true for account owners (non-shared access)
+ * Note: Backend always validates against the database for actual enforcement
  */
 export const hasPermission = (permission: keyof SharePermissions): boolean => {
   const payload = decodeToken();
   // Account owners have full access
   if (!payload?.isSharedAccess) return true;
-  // Check effective permissions (override or token)
-  const permissions = getEffectivePermissions();
+  // Check permissions from token
+  const permissions = getTokenPermissions();
   return permissions?.[permission] ?? false;
 };
 

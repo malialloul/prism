@@ -1,7 +1,9 @@
 import { io, Socket } from 'socket.io-client';
-import { getAuthToken, clearAuthToken, updateSharedPermissions } from '../api/httpClient';
-import type { SharePermissions } from '../api/models/SharedAccountDto';
+import { getAuthToken, clearAuthToken, isSharedAccessSession } from '../api/httpClient';
 import { toastService } from './toastService';
+import { queryClient } from '../App';
+import { dispatchPermissionsUpdate } from '../context/PermissionsContext';
+import type { SharePermissions } from '../api/models/SharedAccountDto';
 
 export interface NotificationPayload {
   id: number;
@@ -153,16 +155,33 @@ class WebSocketService {
     });
 
     // Handle permissions updated (when account owner updates shared user's permissions)
+    // Dispatch to reducer so PermissionsContext updates React state for live UI updates
     this.socket.on('permissions_updated', (payload: PermissionsUpdatedPayload) => {
       console.log('[WebSocket] Received permissions updated:', payload);
       this.permissionsUpdatedCallbacks.forEach((callback) => callback(payload));
       
-      // Update permissions in localStorage for immediate UI effect
-      updateSharedPermissions(payload.permissions as unknown as SharePermissions);
-      
-      // Show success toast for permission approval
-      if (payload.message) {
-        toastService.success(payload.message, { duration: 5000 });
+      // Only process for shared users, not the owner who initiated the change
+      if (isSharedAccessSession()) {
+        // Dispatch to reducer for React state update
+        dispatchPermissionsUpdate(payload.permissions as SharePermissions);
+        
+        // Invalidate all queries to ensure fresh data is fetched
+        queryClient.invalidateQueries();
+        console.log('[WebSocket] Invalidated all queries due to permission change');
+        
+        // Show toast with deduplication (prevent same message within 5 seconds)
+        if (payload.message) {
+          const now = Date.now();
+          const isDuplicate = this.lastToastMessage === payload.message && (now - this.lastToastTime) < 5000;
+          
+          if (!isDuplicate) {
+            this.lastToastMessage = payload.message;
+            this.lastToastTime = now;
+            toastService.info(payload.message, { duration: 5000 });
+          } else {
+            console.log('[WebSocket] Duplicate permissions toast suppressed');
+          }
+        }
       }
     });
 

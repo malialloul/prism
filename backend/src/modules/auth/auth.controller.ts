@@ -544,3 +544,23 @@ export const cancelPermissionRequestHandler = asyncHandler(async (
   };
   res.json(result);
 });
+
+export const getMyPermissionsHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  const shareId = req.user!.shareId;
+  
+  if (!shareId) {
+    throw new AuthorizationError('Share ID not found in token');
+  }
+  
+  const { getMyPermissionsService } = await import('./auth.service');
+  const data = await getMyPermissionsService(shareId);
+  res.json({
+    status: 'success',
+    message: 'Permissions retrieved',
+    data,
+  });
+});

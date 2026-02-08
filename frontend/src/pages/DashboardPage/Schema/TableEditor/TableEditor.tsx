@@ -53,7 +53,7 @@ export default function TableEditor({
   onDataChanged,
 }: TableEditorProps) {
   // Permissions
-  const { canViewTableData, canEditTableData } = usePermissions();
+  const { canViewTableData, canAddRecord, canDeleteRecord } = usePermissions();
 
   // Tab state
   const [activeTab, setActiveTab] = useState(0);
@@ -74,6 +74,7 @@ export default function TableEditor({
   const [totalRows, setTotalRows] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleteRowDialogOpen, setDeleteRowDialogOpen] = useState(false);
 
   // Search and sort state
   const [searchValue, setSearchValue] = useState<string>('');
@@ -391,7 +392,7 @@ export default function TableEditor({
 
   // Close add row dialog and actually add the row when permission is granted
   useEffect(() => {
-    if (canEditTableData && addRowDialogOpen) {
+    if (canAddRecord && addRowDialogOpen) {
       setAddRowDialogOpen(false);
       // Actually add the row now that we have permission
       const newRow: RowData = {
@@ -403,10 +404,10 @@ export default function TableEditor({
       });
       setRows((prev) => [...prev, newRow]);
     }
-  }, [canEditTableData, addRowDialogOpen, columns]);
+  }, [canAddRecord, addRowDialogOpen, columns]);
 
   const handleAddRow = () => {
-    if (!canEditTableData) {
+    if (!canAddRecord) {
       setAddRowDialogOpen(true);
       return;
     }
@@ -444,8 +445,23 @@ export default function TableEditor({
 
   const handleDeleteSelected = () => {
     if (selectedRows.size === 0) return;
+    if (!canDeleteRecord) {
+      setDeleteRowDialogOpen(true);
+      return;
+    }
     setConfirmDeleteOpen(true);
   };
+
+  // Close delete row permission dialog when permission is granted
+  useEffect(() => {
+    if (canDeleteRecord && deleteRowDialogOpen) {
+      setDeleteRowDialogOpen(false);
+      // Show the actual delete confirmation now
+      if (selectedRows.size > 0) {
+        setConfirmDeleteOpen(true);
+      }
+    }
+  }, [canDeleteRecord, deleteRowDialogOpen, selectedRows.size]);
 
   const confirmDelete = async () => {
     const quote = engine === 'postgres' ? '"' : '`';
@@ -743,10 +759,25 @@ export default function TableEditor({
         <AccessRestricted
           message="Add Row Access Restricted"
           description="You don't have permission to add table data. Please contact the account owner to request access."
-          permission="editTableData"
+          permission="addRecord"
         />
         <DialogActions sx={{ p: 2 }}>
           <CancelButton onClick={() => setAddRowDialogOpen(false)}>
+            Close
+          </CancelButton>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Row Permission Dialog */}
+      <Dialog open={deleteRowDialogOpen} onClose={() => setDeleteRowDialogOpen(false)} maxWidth="sm" fullWidth>
+        <MuiDialogTitle>Delete Row</MuiDialogTitle>
+        <AccessRestricted
+          message="Delete Row Access Restricted"
+          description="You don't have permission to delete table data. Please contact the account owner to request access."
+          permission="deleteRecord"
+        />
+        <DialogActions sx={{ p: 2 }}>
+          <CancelButton onClick={() => setDeleteRowDialogOpen(false)}>
             Close
           </CancelButton>
         </DialogActions>

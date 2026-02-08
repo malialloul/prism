@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ApiIcon from '@mui/icons-material/Api';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -31,6 +31,8 @@ import FilterSection from '../FilterSection/FilterSection';
 import ColumnInputForm from '../ColumnInputForm/ColumnInputForm';
 import type { ApiEndpoint, TryItState, ColumnInfo, FilterCondition } from '../../ApisPage.types';
 import { httpClient } from '../../../../api/httpClient';
+import { AccessRestricted, usePermissions } from '../../../../components';
+import type { SharePermissions } from '../../../../api/models/SharedAccountDto';
 
 interface TryItPanelProps {
     endpoint: ApiEndpoint | null;
@@ -38,6 +40,8 @@ interface TryItPanelProps {
 }
 
 export default function TryItPanelComponent({ endpoint, columns }: TryItPanelProps) {
+    const { canViewTableData, canAddRecord, canEditRecord, canDeleteRecord } = usePermissions();
+    
     const [state, setState] = useState<TryItState>({
         pathParams: {},
         queryParams: {},
@@ -51,6 +55,45 @@ export default function TryItPanelComponent({ endpoint, columns }: TryItPanelPro
     const [columnValues, setColumnValues] = useState<Record<string, string>>({});
     const [expandedRecords, setExpandedRecords] = useState<Set<number>>(new Set());
     const [bodyMode, setBodyMode] = useState<'form' | 'json'>('form');
+
+    // Determine permission requirements based on HTTP method
+    const permissionCheck = useMemo((): { hasPermission: boolean; requiredPermission: keyof SharePermissions | null; message: string; description: string } => {
+        if (!endpoint) return { hasPermission: true, requiredPermission: null, message: '', description: '' };
+        
+        switch (endpoint.method) {
+            case 'GET':
+                return {
+                    hasPermission: canViewTableData,
+                    requiredPermission: 'viewTableData',
+                    message: 'View Data Restricted',
+                    description: "You don't have permission to view table data. Please contact the account owner to request access."
+                };
+            case 'POST':
+                return {
+                    hasPermission: canAddRecord,
+                    requiredPermission: 'addRecord',
+                    message: 'Add Record Restricted',
+                    description: "You don't have permission to add records. Please contact the account owner to request access."
+                };
+            case 'PUT':
+            case 'PATCH':
+                return {
+                    hasPermission: canEditRecord,
+                    requiredPermission: 'editRecord',
+                    message: 'Edit Record Restricted',
+                    description: "You don't have permission to edit records. Please contact the account owner to request access."
+                };
+            case 'DELETE':
+                return {
+                    hasPermission: canDeleteRecord,
+                    requiredPermission: 'deleteRecord',
+                    message: 'Delete Record Restricted',
+                    description: "You don't have permission to delete records. Please contact the account owner to request access."
+                };
+            default:
+                return { hasPermission: true, requiredPermission: null, message: '', description: '' };
+        }
+    }, [endpoint, canViewTableData, canAddRecord, canEditRecord, canDeleteRecord]);
 
     // Reset state when endpoint changes
     useEffect(() => {
@@ -269,6 +312,27 @@ export default function TryItPanelComponent({ endpoint, columns }: TryItPanelPro
                     <ApiIcon sx={{ fontSize: '3rem', opacity: 0.3 }} />
                     <span>Select an endpoint to try it</span>
                 </EmptyTryIt>
+            </TryItPanel>
+        );
+    }
+
+    // Show access restricted if user doesn't have permission for this operation
+    if (!permissionCheck.hasPermission && permissionCheck.requiredPermission) {
+        return (
+            <TryItPanel>
+                <TryItHeader>
+                    <TryItTitle>
+                        <MethodBadge method={endpoint.method} label={endpoint.method} />
+                        <TryItEndpoint>{endpoint.summary}</TryItEndpoint>
+                    </TryItTitle>
+                </TryItHeader>
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3 }}>
+                    <AccessRestricted
+                        message={permissionCheck.message}
+                        description={permissionCheck.description}
+                        permission={permissionCheck.requiredPermission}
+                    />
+                </Box>
             </TryItPanel>
         );
     }

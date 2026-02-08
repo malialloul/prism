@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { ButtonLoadingSkeleton, usePermissions } from '../../../../components';
+import { ButtonLoadingSkeleton, usePermissions, AccessRestricted } from '../../../../components';
 import {
   Tooltip,
   IconButton,
@@ -19,6 +19,7 @@ import { useExecuteQuery, useSavedQueries, useSaveQuery, useDeleteSavedQuery } f
 import type { QueryResultDto, SavedQueryDto } from '../../../../api/models/SchemaDto';
 import { toastService } from '../../../../services';
 import { Pagination } from '../../../../components';
+import { useDashboard } from '../../DashboardLayout';
 import {
   EditorWrapper,
   EditorHeader,
@@ -59,7 +60,8 @@ export default function QueryEditor({
   engine: _engine,
   initialQuery = '',
 }: QueryEditorProps) {
-  const { canRunQuery, canCreateApi } = usePermissions();
+  const { canRunQuery, canCreateApi, canCreateDatabase } = usePermissions();
+  const { handleCreateDatabase } = useDashboard();
   const [sql, setSql] = useState(initialQuery);
   const [executedSql, setExecutedSql] = useState<string | null>(null);
   const [result, setResult] = useState<QueryResultDto | null>(null);
@@ -67,6 +69,7 @@ export default function QueryEditor({
   const [queryName, setQueryName] = useState('');
   const [showSavedQueries, setShowSavedQueries] = useState(false);
   const [queryToDelete, setQueryToDelete] = useState<string | null>(null);
+  const [showCreateDbRestricted, setShowCreateDbRestricted] = useState(false);
 
   // Pagination state
   const [page, setPage] = useState(0);
@@ -114,12 +117,32 @@ export default function QueryEditor({
     },
   });
 
+  // Helper to detect CREATE DATABASE command
+  const isCreateDatabaseQuery = useCallback((query: string): boolean => {
+    const normalizedSql = query.toLowerCase().replace(/\s+/g, ' ').trim();
+    return /\bcreate\s+database\b/.test(normalizedSql);
+  }, []);
+
   const handleRunQuery = useCallback(() => {
     if (!sql.trim() || !databaseId) return;
+
+    // Intercept CREATE DATABASE commands
+    if (isCreateDatabaseQuery(sql)) {
+      if (canCreateDatabase) {
+        // User has permission - open the Create Database dialog
+        handleCreateDatabase();
+        toastService.info('Use the Create Database dialog to create a new database.');
+      } else {
+        // User doesn't have permission - show access restricted dialog
+        setShowCreateDbRestricted(true);
+      }
+      return;
+    }
+
     setExecutedSql(sql);
     setPage(0);
     executeQuery({ sql, page: 0, pageSize });
-  }, [sql, databaseId, executeQuery, pageSize]);
+  }, [sql, databaseId, executeQuery, pageSize, isCreateDatabaseQuery, canCreateDatabase, handleCreateDatabase]);
 
   // Re-execute query when page or pageSize changes
   useEffect(() => {
@@ -405,6 +428,20 @@ export default function QueryEditor({
           >
             Delete
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Create Database Access Restricted Dialog */}
+      <Dialog open={showCreateDbRestricted} onClose={() => setShowCreateDbRestricted(false)} maxWidth="sm" fullWidth>
+        <DialogContent sx={{ p: 0 }}>
+          <AccessRestricted
+            message="Create Database Access Restricted"
+            description="You don't have permission to create databases. Please contact the account owner to request access."
+            permission="createDatabase"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowCreateDbRestricted(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </EditorWrapper>

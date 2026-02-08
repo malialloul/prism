@@ -5,7 +5,8 @@ import SendIcon from "@mui/icons-material/Send";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import { styled } from "@mui/material/styles";
-import { isSharedAccessSession, getSharedAccessInfo, hasPermission, onPermissionsChange } from "../../api/httpClient";
+import { getSharedAccessInfo } from "../../api/httpClient";
+import { usePermissionsContext } from "../../context/PermissionsContext";
 import { useCreatePermissionRequest, useMyPermissionRequests } from "../../api/entities/auth";
 import type { SharePermissions } from "../../api/models/SharedAccountDto";
 import { toastService } from "../../services";
@@ -70,14 +71,8 @@ export function AccessRestricted({
     const [showRequestForm, setShowRequestForm] = useState(false);
     const [requestMessage, setRequestMessage] = useState("");
     const [requestSent, setRequestSent] = useState(false);
-    const [, setTrigger] = useState(0);
 
-    // Subscribe to permission changes to re-render when permissions are updated
-    useEffect(() => {
-        return onPermissionsChange(() => setTrigger(t => t + 1));
-    }, []);
-
-    const isShared = isSharedAccessSession();
+    const { isSharedAccess, hasPermission } = usePermissionsContext();
     const shareInfo = getSharedAccessInfo();
 
     // Check if user now has the permission (owner may have granted it)
@@ -130,7 +125,7 @@ export function AccessRestricted({
         });
     };
 
-    const canRequestAccess = isShared && shareInfo && permission && showRequestAccess;
+    const canRequestAccess = isSharedAccess && shareInfo && permission && showRequestAccess;
 
     // If user now has the permission (owner granted it), show success message
     if (nowHasPermission) {

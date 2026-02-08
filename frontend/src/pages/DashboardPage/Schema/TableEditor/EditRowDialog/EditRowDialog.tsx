@@ -31,7 +31,7 @@ export default function EditRowDialog({
     onSave,
     isSaving,
 }: EditRowDialogProps) {
-    const { canEditTableData } = usePermissions();
+    const { canAddRecord, canEditRecord } = usePermissions();
     const [editedRow, setEditedRow] = React.useState<RowData | null>(null);
 
     React.useEffect(() => {
@@ -58,6 +58,8 @@ export default function EditRowDialog({
     if (!row || !editedRow) return null;
 
     const isNewRow = row._isNew;
+    // Check the appropriate permission based on whether it's a new row or existing row
+    const hasPermission = isNewRow ? canAddRecord : canEditRecord;
     // For new rows, show all columns; for existing rows, hide PK columns
     const editableColumns = isNewRow 
         ? columns 
@@ -66,7 +68,7 @@ export default function EditRowDialog({
     return (
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
             <MuiDialogTitle>{isNewRow ? 'Add Row' : 'Edit Row'}</MuiDialogTitle>
-            {canEditTableData ? (
+            {hasPermission ? (
                 <>
                     <DialogContent>
                         {editableColumns.map((column) => (
@@ -99,9 +101,12 @@ export default function EditRowDialog({
             ) : (
                 <>
                     <AccessRestricted
-                        message="Edit Access Restricted"
-                        description="You don't have permission to edit table data. Please contact the account owner to request access."
-                        permission="editTableData"
+                        message={isNewRow ? "Add Access Restricted" : "Edit Access Restricted"}
+                        description={isNewRow 
+                            ? "You don't have permission to add table data. Please contact the account owner to request access."
+                            : "You don't have permission to edit table data. Please contact the account owner to request access."
+                        }
+                        permission={isNewRow ? "addRecord" : "editRecord"}
                     />
                     <DialogActions sx={{ p: 2 }}>
                         <CancelButton onClick={onClose}>

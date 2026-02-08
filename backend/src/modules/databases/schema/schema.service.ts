@@ -835,6 +835,18 @@ export const validateSqlPermissions = (
 
   // Check for DDL operations that require specific permissions
   
+  // CREATE DATABASE
+  if (/\bcreate\s+database\b/.test(normalizedSql)) {
+    if (!permissions.createDatabase) {
+      return 'You do not have permission to create databases. This operation requires the "Create Database" permission.';
+    }
+  }
+
+  // DROP DATABASE (should be blocked entirely for shared users)
+  if (/\bdrop\s+database\b/.test(normalizedSql)) {
+    return 'You do not have permission to drop databases. This operation is not allowed for shared users.';
+  }
+
   // CREATE TABLE
   if (/\bcreate\s+table\b/.test(normalizedSql)) {
     if (!permissions.createTable) {
@@ -878,17 +890,31 @@ export const validateSqlPermissions = (
     }
   }
 
-  // TRUNCATE TABLE (data modification)
+  // TRUNCATE TABLE (data modification - acts like delete)
   if (/\btruncate\s+table\b/.test(normalizedSql)) {
-    if (!permissions.editTableData) {
-      return 'You do not have permission to truncate tables. This operation requires the "Edit Table Data" permission.';
+    if (!permissions.deleteRecord) {
+      return 'You do not have permission to truncate tables. This operation requires the "Delete Record" permission.';
     }
   }
 
-  // INSERT, UPDATE, DELETE (data modification)
-  if (/\b(insert\s+into|update\s+\w+\s+set|delete\s+from)\b/.test(normalizedSql)) {
-    if (!permissions.editTableData) {
-      return 'You do not have permission to modify table data. This operation requires the "Edit Table Data" permission.';
+  // INSERT (adding records)
+  if (/\binsert\s+into\b/.test(normalizedSql)) {
+    if (!permissions.addRecord) {
+      return 'You do not have permission to add records. This operation requires the "Add Record" permission.';
+    }
+  }
+
+  // UPDATE (editing records)
+  if (/\bupdate\s+\w+\s+set\b/.test(normalizedSql)) {
+    if (!permissions.editRecord) {
+      return 'You do not have permission to edit records. This operation requires the "Edit Record" permission.';
+    }
+  }
+
+  // DELETE (removing records)
+  if (/\bdelete\s+from\b/.test(normalizedSql)) {
+    if (!permissions.deleteRecord) {
+      return 'You do not have permission to delete records. This operation requires the "Delete Record" permission.';
     }
   }
 
@@ -897,6 +923,23 @@ export const validateSqlPermissions = (
     // Exclude CREATE ... AS SELECT statements which need createTable permission (already checked above)
     if (!permissions.viewTableData) {
       return 'You do not have permission to view table data. This operation requires the "View Table Data" permission.';
+    }
+  }
+
+  // Block dangerous administrative commands for all shared users
+  const adminCommands = [
+    { pattern: /\bgrant\b/, message: 'You do not have permission to grant privileges.' },
+    { pattern: /\brevoke\b/, message: 'You do not have permission to revoke privileges.' },
+    { pattern: /\bcreate\s+(user|role)\b/, message: 'You do not have permission to create users or roles.' },
+    { pattern: /\bdrop\s+(user|role)\b/, message: 'You do not have permission to drop users or roles.' },
+    { pattern: /\balter\s+(user|role)\b/, message: 'You do not have permission to alter users or roles.' },
+    { pattern: /\bcreate\s+extension\b/, message: 'You do not have permission to create extensions.' },
+    { pattern: /\bdrop\s+extension\b/, message: 'You do not have permission to drop extensions.' },
+  ];
+
+  for (const { pattern, message } of adminCommands) {
+    if (pattern.test(normalizedSql)) {
+      return message;
     }
   }
 

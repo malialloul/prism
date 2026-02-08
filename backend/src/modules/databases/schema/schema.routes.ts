@@ -52,7 +52,7 @@ router.delete('/:id/queries/:queryId', requirePermission('createApiInQueryBuilde
 router.patch('/:id/queries/:queryId/public', requirePermission('createApiInQueryBuilder'), toggleApiPublic);
 
 // Execute saved query with parameters (Custom API endpoint by slug or ID)
-// Requires tryOpenApi permission, plus the SQL validation checks viewTableData/editTableData based on the query
+// Requires tryOpenApi permission, plus the SQL validation checks viewTableData/addRecord/editRecord/deleteRecord based on the query
 router.get('/:id/custom-api/:slugOrId', requirePermission('tryOpenApi'), executeSavedQuery);
 router.post('/:id/custom-api/:slugOrId', requirePermission('tryOpenApi'), executeSavedQuery);
 

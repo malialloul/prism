@@ -30,6 +30,7 @@ import {
   getMyPermissionRequestsHandler,
   respondPermissionRequestHandler,
   cancelPermissionRequestHandler,
+  getMyPermissionsHandler,
 } from './auth.controller';
 import { authMiddleware, blockSharedAccess, requireSharedAccess } from '../../middleware/auth';
 
@@ -79,5 +80,8 @@ router.post('/permission-requests/respond', authMiddleware, blockSharedAccess, r
 router.get('/permission-requests/my', authMiddleware, requireSharedAccess, getMyPermissionRequestsHandler);
 router.post('/permission-requests/:shareId', authMiddleware, requireSharedAccess, createPermissionRequestHandler);
 router.delete('/permission-requests/:requestId', authMiddleware, requireSharedAccess, cancelPermissionRequestHandler);
+
+// Get current permissions for shared user (fetches from DB, not from stale JWT)
+router.get('/my-permissions', authMiddleware, requireSharedAccess, getMyPermissionsHandler);
 
 export default router;

@@ -325,8 +325,14 @@ export default function DatabaseActionsPanel({
                     value={createFormik.values.confirmPassword}
                     onChange={createFormik.handleChange}
                     onBlur={createFormik.handleBlur}
-                    error={createFormik.touched.confirmPassword && Boolean(createFormik.errors.confirmPassword)}
-                    helperText={createFormik.touched.confirmPassword && createFormik.errors.confirmPassword}
+                    error={
+                      (createFormik.touched.confirmPassword && Boolean(createFormik.errors.confirmPassword)) ||
+                      (createFormik.values.confirmPassword.length > 0 && createFormik.values.password !== createFormik.values.confirmPassword)
+                    }
+                    helperText={
+                      (createFormik.touched.confirmPassword && createFormik.errors.confirmPassword) ||
+                      (createFormik.values.confirmPassword.length > 0 && createFormik.values.password !== createFormik.values.confirmPassword ? 'Passwords do not match' : '')
+                    }
                     fullWidth
                   />
                 </FormGroup>
