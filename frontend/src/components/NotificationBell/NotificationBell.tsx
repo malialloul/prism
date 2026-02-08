@@ -12,7 +12,7 @@ import SecurityIcon from '@mui/icons-material/Security';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import LoginIcon from '@mui/icons-material/Login';
-import { CircularProgress, Tooltip, IconButton, Button, Box } from '@mui/material';
+import { CircularProgress, Tooltip, IconButton, Button, Box, Typography } from '@mui/material';
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead, useDeleteNotification } from '../../api/entities/auth';
 import { useRespondPermissionRequest } from '../../api/entities/auth/usePermissionRequests';
 import type { NotificationDto } from '../../api/models/NotificationDto';
@@ -108,6 +108,7 @@ function NotificationItemComponent({ notification, onRead, onDelete, onRespond, 
   let ownerEmail: string | null = null;
   let requestId: number | null = null;
   let permission: keyof SharePermissions | null = null;
+  let requestMessage: string | null = null;
 
   if (notification.metadata) {
     try {
@@ -116,6 +117,7 @@ function NotificationItemComponent({ notification, onRead, onDelete, onRespond, 
       ownerEmail = (metadata.ownerEmail as string) || null;
       requestId = (metadata.requestId as number) || null;
       permission = (metadata.permission as keyof SharePermissions) || null;
+      requestMessage = (metadata.message as string) || null;
     } catch {
       // Ignore parse errors
     }
@@ -176,6 +178,20 @@ function NotificationItemComponent({ notification, onRead, onDelete, onRespond, 
       <NotificationContent>
         <NotificationItemTitle>{notification.title}</NotificationItemTitle>
         <NotificationMessage>{notification.message}</NotificationMessage>
+        {requestMessage && notification.type === 'permission_request' && (
+          <Box sx={{ 
+            mt: 1, 
+            p: 1, 
+            backgroundColor: 'rgba(0, 0, 0, 0.04)', 
+            borderRadius: 1,
+            borderLeft: '3px solid',
+            borderLeftColor: 'primary.main',
+          }}>
+            <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'text.secondary', display: 'block' }}>
+              "{requestMessage}"
+            </Typography>
+          </Box>
+        )}
         {tempPassword && (
           <TempPasswordBox>
             <span className="password-label">Temporary Password</span>
