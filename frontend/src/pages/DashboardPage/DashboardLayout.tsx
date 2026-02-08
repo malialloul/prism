@@ -17,7 +17,8 @@ import DeleteDatabaseDialog from "./_shared/DeleteDatabaseDialog/DeleteDatabaseD
 import SwitchDatabaseDialog from "./_shared/SwitchDatabaseDialog/SwitchDatabaseDialog";
 import EmptyState from "./_shared/EmptyState/EmptyState";
 import PageSkeleton from "../../components/PageSkeleton/PageSkeleton";
-import { CircularProgress } from "@mui/material";
+import { AccessRestricted, usePermissions } from "../../components";
+import { CircularProgress, Dialog, DialogContent, DialogActions, Button } from "@mui/material";
 import { useDatabases, useRefreshDatabase, useDisconnectDatabase, useReconnectDatabase } from "../../api/entities/databases";
 import { DatabaseDto } from "../../api/models/DatabaseDto";
 
@@ -82,6 +83,10 @@ export default function DashboardLayout() {
   const [isSwitchingDatabase, setIsSwitchingDatabase] = useState(false);
   const [pendingSwitchDatabaseId, setPendingSwitchDatabaseId] = useState<number | null>(null);
   const [initialCreateEngine, setInitialCreateEngine] = useState<DatabaseDto['engine'] | undefined>(undefined);
+  const [isAccessRestrictedDialogOpen, setIsAccessRestrictedDialogOpen] = useState(false);
+
+  // Permission check
+  const { canConnectDatabase } = usePermissions();
 
   // Schema version and initial query for child routes
   const [schemaVersion, setSchemaVersion] = useState(0);
@@ -167,6 +172,11 @@ export default function DashboardLayout() {
     if (!targetDb) return;
 
     if (targetDb.status !== 'connected') {
+      // Check permission before attempting to connect
+      if (!canConnectDatabase) {
+        setIsAccessRestrictedDialogOpen(true);
+        return;
+      }
       if (connectedDatabase && connectedDatabase.id !== id) {
         setDatabaseToSwitchTo(targetDb);
         setIsSwitchDialogOpen(true);
@@ -380,6 +390,24 @@ export default function DashboardLayout() {
             </SwitchingContent>
           </SwitchingOverlay>
         )}
+        {/* Access Restricted Dialog */}
+        <Dialog
+          open={isAccessRestrictedDialogOpen}
+          onClose={() => setIsAccessRestrictedDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogContent>
+            <AccessRestricted
+              message="Connect Database Restricted"
+              description="You don't have permission to connect to databases. Please contact the account owner to request access."
+              permission="connectDatabase"
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setIsAccessRestrictedDialogOpen(false)}>Close</Button>
+          </DialogActions>
+        </Dialog>
       </DashboardWrapper>
     </DashboardContext.Provider>
   );
