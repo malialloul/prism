@@ -1,4 +1,5 @@
 import { useState, MouseEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
@@ -10,6 +11,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SecurityIcon from '@mui/icons-material/Security';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbDownIcon from '@mui/icons-material/ThumbDown';
+import LoginIcon from '@mui/icons-material/Login';
 import { CircularProgress, Tooltip, IconButton, Button, Box } from '@mui/material';
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead, useDeleteNotification } from '../../api/entities/auth';
 import { useRespondPermissionRequest } from '../../api/entities/auth/usePermissionRequests';
@@ -93,9 +95,10 @@ interface NotificationItemComponentProps {
   onDelete: (id: number) => void;
   onRespond?: (requestId: number, action: 'approve' | 'reject') => void;
   isResponding?: boolean;
+  onLoginClick?: (email: string, password: string) => void;
 }
 
-function NotificationItemComponent({ notification, onRead, onDelete, onRespond, isResponding }: NotificationItemComponentProps) {
+function NotificationItemComponent({ notification, onRead, onDelete, onRespond, isResponding, onLoginClick }: NotificationItemComponentProps) {
   const [copied, setCopied] = useState(false);
   const isRead = !!notification.readAt;
   const isShared = isSharedAccessSession();
@@ -155,6 +158,16 @@ function NotificationItemComponent({ notification, onRead, onDelete, onRespond, 
     }
   };
 
+  const handleLoginClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (ownerEmail && tempPassword && onLoginClick) {
+      onLoginClick(ownerEmail, tempPassword);
+    }
+  };
+
+  // Show login button for account_shared notifications that have credentials
+  const showLoginButton = notification.type === 'account_shared' && ownerEmail && tempPassword;
+
   return (
     <NotificationItem isRead={isRead} onClick={handleClick}>
       <NotificationIcon type={notification.type}>
@@ -174,6 +187,20 @@ function NotificationItemComponent({ notification, onRead, onDelete, onRespond, 
                 </IconButton>
               </Tooltip>
             </div>
+            {showLoginButton && (
+              <Tooltip title={`Login to ${ownerEmail}`}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="primary"
+                  startIcon={<LoginIcon />}
+                  onClick={handleLoginClick}
+                  sx={{ mt: 1, fontSize: '0.7rem', py: 0.5 }}
+                >
+                  Login
+                </Button>
+              </Tooltip>
+            )}
           </TempPasswordBox>
         )}
         {showPermissionActions && (
@@ -217,6 +244,7 @@ function NotificationItemComponent({ notification, onRead, onDelete, onRespond, 
 
 export default function NotificationBell() {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
+  const navigate = useNavigate();
   const { data, isLoading, refetch } = useNotifications();
   const { markAsRead } = useMarkNotificationRead();
   const { markAllAsRead, isLoading: markingAll } = useMarkAllNotificationsRead();
@@ -248,6 +276,11 @@ export default function NotificationBell() {
 
   const handleRespondToRequest = (requestId: number, action: 'approve' | 'reject') => {
     respondPermissionRequest({ requestId, action });
+  };
+
+  const handleLoginClick = (email: string, password: string) => {
+    handleClose();
+    navigate(`/shared-login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&auto=true`);
   };
 
   const open = Boolean(anchorEl);
@@ -302,6 +335,7 @@ export default function NotificationBell() {
                 onDelete={deleteNotification}
                 onRespond={handleRespondToRequest}
                 isResponding={isResponding}
+                onLoginClick={handleLoginClick}
               />
             ))
           )}

@@ -5,7 +5,7 @@ import { Box, Typography, InputAdornment, IconButton } from '@mui/material';
 import { ButtonLoadingSkeleton } from '../../components';
 import { Api, ArrowBack } from '../../assets/icons';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { useSharedLogin } from '../../api/entities/auth';
 import { toastService } from '../../services/toastService';
 import {
@@ -42,6 +42,13 @@ const validationSchema = Yup.object().shape({
 export default function SharedLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const { sharedLogin, isLoading, error: apiError } = useSharedLogin();
+  const [searchParams] = useSearchParams();
+  const [autoSubmitted, setAutoSubmitted] = useState(false);
+
+  // Get pre-filled values from URL params
+  const prefilledEmail = searchParams.get('email') || '';
+  const prefilledPassword = searchParams.get('password') || '';
+  const autoLogin = searchParams.get('auto') === 'true';
 
   // Show force logout message if redirected from owner account action
   useEffect(() => {
@@ -51,6 +58,17 @@ export default function SharedLogin() {
       sessionStorage.removeItem('forceLogoutMessage');
     }
   }, []);
+
+  // Auto-login if URL params are provided and auto=true
+  useEffect(() => {
+    if (autoLogin && prefilledEmail && prefilledPassword && !autoSubmitted && !isLoading) {
+      setAutoSubmitted(true);
+      sharedLogin({
+        ownerEmail: prefilledEmail,
+        tempPassword: prefilledPassword,
+      });
+    }
+  }, [autoLogin, prefilledEmail, prefilledPassword, autoSubmitted, isLoading, sharedLogin]);
 
   const handleSubmit = (values: { ownerEmail: string; tempPassword: string }): void => {
     sharedLogin({
@@ -113,9 +131,10 @@ export default function SharedLogin() {
           </Box>
 
           <Formik
-            initialValues={{ ownerEmail: '', tempPassword: '' }}
+            initialValues={{ ownerEmail: prefilledEmail, tempPassword: prefilledPassword }}
             validationSchema={validationSchema}
             onSubmit={handleSubmit}
+            enableReinitialize
           >
             {({ values, errors, touched, handleChange, handleBlur }) => (
               <Form style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
