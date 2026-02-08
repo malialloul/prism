@@ -1348,10 +1348,10 @@ export const sharedLoginService = async (
     throw new AuthenticationError('Invalid credentials');
   }
 
-  // Update share status to accepted if pending and clear temp password
+  // Update share status to accepted if pending (keep temp password for owner reference)
   if (validShare.status === 'pending') {
     await pool.query(
-      `UPDATE shared_accounts SET status = 'accepted', accepted_at = NOW(), temp_password = NULL, updated_at = NOW() WHERE id = $1`,
+      `UPDATE shared_accounts SET status = 'accepted', accepted_at = NOW(), updated_at = NOW() WHERE id = $1`,
       [validShare.id],
     );
 

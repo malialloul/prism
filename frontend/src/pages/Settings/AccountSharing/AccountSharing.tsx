@@ -285,8 +285,8 @@ function ShareCardItem({ share, isOwner, onRevoke, onUpdatePermissions, isRevoki
         </div>
       </div>
 
-      {/* Temp Password Display (inline in card) */}
-      {tempPassword && (
+      {/* Temp Password Display (inline in card) - show from prop or from share object */}
+      {(tempPassword || share.tempPassword) && (
         <Box sx={{
           mt: 2,
           pt: 2,
@@ -304,11 +304,11 @@ function ShareCardItem({ share, isOwner, onRevoke, onUpdatePermissions, isRevoki
             </TempPasswordLabel>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <TempPasswordValue>{tempPassword}</TempPasswordValue>
+            <TempPasswordValue>{tempPassword || share.tempPassword}</TempPasswordValue>
             <Tooltip title="Copy password">
               <ShareButton
                 onClick={() => {
-                  navigator.clipboard.writeText(tempPassword);
+                  navigator.clipboard.writeText(tempPassword || share.tempPassword || '');
                   toastService.success('Password copied to clipboard');
                 }}
                 variant="outlined"
