@@ -698,10 +698,23 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                             </Typography>
                             <TextField
                               size="small"
+                              type={
+                                param.columnType?.toLowerCase().includes('timestamp') || 
+                                (param.columnType?.toLowerCase().includes('date') && param.columnType?.toLowerCase().includes('time'))
+                                  ? 'datetime-local'
+                                  : param.columnType?.toLowerCase().includes('date')
+                                    ? 'date'
+                                    : param.columnType?.toLowerCase() === 'integer' || param.columnType?.toLowerCase() === 'number'
+                                      ? 'number'
+                                      : 'text'
+                              }
                               placeholder={param.name === 'pagesize' ? '100' : param.name === 'pagecount' ? '1' : `Enter ${param.name}`}
                               value={testParams[api.id]?.[param.name] || ''}
                               onChange={(e) => handleParamChange(api.id, param.name, e.target.value)}
                               fullWidth
+                              InputLabelProps={{
+                                shrink: param.columnType?.toLowerCase().includes('date') || param.columnType?.toLowerCase().includes('timestamp'),
+                              }}
                               sx={{
                                 '& .MuiOutlinedInput-root': {
                                   backgroundColor: colors.background,

@@ -29,10 +29,10 @@ const mapColumnType = (dbType: string): ColumnType => {
   if (type.includes("bool") || type === "bit" || type === "tinyint(1)") {
     return "boolean";
   }
-  if (type.includes("date") && type.includes("time")) {
+  if (type.includes("timestamp") || (type.includes("date") && type.includes("time"))) {
     return "datetime";
   }
-  if (type.includes("date") || type.includes("timestamp")) {
+  if (type.includes("date")) {
     return "date";
   }
   if (type.includes("time")) {
