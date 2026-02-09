@@ -73,6 +73,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
   const [copiedEndpoint, setCopiedEndpoint] = useState<string | null>(null);
   const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null);
   const [showSqlFor, setShowSqlFor] = useState<string | null>(null);
+  const [paramErrors, setParamErrors] = useState<Record<string, Record<string, boolean>>>({});
 
   const savedApis = savedQueriesData?.queries || [];
 
@@ -180,12 +181,37 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
   const handleTestApi = async (api: SavedQueryDto) => {
     if (!databaseId) return;
 
+    // Validate required parameters
+    const errors: Record<string, boolean> = {};
+    const currentParams = testParams[api.id] || {};
+    const apiParams = api.parameters || [];
+    
+    for (const param of apiParams) {
+      if (param.required && !currentParams[param.name]?.trim()) {
+        errors[param.name] = true;
+      }
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setParamErrors(prev => ({ ...prev, [api.id]: errors }));
+      return;
+    }
+    
+    // Clear errors and build params - only include non-empty values
+    setParamErrors(prev => ({ ...prev, [api.id]: {} }));
+    const filteredParams: Record<string, string> = {};
+    for (const param of apiParams) {
+      const value = currentParams[param.name]?.trim();
+      if (value) {
+        filteredParams[param.name] = value;
+      }
+    }
+
     const slug = getSlugFromEndpoint(api.endpoint);
 
     setTestLoading(prev => ({ ...prev, [api.id]: true }));
     try {
-      const params = testParams[api.id] || {};
-      const result = await SchemaService.executeSavedQuery(databaseId, slug || api.id, params, api.method as 'GET' | 'POST');
+      const result = await SchemaService.executeSavedQuery(databaseId, slug || api.id, filteredParams, api.method as 'GET' | 'POST');
       setTestResults(prev => ({ ...prev, [api.id]: result }));
     } catch (error: any) {
       setTestResults(prev => ({
@@ -208,6 +234,16 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
         [paramName]: value,
       },
     }));
+    // Clear error for this param when user types
+    if (paramErrors[apiId]?.[paramName]) {
+      setParamErrors(prev => ({
+        ...prev,
+        [apiId]: {
+          ...(prev[apiId] || {}),
+          [paramName]: false,
+        },
+      }));
+    }
   };
 
   const handleTogglePublic = async (api: SavedQueryDto) => {
@@ -675,55 +711,71 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                           <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>Value</Typography>
                         </Box>
                         {/* Rows */}
-                        {(api.parameters || []).map((param, index) => (
-                          <Box
-                            key={param.name}
-                            sx={{
-                              display: 'grid',
-                              gridTemplateColumns: '150px 100px 1fr',
-                              gap: 2,
-                              p: 1,
-                              alignItems: 'center',
-                              borderBottom: index < (api.parameters || []).length - 1 ? `1px solid ${colors.border}` : 'none',
-                            }}
-                          >
-                            <Box>
-                              <Typography sx={{ fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 600 }}>
-                                {param.name}
-                                {param.required && <span style={{ color: '#f93e3e' }}> *</span>}
-                              </Typography>
-                            </Box>
-                            <Typography variant="caption" sx={{ color: colors.textMuted }}>
-                              {param.columnType}
-                            </Typography>
-                            <TextField
-                              size="small"
-                              type={
-                                param.columnType?.toLowerCase().includes('timestamp') || 
-                                (param.columnType?.toLowerCase().includes('date') && param.columnType?.toLowerCase().includes('time'))
-                                  ? 'datetime-local'
-                                  : param.columnType?.toLowerCase().includes('date')
-                                    ? 'date'
-                                    : param.columnType?.toLowerCase() === 'integer' || param.columnType?.toLowerCase() === 'number'
-                                      ? 'number'
-                                      : 'text'
-                              }
-                              placeholder={param.name === 'pagesize' ? '100' : param.name === 'pagecount' ? '1' : `Enter ${param.name}`}
-                              value={testParams[api.id]?.[param.name] || ''}
-                              onChange={(e) => handleParamChange(api.id, param.name, e.target.value)}
-                              fullWidth
-                              InputLabelProps={{
-                                shrink: param.columnType?.toLowerCase().includes('date') || param.columnType?.toLowerCase().includes('timestamp'),
-                              }}
+                        {(api.parameters || []).map((param, index) => {
+                          const hasError = paramErrors[api.id]?.[param.name];
+                          return (
+                            <Box
+                              key={param.name}
                               sx={{
-                                '& .MuiOutlinedInput-root': {
-                                  backgroundColor: colors.background,
-                                  fontSize: '0.85rem',
-                                },
+                                display: 'grid',
+                                gridTemplateColumns: '150px 100px 1fr',
+                                gap: 2,
+                                p: 1,
+                                alignItems: 'flex-start',
+                                borderBottom: index < (api.parameters || []).length - 1 ? `1px solid ${colors.border}` : 'none',
+                                backgroundColor: hasError ? alpha('#f93e3e', 0.05) : 'transparent',
                               }}
-                            />
-                          </Box>
-                        ))}
+                            >
+                              <Box sx={{ pt: 1 }}>
+                                <Typography sx={{ fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 600 }}>
+                                  {param.name}
+                                  {param.required && <span style={{ color: '#f93e3e' }}> *</span>}
+                                </Typography>
+                                {!param.required && (
+                                  <Typography variant="caption" sx={{ color: colors.textMuted, fontSize: '0.7rem' }}>
+                                    optional
+                                  </Typography>
+                                )}
+                              </Box>
+                              <Box sx={{ pt: 1 }}>
+                                <Typography variant="caption" sx={{ color: colors.textMuted }}>
+                                  {param.columnType}
+                                </Typography>
+                              </Box>
+                              <TextField
+                                size="small"
+                                type={
+                                  param.columnType?.toLowerCase().includes('timestamp') || 
+                                  (param.columnType?.toLowerCase().includes('date') && param.columnType?.toLowerCase().includes('time'))
+                                    ? 'datetime-local'
+                                    : param.columnType?.toLowerCase().includes('date')
+                                      ? 'date'
+                                      : param.columnType?.toLowerCase() === 'integer' || param.columnType?.toLowerCase() === 'number'
+                                        ? 'number'
+                                        : 'text'
+                                }
+                                placeholder={param.name === 'pagesize' ? '100' : param.name === 'pagecount' ? '1' : `Enter ${param.name}${param.required ? '' : ' (optional)'}`}
+                                value={testParams[api.id]?.[param.name] || ''}
+                                onChange={(e) => handleParamChange(api.id, param.name, e.target.value)}
+                                fullWidth
+                                error={hasError}
+                                helperText={hasError ? 'This field is required' : ''}
+                                InputLabelProps={{
+                                  shrink: param.columnType?.toLowerCase().includes('date') || param.columnType?.toLowerCase().includes('timestamp'),
+                                }}
+                                sx={{
+                                  '& .MuiOutlinedInput-root': {
+                                    backgroundColor: colors.background,
+                                    fontSize: '0.85rem',
+                                  },
+                                  '& .MuiFormHelperText-root': {
+                                    marginLeft: 0,
+                                  },
+                                }}
+                              />
+                            </Box>
+                          );
+                        })}
                       </Box>
                     </>
                   )}

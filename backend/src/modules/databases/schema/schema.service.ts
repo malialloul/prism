@@ -1448,12 +1448,13 @@ export const executeSavedQueryService = async (
       throw new ValidationError(`Missing required parameter: ${param.name}`);
     }
     
-    if (value !== undefined) {
+    const colType = (param.columnType || '').toLowerCase();
+    const numericTypes = ['int', 'integer', 'smallint', 'bigint', 'decimal', 'numeric', 'float', 'double', 'real', 'serial', 'bigserial'];
+    const isNumericType = numericTypes.some(t => colType === t || colType.startsWith(t + '('));
+    
+    if (value !== undefined && value !== '') {
       // Format value based on operator and type
       let formattedValue: string;
-      const colType = (param.columnType || '').toLowerCase();
-      const numericTypes = ['int', 'integer', 'smallint', 'bigint', 'decimal', 'numeric', 'float', 'double', 'real', 'serial', 'bigserial'];
-      const isNumericType = numericTypes.some(t => colType === t || colType.startsWith(t + '('));
       const isNumericValue = !isNaN(Number(value)) && String(value) !== '';
       
       const escapedValue = String(value).replace(/'/g, "''");
@@ -1472,6 +1473,55 @@ export const executeSavedQueryService = async (
       
       // Replace all occurrences of the parameter
       sql = sql.split(`:${param.name}`).join(formattedValue);
+    } else if (param.required === false) {
+      // For optional params with no value:
+      // Handle HAVING conditions for numeric params by replacing the entire condition with 1=1
+      if (isNumericType || param.columnType === 'numeric') {
+        // Look for aggregate function comparisons: COUNT/SUM/AVG/MIN/MAX(...) op :paramName
+        // Use a more robust pattern that handles nested parentheses by matching up to the operator
+        // Pattern matches: AGGREGATE(...anything...) comparison :param
+        let modified = false;
+        
+        // Match aggregate functions followed by parentheses, comparison operator, and the param
+        // We use a simpler approach: look for the aggregate keyword, then match until we find ") op :param"
+        const aggregates = ['COUNT', 'SUM', 'AVG', 'MIN', 'MAX'];
+        for (const agg of aggregates) {
+          // Find patterns like "COUNT(...) > :param" where ... can contain nested parens
+          const aggStart = new RegExp(`\\b${agg}\\s*\\(`, 'gi');
+          let match;
+          while ((match = aggStart.exec(sql)) !== null) {
+            // Find the matching closing paren by counting
+            let depth = 1;
+            let endPos = match.index + match[0].length;
+            while (depth > 0 && endPos < sql.length) {
+              if (sql[endPos] === '(') depth++;
+              else if (sql[endPos] === ')') depth--;
+              endPos++;
+            }
+            // Now check if followed by comparison and our param
+            const afterAgg = sql.substring(endPos).match(/^\s*([><=!]+)\s*:(\w+)/);
+            if (afterAgg && afterAgg[2] === param.name) {
+              // Replace the whole condition with 1=1
+              const fullMatch = sql.substring(match.index, endPos + afterAgg[0].length);
+              sql = sql.substring(0, match.index) + '1=1' + sql.substring(endPos + afterAgg[0].length);
+              modified = true;
+              break; // Restart search since indices changed
+            }
+          }
+          if (modified) break;
+        }
+        
+        if (!modified) {
+          // For WHERE conditions with numeric columns that still have the param
+          // Replace :param with empty string - works with ('' = '' OR ...) pattern if present
+          sql = sql.split(`:${param.name}`).join("''");
+        }
+      } else {
+        // For string params, replace with empty string
+        // This makes conditions like (:param = '' OR column = :param) evaluate to TRUE
+        // For CAST(NULLIF(:param, '') AS NUMERIC) patterns, '' becomes NULL which is safe
+        sql = sql.split(`:${param.name}`).join("''");
+      }
     }
   }
 

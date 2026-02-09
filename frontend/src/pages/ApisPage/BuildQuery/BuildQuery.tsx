@@ -1,10 +1,9 @@
 import { Box, Skeleton } from "@mui/material";
 import { ApisContent } from "./BuildQuery.styles";
-import QueryBuilderImproved from "./QueryBuilder/QueryBuilder";
+import QueryWizardWrapper from "./QueryWizardWrapper";
 import { useDashboard } from "../../DashboardPage/DashboardLayout";
 import { useApisContext } from "../ApisLayout";
 import { usePermissions, AccessRestricted } from "../../../components";
-import QueryBuilder from "./QueryBuilder/QueryBuilder";
 
 export default function BuildQuery() {
   const { connectedDatabase, isSwitchingDatabase } = useDashboard();
@@ -57,7 +56,7 @@ export default function BuildQuery() {
 
   return (
     <ApisContent>
-      <QueryBuilder
+      <QueryWizardWrapper
         connectedDatabase={connectedDatabase}
         onApiSaved={triggerOpenApiRefresh}
       />
