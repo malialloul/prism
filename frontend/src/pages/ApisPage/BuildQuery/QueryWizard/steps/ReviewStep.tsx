@@ -23,6 +23,7 @@ import {
   JOIN_TYPE_OPTIONS,
   AGGREGATION_OPTIONS,
   extractParameters,
+  convertSqlToNamedParams,
   operatorNeedsMultipleValues,
   operatorNeedsTwoValues,
 } from '../types';
@@ -180,26 +181,37 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
     }
   };
 
-  // Generate SQL preview with parameter values substituted
+  // Convert SQL to :paramName format using shared function (same as saved in API)
+  const sqlWithNamedParams = useMemo(() => {
+    return convertSqlToNamedParams(sql, parameters);
+  }, [sql, parameters]);
+
+  // Generate SQL preview with parameter values substituted (for live preview)
   const sqlPreview = useMemo(() => {
-    if (!sql) return sql;
+    if (!sqlWithNamedParams) return sqlWithNamedParams;
     
-    let preview = sql;
-    // Replace $1, $2, etc. placeholders with entered values
-    // Parameters are in the same order as $N placeholders
-    parameters.forEach((param, index) => {
+    // Check if any parameter values are entered
+    const hasValues = Object.values(parameterValues).some(v => v?.trim());
+    if (!hasValues) {
+      // Show :paramName format when no values entered
+      return sqlWithNamedParams;
+    }
+    
+    let preview = sqlWithNamedParams;
+    // Replace :paramName placeholders with entered values for live preview
+    parameters.forEach((param) => {
       const value = parameterValues[param.name] || '';
-      // Escape single quotes in the value
-      const escapedValue = value.replace(/'/g, "''");
-      // Replace the $N placeholder with the quoted value
-      const placeholder = `$${index + 1}`;
-      // Use a more careful replacement that handles whole-word matching
-      const placeholderRegex = new RegExp(`\\$${index + 1}(?!\\d)`, 'g');
-      preview = preview.replace(placeholderRegex, `'${escapedValue}'`);
+      if (value.trim()) {
+        // Escape single quotes in the value
+        const escapedValue = value.replace(/'/g, "''");
+        // Replace the :paramName placeholder with the quoted value
+        const placeholderRegex = new RegExp(`:${param.name}(?![a-zA-Z0-9_])`, 'g');
+        preview = preview.replace(placeholderRegex, `'${escapedValue}'`);
+      }
     });
     
     return preview;
-  }, [sql, parameterValues, parameters]);
+  }, [sqlWithNamedParams, parameterValues, parameters]);
 
   // Check if all required parameters are filled
   const getMissingRequiredParams = () => {
@@ -228,8 +240,9 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
   };
 
   const handleCopySQL = () => {
-    if (sqlPreview) {
-      navigator.clipboard.writeText(sqlPreview);
+    // Copy the SQL with :paramName format (same as saved API)
+    if (sqlWithNamedParams) {
+      navigator.clipboard.writeText(sqlWithNamedParams);
     }
   };
 

@@ -21,6 +21,7 @@ import {
   SortField,
   UniquenessSettings,
   PaginationSettings,
+  generateSqlWithNamedParams,
 } from './types';
 import {
   WizardContainer,
@@ -101,6 +102,11 @@ export const QueryWizard: React.FC<QueryWizardProps> = ({
   const generatedSQL = useMemo(() => {
     return generateSQL(state, engine);
   }, [state, engine]);
+
+  // Convert SQL to :paramName format (same as saved in API and displayed in OpenAPI tab)
+  const sqlWithNamedParams = useMemo(() => {
+    return generateSqlWithNamedParams(generatedSQL.query, state);
+  }, [generatedSQL.query, state]);
 
   // Validate state
   const validation = useMemo(() => {
@@ -221,12 +227,12 @@ export const QueryWizard: React.FC<QueryWizardProps> = ({
     setState((prev) => ({ ...prev, pagination }));
   }, []);
 
-  // Copy SQL
+  // Copy SQL (with :paramName format, same as saved API)
   const handleCopySQL = useCallback(() => {
-    navigator.clipboard.writeText(generatedSQL.query);
+    navigator.clipboard.writeText(sqlWithNamedParams);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }, [generatedSQL.query]);
+  }, [sqlWithNamedParams]);
 
   // Execute with parameters
   const handleExecute = useCallback((parameterValues: Record<string, string>) => {
@@ -500,7 +506,7 @@ export const QueryWizard: React.FC<QueryWizardProps> = ({
             <IconButton
               size="small"
               onClick={handleCopySQL}
-              disabled={!generatedSQL.query}
+              disabled={!sqlWithNamedParams}
               sx={{ color: copied ? '#22c55e' : '#71717a' }}
             >
               {copied ? <CheckIcon fontSize="small" /> : <ContentCopyIcon fontSize="small" />}
@@ -509,7 +515,7 @@ export const QueryWizard: React.FC<QueryWizardProps> = ({
         </PreviewHeader>
         <PreviewContent>
           <SqlCode>
-            {generatedSQL.query || '-- Select a table to begin building your query'}
+            {sqlWithNamedParams || '-- Select a table to begin building your query'}
           </SqlCode>
 
           {validation.length > 0 && (

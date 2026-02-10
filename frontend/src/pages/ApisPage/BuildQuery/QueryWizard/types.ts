@@ -147,6 +147,16 @@ export interface QueryParameter {
   isRequired?: boolean;
 }
 
+// Extracted parameter (may not have filterId, e.g., pagination params)
+export interface ExtractedParameter {
+  name: string;
+  type: 'string' | 'number' | 'date' | 'boolean';
+  filterId?: string;
+  description?: string;
+  defaultValue?: string;
+  isRequired?: boolean;
+}
+
 // ============================================================================
 // WIZARD STATE
 // ============================================================================
@@ -361,7 +371,7 @@ export const getJoinableTables = (
 };
 
 // Get all joined tables including base table
-export const getJoinedTables = (baseTable: SelectedTable | null, joins: TableJoin[], allTables: SchemaTable[]): string[] => {
+export const getJoinedTables = (baseTable: SelectedTable | null, joins: TableJoin[], _allTables?: SchemaTable[]): string[] => {
   if (!baseTable) return [];
   
   const tableNames = new Set<string>([baseTable.name]);
@@ -389,7 +399,7 @@ export const operatorNeedsTwoValues = (operator: FilterOperator): boolean => {
 };
 
 // Generate a default parameter name from table and column
-export const generateParameterName = (table: string, column: string, suffix?: string): string => {
+export const generateParameterName = (_table: string, column: string, suffix?: string): string => {
   const baseName = `${column}`.replace(/[^a-zA-Z0-9_]/g, '_');
   return suffix ? `${baseName}_${suffix}` : baseName;
 };
@@ -412,8 +422,8 @@ export const createDefaultFilter = (table: string, column: string, type: string)
 };
 
 // Get parameters from wizard state
-export const extractParameters = (state: WizardState): QueryParameter[] => {
-  const params: QueryParameter[] = [];
+export const extractParameters = (state: WizardState): ExtractedParameter[] => {
+  const params: ExtractedParameter[] = [];
   
   // Extract from filters
   state.filters.forEach((filter) => {
@@ -495,4 +505,36 @@ export const extractParameters = (state: WizardState): QueryParameter[] => {
   }
   
   return params;
+};
+
+/**
+ * Convert SQL from $1, $2 format to :paramName format
+ * This is the format used when saving APIs and displayed in OpenAPI tab
+ */
+export const convertSqlToNamedParams = (
+  sql: string,
+  parameters: ExtractedParameter[]
+): string => {
+  if (!sql) return '';
+  
+  let converted = sql;
+  // Replace $1, $2, etc. placeholders with :paramName format
+  parameters.forEach((param, index) => {
+    const placeholderRegex = new RegExp(`\\$${index + 1}(?!\\d)`, 'g');
+    converted = converted.replace(placeholderRegex, `:${param.name}`);
+  });
+  
+  return converted;
+};
+
+/**
+ * Generate SQL with named parameters from wizard state
+ * Combines extractParameters and convertSqlToNamedParams
+ */
+export const generateSqlWithNamedParams = (
+  sql: string,
+  state: WizardState
+): string => {
+  const parameters = extractParameters(state);
+  return convertSqlToNamedParams(sql, parameters);
 };
