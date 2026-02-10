@@ -1425,14 +1425,16 @@ export const executeSavedQueryService = async (
 
   // Handle pagination only if the SQL contains pagination placeholders
   // This means pagination was enabled when the query was created
-  if (sql.includes(':pagesize') || sql.includes(':offset')) {
+  if (sql.includes(':pagesize') || sql.includes(':offset') || sql.includes(':pagecount')) {
     // pagecount is 1-indexed, offset = (pagecount - 1) * pagesize
     const pagesize = params['pagesize'] ? parseInt(params['pagesize']) : 100;
     const pagecount = params['pagecount'] ? parseInt(params['pagecount']) : 1;
     const offset = (pagecount - 1) * pagesize;
     
     // Replace pagination placeholders in SQL
+    // Note: SQL might use either :offset or :pagecount depending on how it was generated
     sql = sql.split(':pagesize').join(String(pagesize));
+    sql = sql.split(':pagecount').join(String(pagecount));
     sql = sql.split(':offset').join(String(offset));
   }
 
@@ -1619,12 +1621,14 @@ export const executePublicQueryService = async (
   const parameters: any[] = savedQuery.parameters ? JSON.parse(savedQuery.parameters) : [];
 
   // Handle pagination only if the SQL contains pagination placeholders
-  if (sql.includes(':pagesize') || sql.includes(':offset')) {
+  if (sql.includes(':pagesize') || sql.includes(':offset') || sql.includes(':pagecount')) {
     const pagesize = params['pagesize'] ? parseInt(params['pagesize']) : 100;
     const pagecount = params['pagecount'] ? parseInt(params['pagecount']) : 1;
     const offset = (pagecount - 1) * pagesize;
     
+    // Note: SQL might use either :offset or :pagecount depending on how it was generated
     sql = sql.split(':pagesize').join(String(pagesize));
+    sql = sql.split(':pagecount').join(String(pagecount));
     sql = sql.split(':offset').join(String(offset));
   }
 
@@ -1640,11 +1644,12 @@ export const executePublicQueryService = async (
       throw new ValidationError(`Missing required parameter: ${param.name}`);
     }
     
-    if (value !== undefined) {
+    const colType = (param.columnType || '').toLowerCase();
+    const numericTypes = ['int', 'integer', 'smallint', 'bigint', 'decimal', 'numeric', 'float', 'double', 'real', 'serial', 'bigserial'];
+    const isNumericType = numericTypes.some(t => colType === t || colType.startsWith(t + '('));
+    
+    if (value !== undefined && value !== '') {
       let formattedValue: string;
-      const colType = (param.columnType || '').toLowerCase();
-      const numericTypes = ['int', 'integer', 'smallint', 'bigint', 'decimal', 'numeric', 'float', 'double', 'real', 'serial', 'bigserial'];
-      const isNumericType = numericTypes.some(t => colType === t || colType.startsWith(t + '('));
       const isNumericValue = !isNaN(Number(value)) && String(value) !== '';
       
       const escapedValue = String(value).replace(/'/g, "''");
@@ -1662,6 +1667,40 @@ export const executePublicQueryService = async (
       }
       
       sql = sql.split(`:${param.name}`).join(formattedValue);
+    } else if (param.required === false) {
+      // For optional params with no value:
+      // Handle HAVING conditions for numeric params by replacing the entire condition with 1=1
+      if (isNumericType || param.columnType === 'numeric') {
+        let modified = false;
+        
+        const aggregates = ['COUNT', 'SUM', 'AVG', 'MIN', 'MAX'];
+        for (const agg of aggregates) {
+          const aggStart = new RegExp(`\\b${agg}\\s*\\(`, 'gi');
+          let match;
+          while ((match = aggStart.exec(sql)) !== null) {
+            let depth = 1;
+            let endPos = match.index + match[0].length;
+            while (depth > 0 && endPos < sql.length) {
+              if (sql[endPos] === '(') depth++;
+              else if (sql[endPos] === ')') depth--;
+              endPos++;
+            }
+            const afterAgg = sql.substring(endPos).match(/^\s*([><=!]+)\s*:(\w+)/);
+            if (afterAgg && afterAgg[2] === param.name) {
+              sql = sql.substring(0, match.index) + '1=1' + sql.substring(endPos + afterAgg[0].length);
+              modified = true;
+              break;
+            }
+          }
+          if (modified) break;
+        }
+        
+        if (!modified) {
+          sql = sql.split(`:${param.name}`).join("''");
+        }
+      } else {
+        sql = sql.split(`:${param.name}`).join("''");
+      }
     }
   }
 

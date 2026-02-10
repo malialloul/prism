@@ -71,6 +71,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
   const [exportLoading, setExportLoading] = useState<string | null>(null);
   const [toggleLoading, setToggleLoading] = useState<Record<string, boolean>>({});
   const [copiedEndpoint, setCopiedEndpoint] = useState<string | null>(null);
+  const [copiedSql, setCopiedSql] = useState<string | null>(null);
   const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null);
   const [showSqlFor, setShowSqlFor] = useState<string | null>(null);
   const [paramErrors, setParamErrors] = useState<Record<string, Record<string, boolean>>>({});
@@ -93,6 +94,12 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
     navigator.clipboard.writeText(fullUrl);
     setCopiedEndpoint(`${endpoint}-${type}`);
     setTimeout(() => setCopiedEndpoint(null), 2000);
+  };
+
+  const handleCopySql = (apiId: string, sql: string) => {
+    navigator.clipboard.writeText(sql);
+    setCopiedSql(apiId);
+    setTimeout(() => setCopiedSql(null), 2000);
   };
 
   // Export project options
@@ -828,9 +835,16 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                       backgroundColor: darkMode ? '#0d0d14' : '#272822',
                       border: `1px solid ${colors.border}`,
                     }}>
-                      <Typography variant="caption" sx={{ color: '#888', fontWeight: 600, textTransform: 'uppercase', display: 'block', mb: 1 }}>
-                        SQL Query
-                      </Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="caption" sx={{ color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>
+                          SQL Query
+                        </Typography>
+                        <Tooltip title={copiedSql === api.id ? 'Copied!' : 'Copy SQL'}>
+                          <IconButton size="small" onClick={() => handleCopySql(api.id, api.sql || '')}>
+                            {copiedSql === api.id ? <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} /> : <ContentCopyIcon sx={{ fontSize: 16 }} />}
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                       <pre style={{
                         margin: 0,
                         fontSize: '0.8rem',
