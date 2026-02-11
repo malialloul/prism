@@ -1,4 +1,4 @@
-export { default as VisualQueryBuilder } from './VisualQueryBuilder';
+export { default as QueryBuilder } from './QueryBuilder';
 export { default as TablesPanel } from './TablesPanel';
 export { default as JoinCanvas } from './JoinCanvas';
 export { default as QueryConfigPanel } from './QueryConfigPanel';

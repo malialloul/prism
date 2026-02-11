@@ -20,11 +20,27 @@ interface UseSaveQueryOptions {
   onError?: (error: ApiError) => void;
 }
 
+interface SaveQueryInput {
+  name: string;
+  sql: string;
+  description?: string;
+  parameters?: Array<{
+    name: string;
+    columnName: string;
+    columnType: string;
+    operator: string;
+    required?: boolean;
+  }>;
+  method?: string;
+  isPublic?: boolean;
+}
+
 export function useSaveQuery(databaseId: number, options: UseSaveQueryOptions = {}) {
   const queryClient = useQueryClient();
 
-  return useMutation<{ query: SavedQueryDto; message: string }, ApiError, { name: string; sql: string }>({
-    mutationFn: ({ name, sql }) => SchemaService.saveQuery(databaseId, name, sql),
+  return useMutation<{ query: SavedQueryDto; message: string }, ApiError, SaveQueryInput>({
+    mutationFn: ({ name, sql, description, parameters, method, isPublic }) => 
+      SchemaService.saveQuery(databaseId, name, sql, { description, parameters, method, isPublic }),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: [...SAVED_QUERIES_KEY, databaseId] });
       // Also invalidate databases to update the apis count

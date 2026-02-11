@@ -19,18 +19,13 @@ import CloseIcon from '@mui/icons-material/Close';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import DownloadIcon from '@mui/icons-material/Download';
-
-import { QueryWizard } from './QueryWizard';
-import { SchemaTable, SchemaColumn, DatabaseEngine, WizardState, extractParameters } from './QueryWizard/types';
-import { useFullSchema } from '../../../api/entities/schema/useFullSchema';
-import { useExecuteQuery } from '../../../api/entities/schema/useExecuteQuery';
-import { SAVED_QUERIES_KEY } from '../../../api/entities/schema/useSavedQueries';
-import { SchemaService } from '../../../api/services/SchemaService';
-import { toastService } from '../../../services';
-
-// ============================================================================
-// Types
-// ============================================================================
+import { useFullSchema } from '../../../../api/entities/schema/useFullSchema';
+import { useExecuteQuery } from '../../../../api/entities/schema/useExecuteQuery';
+import { SAVED_QUERIES_KEY } from '../../../../api/entities/schema/useSavedQueries';
+import { SchemaService } from '../../../../api/services/SchemaService';
+import { toastService } from '../../../../services';
+import QueryWizard from './QueryWizard/QueryWizard';
+import { DatabaseEngine, extractParameters, SchemaColumn, SchemaTable, WizardState } from './QueryWizard/types';
 
 interface QueryWizardWrapperProps {
   connectedDatabase: {
@@ -60,14 +55,6 @@ const Container = styled(Box)({
   height: '100%',
   width: '100%',
   backgroundColor: '#0a0a0f',
-});
-
-const LoadingContainer = styled(Box)({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  height: '100%',
-  color: '#667eea',
 });
 
 const ResultsDialogTitle = styled(DialogTitle)({

@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Skeleton } from "@mui/material";
 import { ApisContent } from "./BuildQuery.styles";
-import QueryWizardWrapper from "./QueryWizardWrapper";
+import QueryWizardWrapper from "./QueryWizardWrapper/QueryWizardWrapper";
 import { useDashboard } from "../../DashboardPage/DashboardLayout";
 import { useApisContext } from "../ApisLayout";
 import { usePermissions, AccessRestricted } from "../../../components";

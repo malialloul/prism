@@ -19,7 +19,7 @@ import type { SQLParameter } from '../types';
 
 interface SaveApiDialogProps {
   open: boolean;
-  onSave: (name: string, description: string, method: string, isPublic: boolean) => Promise<void>;
+  onSave: (name: string, description: string, method: string, isPublic: boolean) => void | Promise<void>;
   onClose: () => void;
   defaultName?: string;
   parameters?: SQLParameter[];
