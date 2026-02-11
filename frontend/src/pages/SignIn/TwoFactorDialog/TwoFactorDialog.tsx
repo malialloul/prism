@@ -6,6 +6,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useLogin2FA } from '../../../api/entities/auth';
 import { setAuthToken } from '../../../api/httpClient';
+import { ROUTES } from '../../../constants';
 import {
   StyledDialog,
   StyledDialogTitle,
@@ -62,7 +63,7 @@ const TwoFactorDialog = ({ open, onClose, email, tempToken, rememberMe }: TwoFac
   useEffect(() => {
     if (isSuccess && data?.data?.token) {
       setAuthToken(data.data.token, rememberMe);
-      navigate('/dashboard');
+      navigate(ROUTES.DASHBOARD.ROOT);
     }
   }, [isSuccess, data, rememberMe, navigate]);
 

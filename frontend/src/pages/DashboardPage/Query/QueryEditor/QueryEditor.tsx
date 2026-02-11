@@ -19,7 +19,7 @@ import { useExecuteQuery, useSavedQueries, useSaveQuery, useDeleteSavedQuery } f
 import type { QueryResultDto, SavedQueryDto } from '../../../../api/models/SchemaDto';
 import { toastService } from '../../../../services';
 import { Pagination } from '../../../../components';
-import { useDashboard } from '../../DashboardLayout';
+import { useWorkspace } from '../../DashboardLayout';
 import {
   EditorWrapper,
   EditorHeader,
@@ -61,7 +61,8 @@ export default function QueryEditor({
   initialQuery = '',
 }: QueryEditorProps) {
   const { canRunQuery, canCreateApi, canCreateDatabase } = usePermissions();
-  const { handleCreateDatabase } = useDashboard();
+  const workspace = useWorkspace();
+  const handleCreateDatabase = workspace?.handleCreateDatabase;
   const [sql, setSql] = useState(initialQuery);
   const [executedSql, setExecutedSql] = useState<string | null>(null);
   const [result, setResult] = useState<QueryResultDto | null>(null);
@@ -74,7 +75,7 @@ export default function QueryEditor({
   // Pagination state
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
-  
+
   // Track if pagination change should trigger re-execution
   const isPageChangeRef = useRef(false);
 
@@ -128,11 +129,11 @@ export default function QueryEditor({
 
     // Intercept CREATE DATABASE commands
     if (isCreateDatabaseQuery(sql)) {
-      if (canCreateDatabase) {
+      if (canCreateDatabase && handleCreateDatabase) {
         // User has permission - open the Create Database dialog
         handleCreateDatabase();
         toastService.info('Use the Create Database dialog to create a new database.');
-      } else {
+      } else if (!canCreateDatabase) {
         // User doesn't have permission - show access restricted dialog
         setShowCreateDbRestricted(true);
       }

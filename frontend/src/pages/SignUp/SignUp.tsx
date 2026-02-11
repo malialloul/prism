@@ -11,6 +11,7 @@ import { authColors } from '../../styles/theme';
 import { useSignUp } from '../../api/entities/auth';
 import { hashPassword } from '../../utils/crypto';
 import { toastService } from '../../services';
+import { ROUTES } from '../../constants';
 import {
   AuthWrapper,
   LeftPanel,
@@ -215,7 +216,7 @@ export default function SignUp() {
             Start Building APIs in Minutes
           </LeftPanelTitle>
           <LeftPanelText>
-            Join thousands of developers who are shipping faster with 
+            Join thousands of developers who are shipping faster with
             Cloud API Builder's no-code API generation platform.
           </LeftPanelText>
           <FeatureList>
@@ -232,7 +233,7 @@ export default function SignUp() {
 
       {/* Right Panel - Sign Up Form */}
       <RightPanel>
-        <RouterLink to="/" style={{ textDecoration: 'none' }}>
+        <RouterLink to={ROUTES.HOME} style={{ textDecoration: 'none' }}>
           <HomeLink>
             <ArrowBack sx={{ fontSize: 18 }} />
             Back to Home
@@ -428,8 +429,8 @@ export default function SignUp() {
                     />
                     <TermsLabel>
                       I agree to the{' '}
-                      <a 
-                        href="#" 
+                      <a
+                        href="#"
                         onClick={(e) => {
                           e.preventDefault();
                           setShowTermsDialog(true);
@@ -445,8 +446,8 @@ export default function SignUp() {
                   )}
 
                   {/* Terms & Data Policy Dialog */}
-                  <StyledDialog 
-                    open={showTermsDialog} 
+                  <StyledDialog
+                    open={showTermsDialog}
                     onClose={() => setShowTermsDialog(false)}
                     scroll="paper"
                   >
@@ -454,12 +455,12 @@ export default function SignUp() {
                     <StyledDialogContent dividers>
                       <h3>1. Our Commitment to Trust</h3>
                       <p>
-                        At Prism, trust is a core principle of our platform. We build tools that help users create, 
-                        manage, and expose databases and APIs efficiently. In doing so, we understand the responsibility 
+                        At Prism, trust is a core principle of our platform. We build tools that help users create,
+                        manage, and expose databases and APIs efficiently. In doing so, we understand the responsibility
                         that comes with handling user data.
                       </p>
                       <p>
-                        Our goal is to provide powerful infrastructure while minimizing unnecessary access and maintaining 
+                        Our goal is to provide powerful infrastructure while minimizing unnecessary access and maintaining
                         transparency about how data is handled.
                       </p>
 
@@ -499,7 +500,7 @@ export default function SignUp() {
                         <li>Secure infrastructure and access credentials</li>
                       </ul>
                       <p>
-                        While no system can guarantee absolute security, Prism continuously works to reduce risk and follow 
+                        While no system can guarantee absolute security, Prism continuously works to reduce risk and follow
                         security best practices appropriate for early-stage platforms.
                       </p>
 
@@ -534,7 +535,7 @@ export default function SignUp() {
                       <h3>8. Our Promise</h3>
                       <p><strong>Prism is built by developers, for developers.</strong></p>
                       <p>
-                        We treat user data with the same care and respect we expect for our own. Trust is not enforced 
+                        We treat user data with the same care and respect we expect for our own. Trust is not enforced
                         by complex systems alone — it is maintained through honesty, restraint, and accountability.
                       </p>
                     </StyledDialogContent>
@@ -542,7 +543,7 @@ export default function SignUp() {
                       <CloseButton onClick={() => setShowTermsDialog(false)}>
                         Close
                       </CloseButton>
-                      <AcceptButton 
+                      <AcceptButton
                         onClick={() => {
                           setFieldValue('agreeTerms', true);
                           setShowTermsDialog(false);
@@ -603,7 +604,7 @@ export default function SignUp() {
                     <Typography component="span" sx={{ color: 'inherit' }}>
                       Already have an account?{' '}
                     </Typography>
-                    <RouterLink to="/signin" style={{ textDecoration: 'none' }}>
+                    <RouterLink to={ROUTES.SIGN_IN} style={{ textDecoration: 'none' }}>
                       <StyledLink as="span">Sign in</StyledLink>
                     </RouterLink>
                   </FooterText>

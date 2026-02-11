@@ -10,8 +10,9 @@ import {
   ApisTab,
   NoDatabaseMessage,
 } from "./ApisPage.styles";
-import { useDashboard } from "../DashboardPage/DashboardLayout";
+import { useWorkspace } from "../DashboardPage/DashboardLayout";
 import { createContext, useContext, useState } from "react";
+import { ROUTES } from "../../constants";
 
 // Context for sharing APIs state with child routes
 interface ApisContextType {
@@ -32,30 +33,33 @@ export const useApisContext = () => {
 export default function ApisLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { connectedDatabase, isSwitchingDatabase } = useDashboard();
+  const workspace = useWorkspace();
   const [openApiRefreshKey, setOpenApiRefreshKey] = useState(0);
+
+  const connectedDatabase = workspace?.connectedDatabase;
+  const isSwitchingDatabase = workspace?.isSwitchingDatabase;
 
   // Determine active tab from URL
   const getActiveTab = () => {
-    if (location.pathname.includes("/apis/auto")) return 1;
-    if (location.pathname.includes("/apis/openapi")) return 2;
+    if (location.pathname.includes(ROUTES.APIS.AUTO)) return 1;
+    if (location.pathname.includes(ROUTES.APIS.OPENAPI)) return 2;
     return 0; // build
   };
 
   const activeTab = getActiveTab();
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
-    if (newValue === 0) navigate("/dashboard/apis/build");
-    else if (newValue === 1) navigate("/dashboard/apis/auto");
-    else if (newValue === 2) navigate("/dashboard/apis/openapi");
+    if (newValue === 0) navigate(ROUTES.APIS.BUILD);
+    else if (newValue === 1) navigate(ROUTES.APIS.AUTO);
+    else if (newValue === 2) navigate(ROUTES.APIS.OPENAPI);
   };
 
   const triggerOpenApiRefresh = () => {
     setOpenApiRefreshKey((prev) => prev + 1);
   };
 
-  // Show loading skeleton while switching databases
-  if (isSwitchingDatabase) {
+  // Show loading skeleton while context is loading or switching databases
+  if (!workspace || isSwitchingDatabase) {
     return (
       <ApisPageWrapper>
         <ApisHeader>

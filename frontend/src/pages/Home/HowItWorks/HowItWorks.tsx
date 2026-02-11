@@ -1,6 +1,7 @@
 import { Container, Typography, Grid } from '@mui/material';
 import { Storage, Search, AutoAwesome, Code } from '@mui/icons-material';
 import { motion } from 'motion/react';
+import { ROUTES } from '../../../constants';
 import {
   HowItWorksWrapper,
   HeaderBox,
@@ -91,7 +92,7 @@ export default function HowItWorks() {
             transition={{ duration: 0.6, delay: 0.6 }}
           >
             <ActionButton
-              onClick={() => window.location.href = '/dashboard'}
+              onClick={() => window.location.href = ROUTES.DASHBOARD.ROOT}
             >
               Try it now - it's free
             </ActionButton>

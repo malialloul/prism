@@ -8,6 +8,7 @@ import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { useSharedLogin } from '../../api/entities/auth';
 import { toastService } from '../../services/toastService';
+import { ROUTES } from '../../constants';
 import {
   AuthWrapper,
   LeftPanel,
@@ -94,11 +95,11 @@ export default function SharedLogin() {
           </LeftPanelText>
           <Box sx={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
             <Typography sx={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
-              <strong>How it works:</strong><br/>
-              1. The account owner shares their account with you<br/>
-              2. You receive a notification with the temporary password<br/>
-              3. Enter the owner's email and temporary password here<br/>
-              4. You'll be logged in with full access to their account<br/>
+              <strong>How it works:</strong><br />
+              1. The account owner shares their account with you<br />
+              2. You receive a notification with the temporary password<br />
+              3. Enter the owner's email and temporary password here<br />
+              4. You'll be logged in with full access to their account<br />
             </Typography>
           </Box>
         </LeftPanelContent>
@@ -107,7 +108,7 @@ export default function SharedLogin() {
       {/* Right Panel - Login Form */}
       <RightPanel>
         <BackLinkContainer>
-          <RouterLink to="/signin" style={{ textDecoration: 'none' }}>
+          <RouterLink to={ROUTES.SIGN_IN} style={{ textDecoration: 'none' }}>
             <HomeLink>
               <ArrowBack sx={{ fontSize: 18 }} />
               Back to Sign In
@@ -222,7 +223,7 @@ export default function SharedLogin() {
                   <Typography component="span" sx={{ color: 'inherit' }}>
                     Don't have a shared account?{' '}
                   </Typography>
-                  <RouterLink to="/signin" style={{ textDecoration: 'none' }}>
+                  <RouterLink to={ROUTES.SIGN_IN} style={{ textDecoration: 'none' }}>
                     <Typography
                       component="span"
                       sx={{

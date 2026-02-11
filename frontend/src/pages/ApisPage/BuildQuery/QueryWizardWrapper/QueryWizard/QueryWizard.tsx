@@ -114,7 +114,6 @@ export const QueryWizard: React.FC<QueryWizardProps> = ({
   }, [state, engine]);
 
   const hasErrors = validation.some((v) => v.severity === 'error');
-  const hasWarnings = validation.some((v) => v.severity === 'warning');
 
   // Check for warnings/errors on current step
   const currentStepHasWarnings = useMemo(() => {

@@ -3,6 +3,7 @@ import { getAuthToken, clearAuthToken, isSharedAccessSession } from '../api/http
 import { toastService } from './toastService';
 import { queryClient } from '../App';
 import { dispatchPermissionsUpdate } from '../context/PermissionsContext';
+import { ROUTES } from '../constants';
 import type { SharePermissions } from '../api/models/SharedAccountDto';
 
 export interface NotificationPayload {
@@ -150,7 +151,7 @@ class WebSocketService {
       
       // Redirect to signin after short delay to allow user to see toast
       setTimeout(() => {
-        window.location.href = '/signin';
+        window.location.href = ROUTES.SIGN_IN;
       }, 3000);
     });
 
@@ -225,7 +226,7 @@ class WebSocketService {
       
       // Redirect to shared-login after short delay to allow user to see toast
       setTimeout(() => {
-        window.location.href = '/shared-login';
+        window.location.href = ROUTES.SHARED_LOGIN;
       }, 3000);
     });
 

@@ -4,6 +4,7 @@ import { Tooltip } from '@mui/material';
 import { Brightness4, Brightness7 } from '@mui/icons-material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ApiIcon from '@mui/icons-material/Api';
+import { ROUTES } from '../../../../constants';
 import {
   NavbarWrapper,
   LeftSection,
@@ -41,7 +42,7 @@ export default function Navbar({ onRefresh, activeMainTab = 0, onMainTabChange, 
   return (
     <NavbarWrapper>
       <LeftSection>
-        <Logo onClick={() => navigate('/')}>
+        <Logo onClick={() => navigate(ROUTES.HOME)}>
           <LogoIcon>⬡</LogoIcon>
           <LogoText>Prism</LogoText>
         </Logo>

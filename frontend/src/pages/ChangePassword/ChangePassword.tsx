@@ -7,6 +7,7 @@ import { Api, ArrowBack, CheckCircle } from '../../assets/icons';
 import { Visibility, VisibilityOff, Check, Close } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
 import { authColors } from '../../styles/theme';
+import { ROUTES } from '../../constants';
 import { useChangePassword } from '../../api/entities/auth';
 import {
   AuthWrapper,
@@ -133,7 +134,7 @@ export default function changePassword() {
 
       {/* Right Panel - Change Password Form */}
       <RightPanel>
-        <RouterLink to="/" style={{ textDecoration: 'none' }}>
+        <RouterLink to={ROUTES.HOME} style={{ textDecoration: 'none' }}>
           <HomeLink>
             <ArrowBack sx={{ fontSize: 18 }} />
             Back to Home
@@ -328,7 +329,7 @@ export default function changePassword() {
                         'Change Password'
                       )}
                     </PrimaryButton>
-                    <RouterLink to="/" style={{ textDecoration: 'none' }}>
+                    <RouterLink to={ROUTES.HOME} style={{ textDecoration: 'none' }}>
                       <SecondaryButton fullWidth variant="outlined">
                         Cancel
                       </SecondaryButton>
@@ -340,7 +341,7 @@ export default function changePassword() {
                     <Typography component="span" sx={{ color: 'inherit' }}>
                       Remember your password?{' '}
                     </Typography>
-                    <RouterLink to="/signin" style={{ textDecoration: 'none' }}>
+                    <RouterLink to={ROUTES.SIGN_IN} style={{ textDecoration: 'none' }}>
                       <StyledLink as="span">Sign in</StyledLink>
                     </RouterLink>
                   </FooterText>

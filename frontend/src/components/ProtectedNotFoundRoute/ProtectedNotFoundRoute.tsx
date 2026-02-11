@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { getAuthToken } from '../../api/httpClient';
 import NotFound from '../../pages/NotFound/NotFound';
+import { ROUTES } from '../../constants';
 
 interface ProtectedNotFoundRouteProps {
     children?: React.ReactNode;
@@ -13,7 +14,7 @@ interface ProtectedNotFoundRouteProps {
 export default function ProtectedNotFoundRoute({ children }: ProtectedNotFoundRouteProps) {
     // Check if user is logged in
     if (!getAuthToken()) {
-        return <Navigate to="/signin" replace />;
+        return <Navigate to={ROUTES.SIGN_IN} replace />;
     }
 
     // Show NotFound page for logged-in users

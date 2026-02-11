@@ -13,6 +13,7 @@ import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import LoginIcon from '@mui/icons-material/Login';
 import { CircularProgress, Tooltip, IconButton, Button, Box, Typography } from '@mui/material';
+import { ROUTES } from '../../constants';
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead, useDeleteNotification } from '../../api/entities/auth';
 import { useRespondPermissionRequest } from '../../api/entities/auth/usePermissionRequests';
 import type { NotificationDto } from '../../api/models/NotificationDto';
@@ -181,10 +182,10 @@ function NotificationItemComponent({ notification, onRead, onDelete, onRespond, 
         <NotificationItemTitle>{notification.title}</NotificationItemTitle>
         <NotificationMessage>{notification.message}</NotificationMessage>
         {requestMessage && notification.type === 'permission_request' && (
-          <Box sx={{ 
-            mt: 1, 
-            p: 1, 
-            backgroundColor: 'rgba(0, 0, 0, 0.04)', 
+          <Box sx={{
+            mt: 1,
+            p: 1,
+            backgroundColor: 'rgba(0, 0, 0, 0.04)',
             borderRadius: 1,
             borderLeft: '3px solid',
             borderLeftColor: 'primary.main',
@@ -298,7 +299,7 @@ export default function NotificationBell() {
 
   const handleLoginClick = (email: string, password: string) => {
     handleClose();
-    navigate(`/shared-login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&auto=true`);
+    navigate(`${ROUTES.SHARED_LOGIN}?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&auto=true`);
   };
 
   const open = Boolean(anchorEl);

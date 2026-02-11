@@ -9,6 +9,7 @@ import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { useSignIn } from '../../api/entities/auth';
 import { hashPassword } from '../../utils/crypto';
 import { toastService } from '../../services';
+import { ROUTES } from '../../constants';
 import TwoFactorDialog from './TwoFactorDialog';
 import {
   AuthWrapper,
@@ -124,7 +125,7 @@ export default function SignIn() {
 
       {/* Right Panel - Login Form */}
       <RightPanel>
-        <RouterLink to="/" style={{ textDecoration: 'none' }}>
+        <RouterLink to={ROUTES.HOME} style={{ textDecoration: 'none' }}>
           <HomeLink>
             <ArrowBack sx={{ fontSize: 18 }} />
             Back to Home
@@ -216,7 +217,7 @@ export default function SignIn() {
                     }
                     label="Remember me"
                   />
-                  <RouterLink to="/forgot-password" style={{ textDecoration: 'none' }}>
+                  <RouterLink to={ROUTES.FORGOT_PASSWORD} style={{ textDecoration: 'none' }}>
                     <StyledLink as="span">Forgot password?</StyledLink>
                   </RouterLink>
                 </RememberForgotRow>
@@ -267,7 +268,7 @@ export default function SignIn() {
                   <Typography component="span" sx={{ color: 'inherit' }}>
                     Don't have an account?{' '}
                   </Typography>
-                  <RouterLink to="/signup" style={{ textDecoration: 'none' }}>
+                  <RouterLink to={ROUTES.SIGN_UP} style={{ textDecoration: 'none' }}>
                     <StyledLink as="span">Create an account</StyledLink>
                   </RouterLink>
                 </FooterText>
@@ -276,7 +277,7 @@ export default function SignIn() {
                   <Typography sx={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.5rem' }}>
                     Have a shared account?
                   </Typography>
-                  <RouterLink to="/shared-login" style={{ textDecoration: 'none' }}>
+                  <RouterLink to={ROUTES.SHARED_LOGIN} style={{ textDecoration: 'none' }}>
                     <StyledLink as="span">Sign in with shared access</StyledLink>
                   </RouterLink>
                 </Box>

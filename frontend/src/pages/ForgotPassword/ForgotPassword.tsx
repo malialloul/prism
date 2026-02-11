@@ -8,6 +8,7 @@ import { Visibility, VisibilityOff, Check, Close } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
 import { authColors } from '../../styles/theme';
 import { useForgotPassword, useVerifyResetCode, useResetPassword } from '../../api/entities/auth';
+import { ROUTES } from '../../constants';
 import {
   AuthWrapper,
   LeftPanel,
@@ -236,7 +237,7 @@ export default function ForgotPassword() {
             Reset Your Password
           </LeftPanelTitle>
           <LeftPanelText>
-            Don't worry, it happens to the best of us. Follow the simple steps 
+            Don't worry, it happens to the best of us. Follow the simple steps
             to regain access to your Cloud API Builder account.
           </LeftPanelText>
           <FeatureList>
@@ -253,7 +254,7 @@ export default function ForgotPassword() {
 
       {/* Right Panel - Forgot Password Form */}
       <RightPanel>
-        <RouterLink to="/" style={{ textDecoration: 'none' }}>
+        <RouterLink to={ROUTES.HOME} style={{ textDecoration: 'none' }}>
           <HomeLink>
             <ArrowBack sx={{ fontSize: 18 }} />
             Back to Home
@@ -298,7 +299,7 @@ export default function ForgotPassword() {
               <Typography sx={{ color: 'text.secondary', mb: 2 }}>
                 You can now sign in with your new password.
               </Typography>
-              <RouterLink to="/signin" style={{ textDecoration: 'none' }}>
+              <RouterLink to={ROUTES.SIGN_IN} style={{ textDecoration: 'none' }}>
                 <PrimaryButton fullWidth>
                   Sign In
                 </PrimaryButton>
@@ -351,7 +352,7 @@ export default function ForgotPassword() {
                         <Typography component="span" sx={{ color: 'inherit' }}>
                           Remember your password?{' '}
                         </Typography>
-                        <RouterLink to="/signin" style={{ textDecoration: 'none' }}>
+                        <RouterLink to={ROUTES.SIGN_IN} style={{ textDecoration: 'none' }}>
                           <StyledLink as="span">Sign in</StyledLink>
                         </RouterLink>
                       </FooterText>

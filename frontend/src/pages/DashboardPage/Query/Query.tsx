@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Box, Skeleton } from "@mui/material";
-import { useDashboard } from "../DashboardLayout";
+import { useWorkspace } from "../DashboardLayout";
+import { ROUTES } from "../../../constants";
 import { usePermissions, AccessRestricted } from "../../../components";
 import {
   ContentHeader,
@@ -14,16 +15,16 @@ import { QueryEditor } from "./QueryEditor";
 
 export default function Query() {
   const navigate = useNavigate();
-  const {
-    connectedDatabase,
-    isSwitchingDatabase,
-    schemaVersion,
-    initialQuery,
-  } = useDashboard();
+  const workspace = useWorkspace();
   const { canRunQuery } = usePermissions();
 
-  // Show loading skeleton while switching databases
-  if (isSwitchingDatabase) {
+  const connectedDatabase = workspace?.connectedDatabase;
+  const isSwitchingDatabase = workspace?.isSwitchingDatabase;
+  const schemaVersion = workspace?.schemaVersion;
+  const initialQuery = workspace?.initialQuery;
+
+  // Show loading skeleton while context is loading or switching databases
+  if (!workspace || isSwitchingDatabase) {
     return (
       <>
         <ContentHeader>
@@ -63,9 +64,9 @@ export default function Query() {
         </ContentHeader>
         <TabsContainer>
           <StyledTabs value={2} onChange={(_e, newValue) => {
-            if (newValue === 0) navigate('/dashboard/overview');
-            if (newValue === 1) navigate('/dashboard/schema');
-            if (newValue === 3) navigate('/dashboard/er-diagram');
+            if (newValue === 0) navigate(ROUTES.DASHBOARD.OVERVIEW);
+            if (newValue === 1) navigate(ROUTES.DASHBOARD.SCHEMA);
+            if (newValue === 3) navigate(ROUTES.DASHBOARD.ER_DIAGRAM);
           }}>
             <StyledTab label="Overview" />
             <StyledTab label="Schema" disabled />
@@ -90,9 +91,9 @@ export default function Query() {
 
       <TabsContainer>
         <StyledTabs value={2} onChange={(_e, newValue) => {
-          if (newValue === 0) navigate('/dashboard/overview');
-          if (newValue === 1) navigate('/dashboard/schema');
-          if (newValue === 3) navigate('/dashboard/er-diagram');
+          if (newValue === 0) navigate(ROUTES.DASHBOARD.OVERVIEW);
+          if (newValue === 1) navigate(ROUTES.DASHBOARD.SCHEMA);
+          if (newValue === 3) navigate(ROUTES.DASHBOARD.ER_DIAGRAM);
         }}>
           <StyledTab label="Overview" />
           <StyledTab label="Schema" />

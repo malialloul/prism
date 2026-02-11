@@ -6,6 +6,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { clearAuthToken, getUserFromToken, isSharedAccessSession } from '../../api/httpClient';
 import { queryClient } from '../../App';
+import { ROUTES } from '../../constants';
 
 const AvatarButton = styled('button')<{ variant?: 'light' | 'dark' }>(({ variant = 'dark' }) => ({
   width: '2rem',
@@ -79,7 +80,7 @@ export default function UserAvatar({ variant = 'dark', initial = 'D' }: UserAvat
     queryClient.clear();
     clearAuthToken();
     handleMenuClose();
-    navigate('/signin');
+    navigate(ROUTES.SIGN_IN);
   };
 
   const menuStyles = variant === 'dark' ? {
@@ -160,7 +161,7 @@ export default function UserAvatar({ variant = 'dark', initial = 'D' }: UserAvat
         </Box>
         <Divider sx={{ borderColor: dividerColor }} />
         {!isSharedAccessSession() && (
-          <MenuItem onClick={() => { handleMenuClose(); navigate('/settings'); }}>
+          <MenuItem onClick={() => { handleMenuClose(); navigate(ROUTES.SETTINGS); }}>
             <ListItemIcon>
               <SettingsIcon fontSize="small" sx={{ color: iconColor }} />
             </ListItemIcon>

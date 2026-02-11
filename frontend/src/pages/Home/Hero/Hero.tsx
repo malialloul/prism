@@ -1,5 +1,6 @@
 import { Container, Chip } from '@mui/material';
 import { ArrowForward, PlayArrow, Circle } from '@mui/icons-material';
+import { ROUTES } from '../../../constants';
 import {
   HeroWrapper,
   GridBackground,
@@ -57,7 +58,7 @@ export default function Hero() {
             <PrimaryButton
               variant="contained"
               size="large"
-              onClick={() => (window.location.href = '/dashboard')}
+              onClick={() => (window.location.href = ROUTES.DASHBOARD.ROOT)}
               endIcon={<ArrowForward />}
             >
               Get Started Free

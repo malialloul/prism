@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Container, Typography, Button, useTheme } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import { getDashboardColors } from '../../styles/theme';
+import { ROUTES } from '../../constants';
 
 const NotFound = () => {
   const navigate = useNavigate();
@@ -27,22 +28,22 @@ const NotFound = () => {
             color: colors.error,
           }}
         />
-        
+
         <Typography variant="h1" sx={{ fontSize: 48, fontWeight: 700 }}>
           404
         </Typography>
-        
+
         <Typography variant="h4" sx={{ color: colors.text }}>
           Page Not Found
         </Typography>
-        
+
         <Typography variant="body1" sx={{ color: colors.textSecondary }}>
           The page you're looking for doesn't exist or has been moved.
         </Typography>
-        
+
         <Button
           variant="contained"
-          onClick={() => navigate('/dashboard', { replace: true })}
+          onClick={() => navigate(ROUTES.DASHBOARD.ROOT, { replace: true })}
           sx={{
             mt: 2,
             backgroundColor: colors.primary,

@@ -4,6 +4,7 @@ import { Box, Typography, CircularProgress } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { setAuthToken, clearAuthToken, getAuthToken } from '../../api/httpClient';
 import { toastService } from '../../services';
+import { ROUTES } from '../../constants';
 
 const Container = styled(Box)({
   minHeight: '100vh',
@@ -39,7 +40,7 @@ export default function OAuthCallback() {
         setErrorMessage(decodeURIComponent(error));
         toastService.error(decodeURIComponent(error));
         setTimeout(() => {
-          window.location.href = '/signin';
+          window.location.href = ROUTES.SIGN_IN;
         }, 2000);
         return;
       }
@@ -47,13 +48,13 @@ export default function OAuthCallback() {
       if (token) {
         // Clear any existing auth state first (may have stale shared access token)
         clearAuthToken();
-        
+
         // Small delay to ensure cookie is cleared
         await new Promise(resolve => setTimeout(resolve, 50));
-        
+
         // Store the new token
         setAuthToken(token);
-        
+
         // Verify token was set correctly
         const verifyToken = getAuthToken();
         if (verifyToken !== token) {
@@ -61,27 +62,27 @@ export default function OAuthCallback() {
           setStatus('error');
           setErrorMessage('Failed to save authentication token');
           setTimeout(() => {
-            window.location.href = '/signin';
+            window.location.href = ROUTES.SIGN_IN;
           }, 2000);
           return;
         }
-        
+
         setStatus('success');
         toastService.success('Successfully signed in!');
-        
+
         // Redirect to dashboard with full page reload to reset all React state
         setTimeout(() => {
-          window.location.href = '/dashboard';
+          window.location.href = ROUTES.DASHBOARD.ROOT;
         }, 500);
       } else {
         setStatus('error');
         setErrorMessage('No token received from authentication');
         setTimeout(() => {
-          window.location.href = '/signin';
+          window.location.href = ROUTES.SIGN_IN;
         }, 2000);
       }
     };
-    
+
     handleCallback();
   }, [searchParams]);
 

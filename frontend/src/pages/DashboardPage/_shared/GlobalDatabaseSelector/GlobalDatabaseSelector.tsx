@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SelectChangeEvent, Tooltip, Menu, MenuItem, ListItemIcon, ListItemText, Divider } from '@mui/material';
+import { ROUTES } from '../../../../constants';
 import {
   SelectorWrapper,
   LeftSection,
@@ -70,7 +71,7 @@ export default function GlobalDatabaseSelector({
     queryClient.clear();
     clearAuthToken();
     handleMenuClose();
-    navigate('/signin');
+    navigate(ROUTES.SIGN_IN);
   };
 
   const connectedCount = databases.filter(db => db.status === 'connected').length;
@@ -156,7 +157,7 @@ export default function GlobalDatabaseSelector({
 
         {!isShared && (
           <Tooltip title="Settings">
-            <ActionButton onClick={() => navigate('/settings')}>
+            <ActionButton onClick={() => navigate(ROUTES.SETTINGS)}>
               <SettingsIcon fontSize="small" />
             </ActionButton>
           </Tooltip>

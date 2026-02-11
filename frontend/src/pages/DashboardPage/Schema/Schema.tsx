@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Skeleton, Backdrop, CircularProgress, Typography } from "@mui/material";
-import { useDashboard } from "../DashboardLayout";
+import { Box, Backdrop, CircularProgress, Typography } from "@mui/material";
+import { useWorkspace } from "../DashboardLayout";
+import { ROUTES } from "../../../constants";
+import { SchemaSkeleton } from "@/components";
 import {
   ContentHeader,
   ContentTitle,
@@ -22,11 +24,7 @@ type SelectedObjectType = 'table';
 
 export default function Schema() {
   const navigate = useNavigate();
-  const {
-    connectedDatabase,
-    isSwitchingDatabase,
-    setSchemaVersion,
-  } = useDashboard();
+  const workspace = useWorkspace();
 
   // Schema Explorer state
   const [selectedObjectName, setSelectedObjectName] = useState<string | null>(null);
@@ -42,8 +40,12 @@ export default function Schema() {
   // Import state (lifted from SchemaExplorer for full-page loading)
   const [isImporting, setIsImporting] = useState(false);
 
-  // Show loading skeleton while switching databases
-  if (isSwitchingDatabase) {
+  const connectedDatabase = workspace?.connectedDatabase;
+  const isSwitchingDatabase = workspace?.isSwitchingDatabase;
+  const setSchemaVersion = workspace?.setSchemaVersion;
+
+  // Show loading skeleton while context is loading or switching databases
+  if (!workspace || isSwitchingDatabase) {
     return (
       <>
         <ContentHeader>
@@ -58,21 +60,7 @@ export default function Schema() {
           </StyledTabs>
         </TabsContainer>
         <TabPanel>
-          <Box sx={{ display: 'flex', gap: 2, height: 'calc(100vh - 250px)' }}>
-            {/* Sidebar skeleton */}
-            <Box sx={{ width: 280, display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Skeleton variant="rectangular" height={40} sx={{ borderRadius: 1 }} />
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} variant="rectangular" height={48} sx={{ borderRadius: 1 }} />
-              ))}
-            </Box>
-            {/* Content skeleton */}
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Skeleton variant="rectangular" height={56} sx={{ borderRadius: 1 }} />
-              <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 1 }} />
-              <Skeleton variant="rectangular" height={150} sx={{ borderRadius: 1 }} />
-            </Box>
-          </Box>
+          <SchemaSkeleton />
         </TabPanel>
       </>
     );
@@ -87,9 +75,9 @@ export default function Schema() {
         </ContentHeader>
         <TabsContainer>
           <StyledTabs value={1} onChange={(_e, newValue) => {
-            if (newValue === 0) navigate('/dashboard/overview');
-            if (newValue === 2) navigate('/dashboard/query');
-            if (newValue === 3) navigate('/dashboard/er-diagram');
+            if (newValue === 0) navigate(ROUTES.DASHBOARD.OVERVIEW);
+            if (newValue === 2) navigate(ROUTES.DASHBOARD.QUERY);
+            if (newValue === 3) navigate(ROUTES.DASHBOARD.ER_DIAGRAM);
           }}>
             <StyledTab label="Overview" />
             <StyledTab label="Schema" />
@@ -135,25 +123,25 @@ export default function Schema() {
   };
 
   const handleTableDataChanged = () => {
-    setSchemaVersion(v => v + 1);
+    setSchemaVersion?.(v => v + 1);
   };
 
   const handleTableCreated = () => {
     setSelectedObjectName(null);
-    setSchemaVersion(v => v + 1);
+    setSchemaVersion?.(v => v + 1);
   };
 
   const handleColumnAdded = () => {
     if (selectedObjectName) {
       handleSelectObject(selectedObjectName, selectedObjectType);
     }
-    setSchemaVersion(v => v + 1);
+    setSchemaVersion?.(v => v + 1);
   };
 
   const handleTableDeleted = () => {
     setSelectedObjectName(null);
     setTableToModify(null);
-    setSchemaVersion(v => v + 1);
+    setSchemaVersion?.(v => v + 1);
   };
 
   return (
@@ -190,9 +178,9 @@ export default function Schema() {
 
       <TabsContainer>
         <StyledTabs value={1} onChange={(_e, newValue) => {
-          if (newValue === 0) navigate('/dashboard/overview');
-          if (newValue === 2) navigate('/dashboard/query');
-          if (newValue === 3) navigate('/dashboard/er-diagram');
+          if (newValue === 0) navigate(ROUTES.DASHBOARD.OVERVIEW);
+          if (newValue === 2) navigate(ROUTES.DASHBOARD.QUERY);
+          if (newValue === 3) navigate(ROUTES.DASHBOARD.ER_DIAGRAM);
         }}>
           <StyledTab label="Overview" />
           <StyledTab label="Schema" />

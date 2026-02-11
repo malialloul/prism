@@ -1,5 +1,6 @@
 import { Box, Skeleton } from "@mui/material";
-import { useDashboard } from "../DashboardLayout";
+import { useWorkspace } from "../DashboardLayout";
+import { ROUTES } from "../../../constants";
 import {
   ContentHeader,
   ContentTitle,
@@ -22,6 +23,37 @@ import LinkIcon from "@mui/icons-material/Link";
 
 export default function Overview() {
   const navigate = useNavigate();
+  const workspace = useWorkspace();
+
+  // Show loading skeleton while context is loading
+  if (!workspace) {
+    return (
+      <>
+        <ContentHeader>
+          <ContentTitle>Dashboard Overview</ContentTitle>
+          <QuickActionsBar>
+            <Skeleton variant="rectangular" width={140} height={36} sx={{ borderRadius: 1 }} />
+            <Skeleton variant="rectangular" width={140} height={36} sx={{ borderRadius: 1 }} />
+          </QuickActionsBar>
+        </ContentHeader>
+        <TabsContainer>
+          <StyledTabs value={0}>
+            <StyledTab label="Overview" />
+            <StyledTab label="Schema" disabled />
+            <StyledTab label="Query" disabled />
+            <StyledTab label="ER Diagram" disabled />
+          </StyledTabs>
+        </TabsContainer>
+        <TabPanel>
+          <DashboardGrid>
+            <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 1 }} />
+            <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 1 }} />
+          </DashboardGrid>
+        </TabPanel>
+      </>
+    );
+  }
+
   const {
     databases,
     selectedDatabaseId,
@@ -32,7 +64,7 @@ export default function Overview() {
     handleDisconnect,
     handleCreateDatabase,
     handleConnectDatabase,
-  } = useDashboard();
+  } = useWorkspace()!;
 
   const handleDeleteDatabase = (id: number) => {
     // This is handled by the layout, but we can trigger refresh
@@ -100,9 +132,9 @@ export default function Overview() {
 
       <TabsContainer>
         <StyledTabs value={0} onChange={(_e, newValue) => {
-          if (newValue === 1) navigate('/dashboard/schema');
-          if (newValue === 2) navigate('/dashboard/query');
-          if (newValue === 3) navigate('/dashboard/er-diagram');
+          if (newValue === 1) navigate(ROUTES.DASHBOARD.SCHEMA);
+          if (newValue === 2) navigate(ROUTES.DASHBOARD.QUERY);
+          if (newValue === 3) navigate(ROUTES.DASHBOARD.ER_DIAGRAM);
         }}>
           <StyledTab label="Overview" />
           <StyledTab label="Schema" disabled={!connectedDatabase || isSwitchingDatabase} />

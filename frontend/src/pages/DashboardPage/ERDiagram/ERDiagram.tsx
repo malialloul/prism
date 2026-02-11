@@ -2,7 +2,8 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Paper, Typography, alpha, Skeleton } from '@mui/material';
 import StorageIcon from '@mui/icons-material/Storage';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
-import { useDashboard } from '../DashboardLayout';
+import { useWorkspace } from '../DashboardLayout';
+import { ROUTES } from '../../../constants';
 import {
     ContentHeader,
     ContentTitle,
@@ -15,10 +16,13 @@ import RelationshipGraph from './RelationshipGraph';
 
 export default function ERDiagram() {
     const navigate = useNavigate();
-    const { connectedDatabase, isSwitchingDatabase } = useDashboard();
+    const workspace = useWorkspace();
 
-    // Show loading skeleton while switching databases
-    if (isSwitchingDatabase) {
+    const connectedDatabase = workspace?.connectedDatabase;
+    const isSwitchingDatabase = workspace?.isSwitchingDatabase;
+
+    // Show loading skeleton while context is loading or switching databases
+    if (!workspace || isSwitchingDatabase) {
         return (
             <>
                 <ContentHeader>
@@ -132,9 +136,9 @@ export default function ERDiagram() {
                     <StyledTabs
                         value={3}
                         onChange={(_e, newValue) => {
-                            if (newValue === 0) navigate('/dashboard/overview');
-                            if (newValue === 1) navigate('/dashboard/schema');
-                            if (newValue === 2) navigate('/dashboard/query');
+                            if (newValue === 0) navigate(ROUTES.DASHBOARD.OVERVIEW);
+                            if (newValue === 1) navigate(ROUTES.DASHBOARD.SCHEMA);
+                            if (newValue === 2) navigate(ROUTES.DASHBOARD.QUERY);
                         }}
                     >
                         <StyledTab label="Overview" />
@@ -200,9 +204,9 @@ export default function ERDiagram() {
                 <StyledTabs
                     value={3}
                     onChange={(_e, newValue) => {
-                        if (newValue === 0) navigate('/dashboard/overview');
-                        if (newValue === 1) navigate('/dashboard/schema');
-                        if (newValue === 2) navigate('/dashboard/query');
+                        if (newValue === 0) navigate(ROUTES.DASHBOARD.OVERVIEW);
+                        if (newValue === 1) navigate(ROUTES.DASHBOARD.SCHEMA);
+                        if (newValue === 2) navigate(ROUTES.DASHBOARD.QUERY);
                     }}
                 >
                     <StyledTab label="Overview" />

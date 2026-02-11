@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, createContext, useContext } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { ROUTES } from "../../constants";
 import {
   DashboardWrapper,
   DashboardHeader,
@@ -16,14 +17,13 @@ import DatabaseActionsPanel from "./_shared/DatabaseActionsPanel/DatabaseActions
 import DeleteDatabaseDialog from "./_shared/DeleteDatabaseDialog/DeleteDatabaseDialog";
 import SwitchDatabaseDialog from "./_shared/SwitchDatabaseDialog/SwitchDatabaseDialog";
 import EmptyState from "./_shared/EmptyState/EmptyState";
-import PageSkeleton from "../../components/PageSkeleton/PageSkeleton";
-import { AccessRestricted, usePermissions } from "../../components";
+import { DashboardLayoutSkeleton, AccessRestricted, usePermissions } from "../../components";
 import { CircularProgress, Dialog, DialogContent, DialogActions, Button } from "@mui/material";
 import { useDatabases, useRefreshDatabase, useDisconnectDatabase, useReconnectDatabase } from "../../api/entities/databases";
 import { DatabaseDto } from "../../api/models/DatabaseDto";
 
-// Context for sharing dashboard state with child routes
-interface DashboardContextType {
+// Context for sharing workspace state (database connections, etc.) with child routes
+export interface WorkspaceContextType {
   databases: DatabaseDto[];
   selectedDatabaseId: number | null;
   setSelectedDatabaseId: (id: number | null) => void;
@@ -40,13 +40,10 @@ interface DashboardContextType {
   setInitialQuery: React.Dispatch<React.SetStateAction<string>>;
 }
 
-const DashboardContext = createContext<DashboardContextType | null>(null);
+const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
 
-export const useDashboard = () => {
-  const context = useContext(DashboardContext);
-  if (!context) {
-    throw new Error('useDashboard must be used within DashboardLayout');
-  }
+export const useWorkspace = (): WorkspaceContextType | null => {
+  const context = useContext(WorkspaceContext);
   return context;
 };
 
@@ -56,10 +53,10 @@ export default function DashboardLayout() {
 
   // Determine active main tab from URL
   const getMainTabFromPath = () => {
-    if (location.pathname.includes('/apis')) return 1;
+    if (location.pathname.startsWith(ROUTES.APIS.ROOT)) return 1;
     return 0; // Dashboard (overview, schema, query)
   };
-  
+
   const mainTab = getMainTabFromPath();
 
   // Fetch databases from API
@@ -94,7 +91,7 @@ export default function DashboardLayout() {
 
   // Track if we've already auto-refreshed on mount
   const hasAutoRefreshed = useRef(false);
-  
+
 
   // Get the currently connected database
   const connectedDatabase = databases.find((db) => db.status === 'connected') || null;
@@ -102,10 +99,10 @@ export default function DashboardLayout() {
   // Redirect to overview if trying to access protected routes without a connected database
   useEffect(() => {
     if (!isLoading && !connectedDatabase) {
-      const protectedPaths = ['/apis', '/schema', '/query', '/er-diagram'];
+      const protectedPaths = [ROUTES.APIS.ROOT, '/schema', '/query', '/er-diagram'];
       const isProtectedRoute = protectedPaths.some(path => location.pathname.includes(path));
       if (isProtectedRoute) {
-        navigate('/dashboard/overview', { replace: true });
+        navigate(ROUTES.DASHBOARD.OVERVIEW, { replace: true });
       }
     }
   }, [isLoading, connectedDatabase, location.pathname, navigate]);
@@ -146,9 +143,9 @@ export default function DashboardLayout() {
 
   const handleMainTabChange = (tab: number) => {
     if (tab === 0) {
-      navigate('/dashboard/overview');
+      navigate(ROUTES.DASHBOARD.OVERVIEW);
     } else if (tab === 1) {
-      navigate('/dashboard/apis');
+      navigate(ROUTES.APIS.BUILD);
     }
   };
 
@@ -252,10 +249,10 @@ export default function DashboardLayout() {
 
   // Show skeleton while loading
   if (isLoading) {
-    return <PageSkeleton variant="dashboard" count={3} />;
+    return <DashboardLayoutSkeleton />;
   }
 
-  const contextValue: DashboardContextType = {
+  const contextValue: WorkspaceContextType = {
     databases,
     selectedDatabaseId,
     setSelectedDatabaseId,
@@ -275,7 +272,7 @@ export default function DashboardLayout() {
   // Show empty state when no databases exist
   if (hasNoDatabases) {
     return (
-      <DashboardContext.Provider value={contextValue}>
+      <WorkspaceContext.Provider value={contextValue}>
         <DashboardWrapper>
           <DashboardHeader>
             <Navbar
@@ -320,12 +317,12 @@ export default function DashboardLayout() {
             onDatabaseConnected={handleDatabaseConnected}
           />
         </DashboardWrapper>
-      </DashboardContext.Provider>
+      </WorkspaceContext.Provider>
     );
   }
 
   return (
-    <DashboardContext.Provider value={contextValue}>
+    <WorkspaceContext.Provider value={contextValue}>
       <DashboardWrapper>
         <DashboardHeader>
           <Navbar
@@ -409,6 +406,6 @@ export default function DashboardLayout() {
           </DialogActions>
         </Dialog>
       </DashboardWrapper>
-    </DashboardContext.Provider>
+    </WorkspaceContext.Provider>
   );
 }

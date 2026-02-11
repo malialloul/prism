@@ -5,6 +5,7 @@ import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import SecurityIcon from '@mui/icons-material/Security';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ShareIcon from '@mui/icons-material/Share';
+import { ROUTES } from '../../constants';
 import { ThemeToggleButton } from '../../components/ThemeToggle/ThemeToggle';
 import AccountSettings from './AccountSettings/AccountSettings';
 import SecuritySettings from './SecuritySettings/SecuritySettings';
@@ -42,13 +43,13 @@ const Settings = () => {
   const handleDeactivateSuccess = () => {
     // Clear token cookie and redirect to login
     clearAuthToken();
-    navigate('/signin');
+    navigate(ROUTES.SIGN_IN);
   };
 
   const handleDeleteSuccess = () => {
     // Clear token cookie and redirect to home
     clearAuthToken();
-    navigate('/');
+    navigate(ROUTES.HOME);
   };
 
   const sectionConfig = {

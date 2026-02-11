@@ -2,6 +2,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'ax
 import type { UserDto } from './models/UserDto';
 import type { SharePermissions } from './models/SharedAccountDto';
 import { DEFAULT_SHARE_PERMISSIONS } from './models/SharedAccountDto';
+import { ROUTES } from '../constants';
 
 type ApiResponseStatus = 'success' | 'error' | 'fail';
 
@@ -160,10 +161,10 @@ httpClient.interceptors.response.use(
     if (error.response?.status === 401) {
       clearAuthToken();
       
-      if (!window.location.pathname.includes('/signin') && 
-          !window.location.pathname.includes('/signup') &&
-          !window.location.pathname.includes('/shared-login')) {
-        window.location.href = '/signin';
+      if (!window.location.pathname.includes(ROUTES.SIGN_IN) && 
+          !window.location.pathname.includes(ROUTES.SIGN_UP) &&
+          !window.location.pathname.includes(ROUTES.SHARED_LOGIN)) {
+        window.location.href = ROUTES.SIGN_IN;
       }
     }
 
