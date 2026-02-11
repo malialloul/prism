@@ -192,18 +192,18 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
     const errors: Record<string, boolean> = {};
     const currentParams = testParams[api.id] || {};
     const apiParams = api.parameters || [];
-    
+
     for (const param of apiParams) {
       if (param.required && !currentParams[param.name]?.trim()) {
         errors[param.name] = true;
       }
     }
-    
+
     if (Object.keys(errors).length > 0) {
       setParamErrors(prev => ({ ...prev, [api.id]: errors }));
       return;
     }
-    
+
     // Clear errors and build params - only include non-empty values
     setParamErrors(prev => ({ ...prev, [api.id]: {} }));
     const filteredParams: Record<string, string> = {};
@@ -356,7 +356,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
   }
 
   return (
-    <Box sx={{ 
+    <Box sx={{
       height: '100%',
       width: '100%',
       display: 'flex',
@@ -366,7 +366,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
     }}>
       {/* Swagger-style Header */}
       <Box sx={{
-        background: darkMode 
+        background: darkMode
           ? 'linear-gradient(135deg, #1a365d 0%, #2d3748 100%)'
           : 'linear-gradient(135deg, #89bf04 0%, #547f00 100%)',
         p: 3,
@@ -503,7 +503,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
       </Menu>
 
       {/* API List - Swagger Style */}
-      <Box sx={{ 
+      <Box sx={{
         flex: 1,
         overflow: 'auto',
         p: 2,
@@ -752,8 +752,8 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
                               <TextField
                                 size="small"
                                 type={
-                                  param.columnType?.toLowerCase().includes('timestamp') || 
-                                  (param.columnType?.toLowerCase().includes('date') && param.columnType?.toLowerCase().includes('time'))
+                                  param.columnType?.toLowerCase().includes('timestamp') ||
+                                    (param.columnType?.toLowerCase().includes('date') && param.columnType?.toLowerCase().includes('time'))
                                     ? 'datetime-local'
                                     : param.columnType?.toLowerCase().includes('date')
                                       ? 'date'

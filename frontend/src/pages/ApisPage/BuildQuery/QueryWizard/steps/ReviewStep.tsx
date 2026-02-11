@@ -168,7 +168,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
 
   // Extract parameters from filters
   const parameters = useMemo(() => extractParameters(state), [state]);
-  
+
   // State for parameter values
   const [parameterValues, setParameterValues] = useState<Record<string, string>>({});
   const [parameterErrors, setParameterErrors] = useState<Record<string, boolean>>({});
@@ -189,14 +189,14 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
   // Generate SQL preview with parameter values substituted (for live preview)
   const sqlPreview = useMemo(() => {
     if (!sqlWithNamedParams) return sqlWithNamedParams;
-    
+
     // Check if any parameter values are entered
     const hasValues = Object.values(parameterValues).some(v => v?.trim());
     if (!hasValues) {
       // Show :paramName format when no values entered
       return sqlWithNamedParams;
     }
-    
+
     let preview = sqlWithNamedParams;
     // Replace :paramName placeholders with entered values for live preview
     parameters.forEach((param) => {
@@ -209,7 +209,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
         preview = preview.replace(placeholderRegex, `'${escapedValue}'`);
       }
     });
-    
+
     return preview;
   }, [sqlWithNamedParams, parameterValues, parameters]);
 
@@ -523,9 +523,9 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                 <SummaryValue>
                   {'aggregateId' in sort && sort.aggregateId
                     ? (() => {
-                        const agg = state.aggregates.find((a) => a.id === sort.aggregateId);
-                        return agg ? `${agg.function}(${agg.column})` : 'Unknown';
-                      })()
+                      const agg = state.aggregates.find((a) => a.id === sort.aggregateId);
+                      return agg ? `${agg.function}(${agg.column})` : 'Unknown';
+                    })()
                     : `${sort.table}.${sort.column}`}
                   <Badge
                     colorVariant={sort.direction === 'ASC' ? 'success' : 'warning'}
@@ -569,7 +569,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
             <CodeIcon fontSize="small" />
             Query Parameters ({parameters.length})
           </SummarySectionHeader>
-          
+
           <StepInstructions sx={{ mt: 1, mb: 2 }}>
             <LightbulbIcon fontSize="small" />
             <span>
@@ -585,7 +585,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
               const hasError = parameterErrors[param.name];
               const isHavingParam = !!having;
               const isPaginationParam = param.name === 'pagesize' || param.name === 'pagecount';
-              
+
               return (
                 <ParameterField key={param.name}>
                   <ParameterLabel>
@@ -608,7 +608,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                     onChange={(e) => handleParameterChange(param.name, e.target.value)}
                     placeholder={isPaginationParam ? (param.name === 'pagesize' ? '100' : '1') : (isMultiple ? "value1, value2, value3" : "Enter value...")}
                     error={hasError}
-                    sx={{ 
+                    sx={{
                       mt: 0.5,
                       '& .MuiOutlinedInput-root': hasError ? {
                         '& fieldset': { borderColor: '#ef4444' },
@@ -641,7 +641,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
           onClick={onSave}
           startIcon={<SaveIcon />}
           disabled={hasErrors || !sql}
-          sx={{ 
+          sx={{
             borderColor: '#22c55e',
             color: '#22c55e',
             '&:hover': {

@@ -244,12 +244,12 @@ export const QueryWizard: React.FC<QueryWizardProps> = ({
           if (filter.valueType === 'parameter') {
             const paramName = filter.parameterName || `${filter.table}_${filter.column}`;
             const value = parameterValues[paramName] ?? '';
-            
+
             // Optional filter with no value - skip it entirely
             if (!filter.isRequired && !value.trim()) {
               return null;
             }
-            
+
             // Convert parameter to fixed with actual value
             return { ...filter, valueType: 'fixed' as const, value };
           }
@@ -261,17 +261,17 @@ export const QueryWizard: React.FC<QueryWizardProps> = ({
         .map((having) => {
           if (having.valueType === 'parameter') {
             const agg = state.aggregates.find((a) => a.id === having.aggregateId);
-            const aggLabel = agg 
+            const aggLabel = agg
               ? (agg.alias || `${agg.function.toLowerCase()}_${agg.column}`)
               : 'calculation';
             const paramName = having.parameterName || aggLabel;
             const value = parameterValues[paramName] ?? '';
-            
+
             // Optional HAVING with no value - skip it entirely
             if (!having.isRequired && !value.trim()) {
               return null;
             }
-            
+
             // Convert parameter to fixed with actual value
             return { ...having, valueType: 'fixed' as const, value };
           }
@@ -283,15 +283,15 @@ export const QueryWizard: React.FC<QueryWizardProps> = ({
       let modifiedLimit = state.limit;
       let modifiedOffset = state.offset;
       let modifiedPagination = state.pagination;
-      
+
       if (state.pagination?.enabled) {
-        const pageSize = parameterValues['pagesize'] 
-          ? parseInt(parameterValues['pagesize'], 10) 
+        const pageSize = parameterValues['pagesize']
+          ? parseInt(parameterValues['pagesize'], 10)
           : state.pagination.defaultPageSize;
-        const pageCount = parameterValues['pagecount'] 
-          ? parseInt(parameterValues['pagecount'], 10) 
+        const pageCount = parameterValues['pagecount']
+          ? parseInt(parameterValues['pagecount'], 10)
           : 1;
-        
+
         modifiedLimit = pageSize;
         modifiedOffset = (pageCount - 1) * pageSize;
         // Disable pagination mode since we're using fixed values now
