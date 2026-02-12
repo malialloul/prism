@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Box, Skeleton } from "@mui/material";
-import { useWorkspace } from "../DashboardLayout";
+import { useWorkspace } from "../WorkspaceLayout";
 import { ROUTES } from "../../../constants";
 import { usePermissions, AccessRestricted } from "../../../components";
 import {
@@ -24,7 +24,7 @@ export default function Query() {
   const initialQuery = workspace?.initialQuery;
 
   // Show loading skeleton while context is loading or switching databases
-  if (!workspace || isSwitchingDatabase) {
+  if (!workspace || isSwitchingDatabase || !connectedDatabase) {
     return (
       <>
         <ContentHeader>
@@ -50,34 +50,6 @@ export default function Query() {
             {/* Results skeleton */}
             <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 1 }} />
           </Box>
-        </TabPanel>
-      </>
-    );
-  }
-
-  // Redirect if no database connected
-  if (!connectedDatabase) {
-    return (
-      <>
-        <ContentHeader>
-          <ContentTitle>Query Editor</ContentTitle>
-        </ContentHeader>
-        <TabsContainer>
-          <StyledTabs value={2} onChange={(_e, newValue) => {
-            if (newValue === 0) navigate(ROUTES.DASHBOARD.OVERVIEW);
-            if (newValue === 1) navigate(ROUTES.DASHBOARD.SCHEMA);
-            if (newValue === 3) navigate(ROUTES.DASHBOARD.ER_DIAGRAM);
-          }}>
-            <StyledTab label="Overview" />
-            <StyledTab label="Schema" disabled />
-            <StyledTab label="Query" />
-            <StyledTab label="ER Diagram" disabled />
-          </StyledTabs>
-        </TabsContainer>
-        <TabPanel>
-          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-            Please connect to a database to run queries.
-          </div>
         </TabPanel>
       </>
     );

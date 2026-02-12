@@ -9,7 +9,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import ScheduleIcon from '@mui/icons-material/Schedule';
-import StorageIcon from '@mui/icons-material/Storage';
 import DownloadIcon from '@mui/icons-material/Download';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -287,30 +286,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
     }
   };
 
-  // Empty states
-  if (!connectedDatabase) {
-    return (
-      <Box sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        gap: 2,
-        color: colors.textMuted,
-      }}>
-        <StorageIcon sx={{ fontSize: '4rem', opacity: 0.3 }} />
-        <Typography variant="h6" sx={{ fontWeight: 600, color: colors.text }}>
-          No Database Connected
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Connect to a database to view your API endpoints.
-        </Typography>
-      </Box>
-    );
-  }
-
-  if (isLoading) {
+  if (isLoading || !connectedDatabase) {
     return (
       <Box sx={{ p: 3 }}>
         <Skeleton variant="rectangular" height={80} sx={{ borderRadius: 1, mb: 2 }} />

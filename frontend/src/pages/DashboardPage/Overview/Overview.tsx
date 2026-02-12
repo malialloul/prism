@@ -1,5 +1,5 @@
 import { Box, Skeleton } from "@mui/material";
-import { useWorkspace } from "../DashboardLayout";
+import { useWorkspace } from "../WorkspaceLayout";
 import { ROUTES } from "../../../constants";
 import {
   ContentHeader,

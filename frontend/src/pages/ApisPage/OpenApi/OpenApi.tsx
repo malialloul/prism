@@ -1,7 +1,7 @@
 import { Box } from "@mui/material";
 import { ApisContent } from "./OpenApi.styles";
 import { OpenApiPanel } from "./OpenApiPanel";
-import { useWorkspace } from "../../DashboardPage/DashboardLayout";
+import { useWorkspace } from "../../DashboardPage/WorkspaceLayout";
 import { useApisContext } from "../ApisLayout";
 import { usePermissions, AccessRestricted, OpenApiSkeleton } from "../../../components";
 

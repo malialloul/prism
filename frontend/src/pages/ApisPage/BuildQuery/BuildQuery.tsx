@@ -1,7 +1,7 @@
 import { Box } from "@mui/material";
 import { ApisContent } from "./BuildQuery.styles";
 import QueryWizardWrapper from "./QueryWizardWrapper/QueryWizardWrapper";
-import { useWorkspace } from "../../DashboardPage/DashboardLayout";
+import { useWorkspace } from "../../DashboardPage/WorkspaceLayout";
 import { useApisContext } from "../ApisLayout";
 import { usePermissions, AccessRestricted, QueryWizardSkeleton } from "../../../components";
 

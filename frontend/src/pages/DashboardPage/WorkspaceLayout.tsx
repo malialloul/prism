@@ -47,7 +47,7 @@ export const useWorkspace = (): WorkspaceContextType | null => {
   return context;
 };
 
-export default function DashboardLayout() {
+export default function WorkspaceLayout() {
   const location = useLocation();
   const navigate = useNavigate();
 

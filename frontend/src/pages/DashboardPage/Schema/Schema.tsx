@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Box, Backdrop, CircularProgress, Typography } from "@mui/material";
-import { useWorkspace } from "../DashboardLayout";
+import { useWorkspace } from "../WorkspaceLayout";
 import { ROUTES } from "../../../constants";
-import { SchemaSkeleton } from "@/components";
 import {
   ContentHeader,
   ContentTitle,
@@ -19,6 +18,7 @@ import { CreateTableDialog, AddColumnDialog, DeleteTableDialog, TableEditor } fr
 
 // Icons
 import TableViewIcon from "@mui/icons-material/TableView";
+import { SchemaSkeleton } from "../../../components/Skeletons";
 
 type SelectedObjectType = 'table';
 
@@ -45,7 +45,7 @@ export default function Schema() {
   const setSchemaVersion = workspace?.setSchemaVersion;
 
   // Show loading skeleton while context is loading or switching databases
-  if (!workspace || isSwitchingDatabase) {
+  if (!workspace || isSwitchingDatabase || !connectedDatabase) {
     return (
       <>
         <ContentHeader>
@@ -61,34 +61,6 @@ export default function Schema() {
         </TabsContainer>
         <TabPanel>
           <SchemaSkeleton />
-        </TabPanel>
-      </>
-    );
-  }
-
-  // Redirect if no database connected
-  if (!connectedDatabase) {
-    return (
-      <>
-        <ContentHeader>
-          <ContentTitle>Schema Explorer</ContentTitle>
-        </ContentHeader>
-        <TabsContainer>
-          <StyledTabs value={1} onChange={(_e, newValue) => {
-            if (newValue === 0) navigate(ROUTES.DASHBOARD.OVERVIEW);
-            if (newValue === 2) navigate(ROUTES.DASHBOARD.QUERY);
-            if (newValue === 3) navigate(ROUTES.DASHBOARD.ER_DIAGRAM);
-          }}>
-            <StyledTab label="Overview" />
-            <StyledTab label="Schema" />
-            <StyledTab label="Query" disabled />
-            <StyledTab label="ER Diagram" disabled />
-          </StyledTabs>
-        </TabsContainer>
-        <TabPanel>
-          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-            Please connect to a database to explore its schema.
-          </div>
         </TabPanel>
       </>
     );
