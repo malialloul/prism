@@ -787,7 +787,6 @@ export function validateState(state: WizardState, engine: DatabaseEngine = 'post
 
   return messages;
 }
-
 /**
  * Check if current step is valid to proceed
  */

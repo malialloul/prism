@@ -6,25 +6,38 @@ import type { SharedAccountsResponseDto } from '../../models/SharedAccountsRespo
 import type { PasswordActionResponseDto } from '../../models/PasswordActionResponseDto';
 import type { SharePermissions, SharedAccountDto } from '../../models/SharedAccountDto';
 import { websocketService } from '../../../services';
+import { isDemoModeActive } from '../../../context/TourContext';
+
+// Empty shared accounts data for demo mode
+const DEMO_SHARED_ACCOUNTS: SharedAccountsResponseDto = {
+  status: 'success',
+  message: 'Demo mode - no shared accounts',
+  data: {
+    sharedByMe: [],
+    sharedWithMe: [],
+  },
+};
 
 export function useSharedAccounts() {
   const queryClient = useQueryClient();
+  const isDemo = isDemoModeActive();
 
-  // Listen for share status changes via WebSocket
+  // Listen for share status changes via WebSocket (skip in demo mode)
   useEffect(() => {
+    // Skip WebSocket connection in demo mode
+    if (isDemo) return;
+
     // Make sure WebSocket is connected
     websocketService.connect();
 
     // When share status changes (e.g., shared user accepts), refresh the list
     const unsubShareStatusChanged = websocketService.onShareStatusChanged(() => {
-      console.log('[useSharedAccounts] Share status changed, refreshing...');
       queryClient.invalidateQueries({ queryKey: ['sharedAccounts'] });
     });
 
     // Also listen for share_accepted notifications
     const unsubNotification = websocketService.onNotification((notification) => {
       if (notification.type === 'share_accepted') {
-        console.log('[useSharedAccounts] Share accepted notification, refreshing...');
         queryClient.invalidateQueries({ queryKey: ['sharedAccounts'] });
       }
     });
@@ -33,12 +46,18 @@ export function useSharedAccounts() {
       unsubShareStatusChanged();
       unsubNotification();
     };
-  }, [queryClient]);
+  }, [queryClient, isDemo]);
 
   return useQuery<SharedAccountsResponseDto, ApiError>({
     queryKey: ['sharedAccounts'],
-    queryFn: () => AccountSharingService.getSharedAccounts(),
-    staleTime: 30000, // 30 seconds
+    queryFn: () => {
+      if (isDemo) {
+        return Promise.resolve(DEMO_SHARED_ACCOUNTS);
+      }
+      return AccountSharingService.getSharedAccounts();
+    },
+    staleTime: isDemo ? Infinity : 30000,
+    placeholderData: isDemo ? DEMO_SHARED_ACCOUNTS : undefined,
   });
 }
 

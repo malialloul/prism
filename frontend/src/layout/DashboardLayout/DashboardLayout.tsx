@@ -41,11 +41,11 @@ export default function DashboardLayout() {
         <DashboardPageWrapper>
             <DashboardHeader>
                 <DashboardTitle>Dashboard</DashboardTitle>
-                <DashboardTabs value={activeTab} onChange={handleTabChange}>
+                <DashboardTabs value={activeTab} onChange={handleTabChange} data-tour="dashboard-tabs">
                     <DashboardTab label="Overview" />
-                    <DashboardTab label="Schema" disabled={isProtectedTabDisabled} />
-                    <DashboardTab label="Query" disabled={isProtectedTabDisabled} />
-                    <DashboardTab label="ER Diagram" disabled={isProtectedTabDisabled} />
+                    <DashboardTab label="Schema" disabled={isProtectedTabDisabled} data-tour="schema-tab" />
+                    <DashboardTab label="Query" disabled={isProtectedTabDisabled} data-tour="query-tab" />
+                    <DashboardTab label="ER Diagram" disabled={isProtectedTabDisabled} data-tour="er-diagram-tab" />
                 </DashboardTabs>
             </DashboardHeader>
             <Outlet />

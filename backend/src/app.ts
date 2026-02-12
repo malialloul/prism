@@ -9,6 +9,7 @@ import { springBootRoutes } from "./modules/databases/springboot";
 import { expressRoutes } from "./modules/databases/express";
 import { dotnetRoutes } from "./modules/databases/dotnet";
 import { feedbackRoutes } from "./modules/feedback";
+import { contactRoutes } from "./modules/contact";
 import swaggerUi from "swagger-ui-express";
 import { openapiDoc } from "./openapi";
 import { errorHandler } from "./middleware/errorHandler";
@@ -53,6 +54,7 @@ app.use(express.json());
 app.use("/auth", authRoutes);
 app.use("/logs", logsRoutes);
 app.use("/feedback", feedbackRoutes);
+app.use("/contact", contactRoutes);
 // Public schema routes MUST come first (no auth required)
 app.use("/databases", publicSchemaRoutes);
 // Then authenticated routes

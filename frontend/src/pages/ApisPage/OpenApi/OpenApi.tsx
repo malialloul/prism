@@ -6,9 +6,12 @@ import { useApisContext } from "../../../layout";
 import { usePermissions, AccessRestricted } from "../../../components";
 
 export default function OpenApi() {
-  const workspace = useWorkspace()!;
+  const workspace = useWorkspace();
   const { openApiRefreshKey } = useApisContext();
   const { canTryOpenApi } = usePermissions();
+
+  if (!workspace) return null;
+
   const { connectedDatabase } = workspace;
 
   if (!connectedDatabase) return null;

@@ -14,8 +14,10 @@ import {
   ToastProvider,
   ProtectedRoute,
   ProtectedNotFoundRoute,
+  DemoBanner,
 } from "./components";
 import { PermissionsProvider } from "./context/PermissionsContext";
+import { TourProvider } from "./context/TourContext";
 import { ROUTES } from "./constants";
 
 // Lazy load pages for better initial load performance
@@ -91,8 +93,10 @@ const App: React.FC = () => {
             <ToastProvider>
               <PermissionsProvider>
                 <Router>
-                  <Suspense fallback={null}>
-                    <Routes>
+                  <TourProvider>
+                    <DemoBanner />
+                    <Suspense fallback={null}>
+                      <Routes>
                       {/* Home page */}
                       <Route path={ROUTES.HOME} element={<Home />} />
 
@@ -148,8 +152,9 @@ const App: React.FC = () => {
                       } />
 
                       <Route path="*" element={<ProtectedNotFoundRoute />} />
-                    </Routes>
-                  </Suspense>
+                      </Routes>
+                    </Suspense>
+                  </TourProvider>
                 </Router>
               </PermissionsProvider>
             </ToastProvider>

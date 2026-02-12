@@ -77,9 +77,6 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ tables, error, on
     const [textInput, setTextInput] = useState('');
 
     const buildGraph = useCallback((tablesData: TableDetailsDto[]) => {
-        const tableNames = tablesData.map(t => t.name);
-        console.log('Building graph for tables:', tableNames);
-
         // Extract FK info from constraints
         const getForeignKeys = (table: TableDetailsDto) => {
             const fkConstraints = table.constraints?.filter(c => c.type === 'FOREIGN KEY') || [];
@@ -162,9 +159,7 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ tables, error, on
 
         tablesData.forEach(table => {
             const fks = getForeignKeys(table);
-            console.log(`Creating edges for ${table.name}, FKs:`, fks);
             fks.forEach(fk => {
-                console.log(`  Checking FK: ${fk.columnName} -> ${fk.foreignTable}, exists in posMap: ${!!posMap[fk.foreignTable]}`);
                 if (fk.foreignTable && posMap[fk.foreignTable]) {
                     newEdges.push({
                         id: `e${edgeId++}`,
@@ -179,9 +174,6 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ tables, error, on
                 }
             });
         });
-
-        console.log('Created edges:', newEdges.length, newEdges);
-
         // Apply dagre layout
         const layoutedNodes = applyDagreLayout(newNodes, newEdges, layoutDirection);
         setNodes(layoutedNodes);

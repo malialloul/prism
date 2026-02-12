@@ -10,8 +10,8 @@ import {
 import RelationshipGraph from './RelationshipGraph';
 
 export default function ERDiagram() {
-    const workspace = useWorkspace()!;
-    const { connectedDatabase } = workspace;
+    const workspace = useWorkspace();
+    const connectedDatabase = workspace?.connectedDatabase;
 
     const { data, isLoading, error, refetch } = useFullSchema(connectedDatabase?.id);
 
@@ -30,7 +30,7 @@ export default function ERDiagram() {
                 flex: 1,
                 height: 'calc(100vh - 180px)',
                 overflow: 'hidden',
-            }}>
+            }} data-tour="er-diagram-area">
                 {isLoading ? (
                     <ERDiagramSkeleton />
                 ) : (

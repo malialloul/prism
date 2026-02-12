@@ -41,7 +41,7 @@ import ColumnsTab from './ColumnsTab';
 import ConfirmDeleteRowsDialog from './ConfirmDeleteRowsDialog';
 import EditColumnDialog from './EditColumnDialog';
 import DeleteColumnDialog from './DeleteColumnDialog';
-import { usePermissions, AccessRestricted } from '../../../../components';
+import { usePermissions, AccessRestricted, AccessRestrictedDialog } from '../../../../components';
 import EditRowDialog from './EditRowDialog/EditRowDialog';
 
 export default function TableEditor({
@@ -754,34 +754,24 @@ export default function TableEditor({
       />
 
       {/* Add Row Permission Dialog */}
-      <Dialog open={addRowDialogOpen} onClose={() => setAddRowDialogOpen(false)} maxWidth="sm" fullWidth>
-        <MuiDialogTitle>Add Row</MuiDialogTitle>
-        <AccessRestricted
-          message="Add Row Access Restricted"
-          description="You don't have permission to add table data. Please contact the account owner to request access."
-          permission="addRecord"
-        />
-        <DialogActions sx={{ p: 2 }}>
-          <CancelButton onClick={() => setAddRowDialogOpen(false)}>
-            Close
-          </CancelButton>
-        </DialogActions>
-      </Dialog>
+      <AccessRestrictedDialog
+        open={addRowDialogOpen}
+        onClose={() => setAddRowDialogOpen(false)}
+        title="Add Row"
+        message="Add Row Access Restricted"
+        description="You don't have permission to add table data. Please contact the account owner to request access."
+        permission="addRecord"
+      />
 
       {/* Delete Row Permission Dialog */}
-      <Dialog open={deleteRowDialogOpen} onClose={() => setDeleteRowDialogOpen(false)} maxWidth="sm" fullWidth>
-        <MuiDialogTitle>Delete Row</MuiDialogTitle>
-        <AccessRestricted
-          message="Delete Row Access Restricted"
-          description="You don't have permission to delete table data. Please contact the account owner to request access."
-          permission="deleteRecord"
-        />
-        <DialogActions sx={{ p: 2 }}>
-          <CancelButton onClick={() => setDeleteRowDialogOpen(false)}>
-            Close
-          </CancelButton>
-        </DialogActions>
-      </Dialog>
+      <AccessRestrictedDialog
+        open={deleteRowDialogOpen}
+        onClose={() => setDeleteRowDialogOpen(false)}
+        title="Delete Row"
+        message="Delete Row Access Restricted"
+        description="You don't have permission to delete table data. Please contact the account owner to request access."
+        permission="deleteRecord"
+      />
     </TableEditorDialog>
   );
 }

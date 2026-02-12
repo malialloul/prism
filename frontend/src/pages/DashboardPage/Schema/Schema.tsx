@@ -17,7 +17,12 @@ import SchemaSkeleton from "../../../components/Skeletons/SchemaSkeleton";
 type SelectedObjectType = 'table';
 
 export default function Schema() {
-  const workspace = useWorkspace()!;
+  const workspace = useWorkspace();
+
+  if (!workspace) {
+    return <SchemaSkeleton />;
+  }
+
   const { connectedDatabase, isLoading, setSchemaVersion } = workspace;
 
   // Schema Explorer state
@@ -124,7 +129,7 @@ export default function Schema() {
         </QuickActionsBar>
       </ContentHeader>
 
-      <Box sx={{ display: 'flex', gap: '1.5rem', flexDirection: 'row', flex: 1 }}>
+      <Box sx={{ display: 'flex', gap: '1.5rem', flexDirection: 'row', flex: 1 }} data-tour="schema-explorer-area">
         <SchemaExplorer
           databaseId={connectedDatabase.id}
           onSelectObject={handleSelectObject}

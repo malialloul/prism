@@ -1,13 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Box, IconButton, Tooltip } from '@mui/material';
-import CheckIcon from '@mui/icons-material/Check';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 import {
   WizardState,
-  WIZARD_STEPS,
   SchemaTable,
   DatabaseEngine,
   SelectedTable,
@@ -23,25 +17,7 @@ import {
   PaginationSettings,
   generateSqlWithNamedParams,
 } from './types';
-import {
-  WizardContainer,
-  WizardMain,
-  WizardSidebar,
-  StepperContainer,
-  StepperTrack,
-  StepItem,
-  StepNumber,
-  StepLabel,
-  StepConnector,
-  NavigationBar,
-  NavButton,
-  PreviewHeader,
-  PreviewTitle,
-  PreviewContent,
-  SqlCode,
-  ValidationList,
-  ValidationItem,
-} from './QueryWizard.styles';
+import { WizardContainer, WizardMain } from './QueryWizard.styles';
 import {
   BaseTableStep,
   JoinsStep,
@@ -51,6 +27,7 @@ import {
   SortingStep,
   ReviewStep,
 } from './steps';
+import { WizardStepper, WizardNavigation, SqlPreviewSidebar } from './components';
 import { generateSQL, validateState, isStepValid } from './sqlGenerator';
 
 interface QueryWizardProps {
@@ -142,7 +119,7 @@ export const QueryWizard: React.FC<QueryWizardProps> = ({
 
   // Navigation
   const handleNext = useCallback(() => {
-    if (currentStep < WIZARD_STEPS.length - 1 && canProceed) {
+    if (currentStep < 6 && canProceed) {
       setCurrentStep((prev) => prev + 1);
     }
   }, [currentStep, canProceed]);
@@ -428,111 +405,38 @@ export const QueryWizard: React.FC<QueryWizardProps> = ({
   };
 
   // Check which steps are completed
-  const getStepStatus = (stepIndex: number): { completed: boolean; active: boolean; clickable: boolean } => {
+  const getStepStatus = useCallback((stepIndex: number): { completed: boolean; active: boolean; clickable: boolean } => {
     const active = stepIndex === currentStep;
     const completed = stepIndex < currentStep;
     // Can click to go back, or forward to steps that have all prerequisites completed
     const clickable = stepIndex < currentStep || (stepIndex > currentStep && isStepCompleted(stepIndex - 1));
     return { completed, active, clickable };
-  };
+  }, [currentStep, isStepCompleted]);
 
   return (
     <WizardContainer>
       <WizardMain>
-        {/* Stepper */}
-        <StepperContainer>
-          <StepperTrack>
-            {WIZARD_STEPS.map((step, index) => {
-              const { completed, active, clickable } = getStepStatus(index);
-              return (
-                <React.Fragment key={step.id}>
-                  <StepItem
-                    isActive={active}
-                    isCompleted={completed}
-                    isClickable={clickable}
-                    onClick={() => clickable && handleGoToStep(index)}
-                  >
-                    <StepNumber isActive={active} isCompleted={completed}>
-                      {completed ? <CheckIcon sx={{ fontSize: '0.9rem' }} /> : index + 1}
-                    </StepNumber>
-                    <StepLabel isActive={active}>{step.label}</StepLabel>
-                  </StepItem>
-                  {index < WIZARD_STEPS.length - 1 && (
-                    <StepConnector isCompleted={completed} />
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </StepperTrack>
-        </StepperContainer>
+        <WizardStepper
+          onGoToStep={handleGoToStep}
+          getStepStatus={getStepStatus}
+        />
 
-        {/* Step Content */}
         {renderStepContent()}
 
-        {/* Navigation - not shown on Review step (it has its own actions) */}
-        {currentStep < WIZARD_STEPS.length - 1 && (
-          <NavigationBar>
-            <NavButton
-              variant="text"
-              onClick={handleBack}
-              disabled={currentStep === 0}
-            >
-              Back
-            </NavButton>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              {!canProceed && currentStep === 0 && (
-                <Box sx={{ fontSize: '0.8rem', color: '#f59e0b' }}>
-                  Select a table to continue
-                </Box>
-              )}
-              <NavButton
-                variant="contained"
-                onClick={handleNext}
-                disabled={!canProceed}
-              >
-                {currentStep === WIZARD_STEPS.length - 2 ? 'Review' : 'Next'}
-              </NavButton>
-            </Box>
-          </NavigationBar>
-        )}
+        <WizardNavigation
+          currentStep={currentStep}
+          canProceed={canProceed}
+          onBack={handleBack}
+          onNext={handleNext}
+        />
       </WizardMain>
 
-      {/* SQL Preview Sidebar */}
-      <WizardSidebar>
-        <PreviewHeader>
-          <PreviewTitle>SQL Preview</PreviewTitle>
-          <Tooltip title={copied ? 'Copied!' : 'Copy SQL'}>
-            <IconButton
-              size="small"
-              onClick={handleCopySQL}
-              disabled={!sqlWithNamedParams}
-              sx={{ color: copied ? '#22c55e' : '#71717a' }}
-            >
-              {copied ? <CheckIcon fontSize="small" /> : <ContentCopyIcon fontSize="small" />}
-            </IconButton>
-          </Tooltip>
-        </PreviewHeader>
-        <PreviewContent>
-          <SqlCode>
-            {sqlWithNamedParams || '-- Select a table to begin building your query'}
-          </SqlCode>
-
-          {validation.length > 0 && (
-            <ValidationList>
-              {validation.map((msg, idx) => (
-                <ValidationItem key={idx} severity={msg.severity}>
-                  {msg.severity === 'error' ? (
-                    <ErrorOutlineIcon fontSize="small" />
-                  ) : (
-                    <WarningAmberIcon fontSize="small" />
-                  )}
-                  <span>{msg.message}</span>
-                </ValidationItem>
-              ))}
-            </ValidationList>
-          )}
-        </PreviewContent>
-      </WizardSidebar>
+      <SqlPreviewSidebar
+        sql={sqlWithNamedParams}
+        validation={validation}
+        copied={copied}
+        onCopy={handleCopySQL}
+      />
     </WizardContainer>
   );
 };

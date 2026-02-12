@@ -56,7 +56,6 @@ const getInitialState = (): PermissionsState => ({
 function permissionsReducer(state: PermissionsState, action: PermissionsAction): PermissionsState {
     switch (action.type) {
         case 'UPDATE_PERMISSIONS':
-            console.log('[PermissionsReducer] UPDATE_PERMISSIONS:', action.payload);
             return {
                 ...state,
                 permissions: action.payload,
@@ -89,12 +88,10 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
             
             try {
                 const response = await httpClient.get<{ data: { permissions: SharePermissions } }>('/auth/my-permissions');
-                console.log('[PermissionsContext] Fetched permissions from DB:', response.data.data.permissions);
                 dispatch({ type: 'UPDATE_PERMISSIONS', payload: response.data.data.permissions });
             } catch (error: any) {
                 // If 404, user is not actually a shared user (token may be stale)
                 // Silently fall back to default permissions
-                console.warn('[PermissionsContext] Failed to fetch permissions, using defaults:', error?.response?.status);
                 dispatch({ type: 'UPDATE_PERMISSIONS', payload: getPermissionsFromToken() || DEFAULT_SHARE_PERMISSIONS });
             }
         };

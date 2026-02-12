@@ -3,15 +3,26 @@ import { SchemaService } from '../../services/SchemaService';
 import { ApiError } from '../../core/ApiError';
 import type { SavedQueryDto } from '../../models/SchemaDto';
 import { DATABASES_QUERY_KEY } from '../databases';
+import { isDemoModeActive } from '../../../context/TourContext';
+import { getDemoSavedQueries } from '../../../context/demoData';
 
 export const SAVED_QUERIES_KEY = ['saved-queries'];
 
 export function useSavedQueries(databaseId: number | undefined) {
+  const isDemo = isDemoModeActive();
+  const demoData = { queries: getDemoSavedQueries(databaseId) };
+  
   return useQuery({
-    queryKey: [...SAVED_QUERIES_KEY, databaseId],
-    queryFn: () => SchemaService.getSavedQueries(databaseId!),
-    enabled: !!databaseId,
-    staleTime: 60000, // 1 minute
+    queryKey: [...SAVED_QUERIES_KEY, isDemo ? 'demo' : databaseId],
+    queryFn: () => {
+      if (isDemo) {
+        return Promise.resolve(demoData);
+      }
+      return SchemaService.getSavedQueries(databaseId!);
+    },
+    enabled: isDemo || !!databaseId,
+    staleTime: isDemo ? Infinity : undefined,
+    placeholderData: isDemo ? demoData : undefined,
   });
 }
 

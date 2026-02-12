@@ -13,7 +13,11 @@ import {
   HeroPaper,
 } from './Hero.styles';
 
-export default function Hero() {
+interface HeroProps {
+  onViewDemo?: () => void;
+}
+
+export default function Hero({ onViewDemo }: HeroProps) {
   return (
     <HeroWrapper>
       {/* Grid Background */}
@@ -47,10 +51,8 @@ export default function Hero() {
 
           {/* Subheadline */}
           <HeroSubtitle variant="h5">
-            Auto-generate REST APIs from any database. Multi-language code generation. Zero setup.{' '}
-            <span style={{ color: 'var(--primary-main)', fontWeight: 600 }}>
-              Your credentials never leave your browser.
-            </span>
+            Auto-generate REST APIs from POSTGRES/MYSQL database. Visual query builder. Zero setup.{' '}
+           
           </HeroSubtitle>
 
           {/* CTA Buttons */}
@@ -67,6 +69,7 @@ export default function Hero() {
               variant="outlined"
               size="large"
               startIcon={<PlayArrow />}
+              onClick={onViewDemo}
             >
               View Demo
             </SecondaryButton>

@@ -70,13 +70,14 @@ export default function Sidebar({
   };
 
   return (
-    <SidebarWrapper>
+    <SidebarWrapper data-tour="sidebar">
       <SidebarHeader>
         <HeaderTitle>Databases</HeaderTitle>
         <Tooltip title="Add Database" arrow>
           <AddButton
             onClick={() => onAddDatabase()}
             size="small"
+            data-tour="add-database"
           >
             <AddIcon sx={{ fontSize: '1rem' }} />
           </AddButton>

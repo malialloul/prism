@@ -9,5 +9,6 @@ export { default as NotificationBell } from './NotificationBell/NotificationBell
 export { ProtectedRoute } from './ProtectedRoute';
 export { default as ProtectedNotFoundRoute } from './ProtectedNotFoundRoute';
 export { PermissionGate, usePermissions } from './PermissionGate';
-export { AccessRestricted } from './AccessRestricted';
+export { AccessRestricted, AccessRestrictedDialog } from './AccessRestricted';
+export { DemoBanner } from './DemoBanner';
 

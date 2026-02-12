@@ -6,9 +6,12 @@ import { useApisContext } from "../../../layout";
 import { usePermissions, AccessRestricted } from "../../../components";
 
 export default function BuildQuery() {
-  const workspace = useWorkspace()!;
+  const workspace = useWorkspace();
   const { triggerOpenApiRefresh } = useApisContext();
   const { canCreateApi } = usePermissions();
+
+  if (!workspace) return null;
+
   const { connectedDatabase } = workspace;
 
   // TypeScript safety - WorkspaceLayout handles redirect if no connected database

@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ApiIcon from '@mui/icons-material/Api';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -33,13 +34,18 @@ import type { ApiEndpoint, TryItState, ColumnInfo, FilterCondition } from '../..
 import { httpClient } from '../../../../api/httpClient';
 import { AccessRestricted, usePermissions } from '../../../../components';
 import type { SharePermissions } from '../../../../api/models/SharedAccountDto';
+import { QUERY_STATS_KEY } from '../../../../api/entities/databases';
+import { isDemoModeActive } from '../../../../context/TourContext';
+import { getDemoTableData } from '../../../../context/demoData';
 
 interface TryItPanelProps {
     endpoint: ApiEndpoint | null;
     columns: ColumnInfo[];
+    databaseId?: number;
 }
 
-export default function TryItPanelComponent({ endpoint, columns }: TryItPanelProps) {
+export default function TryItPanelComponent({ endpoint, columns, databaseId }: TryItPanelProps) {
+    const queryClient = useQueryClient();
     const { canViewTableData, canAddRecord, canEditRecord, canDeleteRecord } = usePermissions();
     
     const [state, setState] = useState<TryItState>({
@@ -202,6 +208,34 @@ export default function TryItPanelComponent({ endpoint, columns }: TryItPanelPro
 
         const startTime = performance.now();
 
+        // Return mock data in demo mode
+        if (isDemoModeActive()) {
+            // Extract table name from endpoint path
+            const tableMatch = endpoint.path.match(/\/tables\/([^/]+)/);
+            const tableName = tableMatch ? tableMatch[1] : 'users';
+            
+            await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
+            const endTime = performance.now();
+            
+            const mockData = getDemoTableData(tableName);
+            
+            setState((prev) => ({
+                ...prev,
+                isLoading: false,
+                response: {
+                    status: 200,
+                    statusText: 'OK (Demo)',
+                    data: {
+                        status: 'success',
+                        message: 'Demo mode: Showing sample data',
+                        data: endpoint.method === 'GET' ? mockData.rows : { affected: 1 },
+                    },
+                    time: Math.round(endTime - startTime),
+                },
+            }));
+            return;
+        }
+
         try {
             let url = endpoint.path;
             for (const [name, value] of Object.entries(state.pathParams)) {
@@ -229,10 +263,6 @@ export default function TryItPanelComponent({ endpoint, columns }: TryItPanelPro
             if (queryString) {
                 url += `?${queryString}`;
             }
-
-            console.log('API Request URL:', url);
-            console.log('Filters:', filters);
-
             let response;
             const config = { url, method: endpoint.method.toLowerCase() as 'get' | 'post' | 'put' | 'patch' | 'delete' };
 
@@ -255,7 +285,6 @@ export default function TryItPanelComponent({ endpoint, columns }: TryItPanelPro
                     }
                 }
 
-                console.log('Request body:', bodyData);
                 response = await httpClient.request({ ...config, data: bodyData });
             } else {
                 response = await httpClient.request(config);
@@ -273,6 +302,11 @@ export default function TryItPanelComponent({ endpoint, columns }: TryItPanelPro
                     time: Math.round(endTime - startTime),
                 },
             }));
+
+            // Invalidate query stats to update the Queries Executed card
+            if (databaseId !== undefined) {
+                queryClient.invalidateQueries({ queryKey: [...QUERY_STATS_KEY, databaseId] });
+            }
         } catch (error: unknown) {
             const endTime = performance.now();
             const err = error as { response?: { status: number; statusText: string; data: Record<string, unknown> }; message?: string };
@@ -296,7 +330,7 @@ export default function TryItPanelComponent({ endpoint, columns }: TryItPanelPro
                 }));
             }
         }
-    }, [endpoint, state.pathParams, state.queryParams, state.body, filters, columnValues, bodyMode, columns]);
+    }, [endpoint, state.pathParams, state.queryParams, state.body, filters, columnValues, bodyMode, columns, databaseId, queryClient]);
 
     // Determine which features to show based on HTTP method
     const showFilters = endpoint?.method === 'GET' || endpoint?.method === 'PUT' || endpoint?.method === 'PATCH' || endpoint?.method === 'DELETE';
@@ -450,33 +484,7 @@ export default function TryItPanelComponent({ endpoint, columns }: TryItPanelPro
                     {/* Column Input Form - for POST, PUT, PATCH */}
                     {showColumnForm && columns.length > 0 && (
                         <>
-                            <TryItSection sx={{ py: 1, borderBottom: 1, borderColor: 'divider' }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <SectionTitle sx={{ mb: 0 }}>Request Body</SectionTitle>
-                                    {/* Only show JSON option for POST */}
-                                    {endpoint.method === 'POST' && (
-                                        <Tabs
-                                            value={bodyMode}
-                                            onChange={(_, v) => setBodyMode(v)}
-                                            sx={{
-                                                minHeight: 'auto',
-                                                ml: 'auto',
-                                                '& .MuiTab-root': {
-                                                    minHeight: 'auto',
-                                                    py: 0.5,
-                                                    px: 1.5,
-                                                    fontSize: '0.7rem',
-                                                    minWidth: 'auto'
-                                                },
-                                                '& .MuiTabs-indicator': { height: 2 }
-                                            }}
-                                        >
-                                            <Tab label="Form" value="form" />
-                                            <Tab label="JSON" value="json" />
-                                        </Tabs>
-                                    )}
-                                </Box>
-                            </TryItSection>
+                           
 
                             {(bodyMode === 'form' || endpoint.method === 'PUT' || endpoint.method === 'PATCH') ? (
                                 <ColumnInputForm

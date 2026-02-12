@@ -52,7 +52,6 @@ const plans = [
       "All Free features",
       "Advanced relationship mapping",
       "Custom endpoint generation",
-      "Export full project code",
       "GraphQL support (coming soon)",
       "Priority support",
       "Early access to new features",
@@ -65,7 +64,6 @@ const plans = [
 const allFeatures = [
   "Multi-database support (MySQL, PostgreSQL)",
   "Instant CRUD API generation",
-  "Multi-language code generation",
   "Interactive ER diagrams",
   "Auto-generated APIs docs",
   "Privacy-first architecture",

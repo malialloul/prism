@@ -1,5 +1,5 @@
 import { Container, Typography, Grid } from '@mui/material';
-import { Storage, Search, AutoAwesome, Code } from '@mui/icons-material';
+import { Storage, Search, AutoAwesome, RocketLaunch } from '@mui/icons-material';
 import { motion } from 'motion/react';
 import { ROUTES } from '../../../constants';
 import {
@@ -17,7 +17,7 @@ const steps = [
   {
     icon: Storage,
     title: 'Connect your database',
-    description: 'Enter your MySQL or PostgreSQL credentials. Everything happens locally in your browser.',
+    description: 'Enter your MySQL or PostgreSQL credentials. Prism securely connects and accesses your schema.',
     gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
     number: '01',
   },
@@ -36,9 +36,9 @@ const steps = [
     number: '03',
   },
   {
-    icon: Code,
-    title: 'Copy code & start building',
-    description: 'Get production-ready code in your preferred language. Swagger docs included.',
+    icon: RocketLaunch,
+    title: 'Test & start building',
+    description: 'Test endpoints in-browser with our API panel. Build custom queries with the visual wizard.',
     gradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
     number: '04',
   },

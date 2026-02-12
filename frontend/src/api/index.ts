@@ -28,9 +28,11 @@ export type { Verify2FADto } from './models/Verify2FADto';
 export { Verify2FAResponseDto } from './models/Verify2FAResponseDto';
 export { VerifyCodeResponseDto } from './models/VerifyCodeResponseDto';
 export type { VerifyResetCodeDto } from './models/VerifyResetCodeDto';
+export type { ContactDto, CreateContactDto, SubmitContactResponse } from './models/ContactDto';
 
 export { AuthenticationService } from './services/AuthenticationService';
 export { TwoFactorAuthenticationService } from './services/TwoFactorAuthenticationService';
+export { ContactService } from './services/ContactService';
 
 // HTTP Client utilities
 export {

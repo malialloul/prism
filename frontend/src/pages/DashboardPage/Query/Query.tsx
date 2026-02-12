@@ -9,8 +9,12 @@ import { QueryEditor } from "./QueryEditor";
 import { QuerySkeleton } from "../../../components/Skeletons";
 
 export default function Query() {
-  const workspace = useWorkspace()!;
+  const workspace = useWorkspace();
   const { canRunQuery } = usePermissions();
+
+  if (!workspace) {
+    return <QuerySkeleton />;
+  }
 
   const { connectedDatabase, schemaVersion, initialQuery, isLoading } = workspace;
 
@@ -28,7 +32,7 @@ export default function Query() {
         <ContentTitle>Query Editor</ContentTitle>
       </ContentHeader>
 
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }} data-tour="query-editor-area">
         {canRunQuery ? (
           <QueryEditor
             key={`query-editor-${connectedDatabase.id}-${schemaVersion}`}

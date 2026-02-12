@@ -48,9 +48,10 @@ const ProfileAvatar = styled(Box)({
 interface UserAvatarProps {
   variant?: 'light' | 'dark';
   initial?: string;
+  'data-tour'?: string;
 }
 
-export default function UserAvatar({ variant = 'dark', initial = 'D' }: UserAvatarProps) {
+export default function UserAvatar({ variant = 'dark', initial = 'D', 'data-tour': dataTour }: UserAvatarProps) {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const menuOpen = Boolean(anchorEl);
@@ -112,7 +113,7 @@ export default function UserAvatar({ variant = 'dark', initial = 'D' }: UserAvat
 
   return (
     <>
-      <AvatarButton variant={variant} onClick={handleAvatarClick}>
+      <AvatarButton variant={variant} onClick={handleAvatarClick} data-tour={dataTour}>
         {userInitial}
       </AvatarButton>
       <Menu

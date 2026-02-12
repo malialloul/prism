@@ -3,6 +3,7 @@ import type { UserDto } from './models/UserDto';
 import type { SharePermissions } from './models/SharedAccountDto';
 import { DEFAULT_SHARE_PERMISSIONS } from './models/SharedAccountDto';
 import { ROUTES } from '../constants';
+import { isDemoModeActive } from '../context/TourContext';
 
 type ApiResponseStatus = 'success' | 'error' | 'fail';
 
@@ -132,9 +133,27 @@ const httpClient = axios.create({
   },
 });
 
-// Request interceptor - add auth token from cookie
+// Request interceptor - add auth token from cookie and block mutations in demo mode
 httpClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // Block mutating requests in demo mode
+    if (isDemoModeActive()) {
+      const method = config.method?.toUpperCase();
+      if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
+        return Promise.reject({
+          response: {
+            status: 403,
+            data: { 
+              status: 'error', 
+              message: 'This action is not available in demo mode. Sign up to unlock all features!' 
+            }
+          },
+          isAxiosError: true,
+          isDemoBlocked: true,
+        });
+      }
+    }
+    
     const token = getAuthToken();
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -157,8 +176,8 @@ httpClient.interceptors.response.use(
     // Don't auto-show error toasts here - let components handle their own error toasts
     // Only handle 401 redirect
     
-    // Handle 401 - redirect to login
-    if (error.response?.status === 401) {
+    // Handle 401 - redirect to login (but not in demo mode)
+    if (error.response?.status === 401 && !isDemoModeActive()) {
       clearAuthToken();
       
       if (!window.location.pathname.includes(ROUTES.SIGN_IN) && 

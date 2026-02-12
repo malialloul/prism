@@ -16,7 +16,11 @@ import LinkIcon from "@mui/icons-material/Link";
 import { OverviewSkeleton } from "../../../components/Skeletons";
 
 export default function Overview() {
-  const workspace = useWorkspace()!;
+  const workspace = useWorkspace();
+
+  if (!workspace) {
+    return <OverviewSkeleton />;
+  }
 
   const {
     databases,

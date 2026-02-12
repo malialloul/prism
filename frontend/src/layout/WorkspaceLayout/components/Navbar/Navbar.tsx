@@ -63,6 +63,7 @@ export default function Navbar({ onRefresh, activeMainTab = 0, onMainTabChange, 
             )}
             disabled={!hasConnectedDatabase}
             sx={!hasConnectedDatabase ? { opacity: 0.5, pointerEvents: 'auto' } : {}}
+            data-tour="navbar-apis"
           />
         </NavTabs>
       </LeftSection>
@@ -82,7 +83,7 @@ export default function Navbar({ onRefresh, activeMainTab = 0, onMainTabChange, 
 
         <NotificationBell />
 
-        <UserAvatar variant={darkMode ? 'dark' : 'light'} />
+        <UserAvatar variant={darkMode ? 'dark' : 'light'} data-tour="user-menu" />
       </RightSection>
     </NavbarWrapper>
   );

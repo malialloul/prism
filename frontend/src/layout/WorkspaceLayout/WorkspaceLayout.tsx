@@ -17,11 +17,12 @@ import DatabaseActionsPanel from "./components/DatabaseActionsPanel/DatabaseActi
 import DeleteDatabaseDialog from "./components/DeleteDatabaseDialog/DeleteDatabaseDialog";
 import SwitchDatabaseDialog from "./components/SwitchDatabaseDialog/SwitchDatabaseDialog";
 import EmptyState from "./components/EmptyState/EmptyState";
-import { WorkspaceLayoutSkeleton } from "../../components/Skeletons";
-import { AccessRestricted, usePermissions } from "../../components";
-import { CircularProgress, Dialog, DialogContent, DialogActions, Button } from "@mui/material";
+import { AccessRestrictedDialog, usePermissions } from "../../components";
+import { CircularProgress } from "@mui/material";
 import { useDatabases, useRefreshDatabase, useDisconnectDatabase, useReconnectDatabase } from "../../api/entities/databases";
 import { DatabaseDto } from "../../api/models/DatabaseDto";
+import { isDemoModeActive } from "../../context/TourContext";
+import { DEMO_DATABASES } from "../../context/demoData";
 
 // Context for sharing workspace state (database connections, etc.) with child routes
 export interface WorkspaceContextType {
@@ -52,6 +53,7 @@ export const useWorkspace = (): WorkspaceContextType | null => {
 export default function WorkspaceLayout() {
     const location = useLocation();
     const navigate = useNavigate();
+    const isDemo = isDemoModeActive();
 
     // Determine active main tab from URL
     const getMainTabFromPath = () => {
@@ -61,16 +63,17 @@ export default function WorkspaceLayout() {
 
     const mainTab = getMainTabFromPath();
 
-    // Fetch databases from API
-    const { data: databasesData, isLoading, refetch: refetchDatabases } = useDatabases();
+    // Fetch databases from API (skip in demo mode)
+    const { data: databasesData, isLoading: isApiLoading, refetch: refetchDatabases } = useDatabases();
 
     // Database mutations
     const { mutate: refreshDatabase } = useRefreshDatabase();
     const { mutate: disconnectDatabase } = useDisconnectDatabase();
     const { mutate: reconnectDatabase } = useReconnectDatabase();
 
-    // Get databases from API
-    const databases: DatabaseDto[] = databasesData?.databases || [];
+    // Use mock data in demo mode, otherwise use API data
+    const isLoading = isDemo ? false : isApiLoading;
+    const databases: DatabaseDto[] = isDemo ? DEMO_DATABASES : (databasesData?.databases || []);
 
     const [selectedDatabaseId, setSelectedDatabaseId] = useState<number | null>(null);
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -96,10 +99,16 @@ export default function WorkspaceLayout() {
 
 
     // Get the currently connected database
-    const connectedDatabase = databases.find((db) => db.status === 'connected') || null;
+    // In demo mode, treat selected database as connected
+    const connectedDatabase = isDemo 
+        ? (databases.find((db) => db.id === selectedDatabaseId) || databases.find((db) => db.status === 'connected') || null)
+        : (databases.find((db) => db.status === 'connected') || null);
 
     // Redirect to overview if trying to access protected routes without a connected database
     useEffect(() => {
+        // In demo mode, don't redirect - allow navigation to all pages
+        if (isDemo) return;
+        
         if (!isLoading && !connectedDatabase) {
             const protectedPaths = [ROUTES.APIS.ROOT, '/schema', '/query', '/er-diagram'];
             const isProtectedRoute = protectedPaths.some(path => location.pathname.includes(path));
@@ -107,7 +116,7 @@ export default function WorkspaceLayout() {
                 navigate(ROUTES.DASHBOARD.OVERVIEW, { replace: true });
             }
         }
-    }, [isLoading, connectedDatabase, location.pathname, navigate]);
+    }, [isLoading, connectedDatabase, location.pathname, navigate, isDemo]);
 
     // Watch for when the pending database becomes connected after switching
     useEffect(() => {
@@ -169,6 +178,17 @@ export default function WorkspaceLayout() {
     const handleSelectDatabase = (id: number) => {
         const targetDb = databases.find((db) => db.id === id);
         if (!targetDb) return;
+
+        // In demo mode, show switch dialog if there's a connected database
+        if (isDemo) {
+            if (connectedDatabase && connectedDatabase.id !== id) {
+                setDatabaseToSwitchTo(targetDb);
+                setIsSwitchDialogOpen(true);
+            } else {
+                setSelectedDatabaseId(id);
+            }
+            return;
+        }
 
         if (targetDb.status !== 'connected') {
             // Check permission before attempting to connect
@@ -386,23 +406,13 @@ export default function WorkspaceLayout() {
                     </SwitchingOverlay>
                 )}
                 {/* Access Restricted Dialog */}
-                <Dialog
+                <AccessRestrictedDialog
                     open={isAccessRestrictedDialogOpen}
                     onClose={() => setIsAccessRestrictedDialogOpen(false)}
-                    maxWidth="sm"
-                    fullWidth
-                >
-                    <DialogContent>
-                        <AccessRestricted
-                            message="Connect Database Restricted"
-                            description="You don't have permission to connect to databases. Please contact the account owner to request access."
-                            permission="connectDatabase"
-                        />
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setIsAccessRestrictedDialogOpen(false)}>Close</Button>
-                    </DialogActions>
-                </Dialog>
+                    message="Connect Database Restricted"
+                    description="You don't have permission to connect to databases. Please contact the account owner to request access."
+                    permission="connectDatabase"
+                />
             </WorkspaceWrapper>
         </WorkspaceContext.Provider>
     );

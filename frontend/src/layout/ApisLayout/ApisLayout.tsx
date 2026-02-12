@@ -55,14 +55,15 @@ export default function ApisLayout() {
             <ApisPageWrapper>
                 <ApisHeader>
                     <ApisTitle>API Explorer</ApisTitle>
-                    <ApisTabs value={activeTab} onChange={handleTabChange}>
+                    <ApisTabs value={activeTab} onChange={handleTabChange} data-tour="apis-tabs">
                         <ApisTab
                             icon={<BuildIcon sx={{ fontSize: "1rem", mr: 0.5 }} />}
                             iconPosition="start"
                             label="Build Query"
+                            data-tour="build-query-tab"
                         />
-                        <ApisTab label="Auto-generated APIs" />
-                        <ApisTab label="Open API" />
+                        <ApisTab label="Auto-generated APIs" data-tour="auto-apis-tab" />
+                        <ApisTab label="Open API" data-tour="openapi-tab" />
                     </ApisTabs>
                 </ApisHeader>
                 <Outlet />

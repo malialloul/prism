@@ -46,7 +46,9 @@ export const StepperTrack = styled(Box)({
   gap: '4px',
 });
 
-export const StepItem = styled(Box)<{ isActive?: boolean; isCompleted?: boolean; isClickable?: boolean }>(
+export const StepItem = styled(Box, {
+  shouldForwardProp: (prop) => !['isActive', 'isCompleted', 'isClickable'].includes(prop as string),
+})<{ isActive?: boolean; isCompleted?: boolean; isClickable?: boolean }>(
   ({ isActive, isCompleted, isClickable }) => ({
     display: 'flex',
     alignItems: 'center',
@@ -62,7 +64,9 @@ export const StepItem = styled(Box)<{ isActive?: boolean; isCompleted?: boolean;
   })
 );
 
-export const StepNumber = styled(Box)<{ isActive?: boolean; isCompleted?: boolean }>(
+export const StepNumber = styled(Box, {
+  shouldForwardProp: (prop) => !['isActive', 'isCompleted'].includes(prop as string),
+})<{ isActive?: boolean; isCompleted?: boolean }>(
   ({ isActive, isCompleted }) => ({
     width: '28px',
     height: '28px',
@@ -82,14 +86,18 @@ export const StepNumber = styled(Box)<{ isActive?: boolean; isCompleted?: boolea
   })
 );
 
-export const StepLabel = styled(Box)<{ isActive?: boolean }>(({ isActive }) => ({
+export const StepLabel = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isActive',
+})<{ isActive?: boolean }>(({ isActive }) => ({
   fontSize: '13px',
   fontWeight: isActive ? 600 : 500,
   color: isActive ? '#e4e4e7' : '#71717a',
   whiteSpace: 'nowrap',
 }));
 
-export const StepConnector = styled(Box)<{ isCompleted?: boolean }>(({ isCompleted }) => ({
+export const StepConnector = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isCompleted',
+})<{ isCompleted?: boolean }>(({ isCompleted }) => ({
   flex: 1,
   height: '2px',
   backgroundColor: isCompleted ? '#22c55e' : '#2a2a3a',
@@ -196,7 +204,9 @@ export const NavButton = styled(Button)<{ variant?: 'text' | 'outlined' | 'conta
 // CARDS & ITEMS
 // ============================================================================
 
-export const SelectableCard = styled(Paper)<{ isSelected?: boolean }>(({ isSelected }) => ({
+export const SelectableCard = styled(Paper, {
+  shouldForwardProp: (prop) => prop !== 'isSelected',
+})<{ isSelected?: boolean }>(({ isSelected }) => ({
   padding: '16px',
   backgroundColor: isSelected ? alpha('#667eea', 0.1) : '#12121a',
   border: `1px solid ${isSelected ? '#667eea' : '#2a2a3a'}`,

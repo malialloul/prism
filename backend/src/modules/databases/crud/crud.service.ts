@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { pool } from '../../../config/db';
 import { config } from '../../../config/env';
 import { NotFoundError, ValidationError } from '../../../utils/errors';
+import { logQueryExecution } from '../queryStats.service';
 import type { 
   ListQueryParams, 
   PaginatedResult, 
@@ -203,43 +204,6 @@ const buildWhereClause = (
 };
 
 /**
- * Build search clause for text search
- */
-const buildSearchClause = (
-  search: string,
-  searchFields: string[],
-  engine: 'postgres' | 'mysql',
-  startParamIndex: number
-): { clause: string; values: unknown[]; nextIndex: number } => {
-  if (!search || searchFields.length === 0) {
-    return { clause: '', values: [], nextIndex: startParamIndex };
-  }
-
-  const conditions: string[] = [];
-  const values: unknown[] = [];
-  let paramIndex = startParamIndex;
-
-  for (const field of searchFields) {
-    const sanitizedField = sanitizeIdentifier(field);
-    if (engine === 'postgres') {
-      conditions.push(`"${sanitizedField}"::text ILIKE $${paramIndex}`);
-    } else {
-      conditions.push(`\`${sanitizedField}\` LIKE ?`);
-    }
-  }
-
-  const searchValue = engine === 'postgres' ? `%${search}%` : `%${search}%`;
-  values.push(searchValue);
-  paramIndex++;
-
-  return {
-    clause: conditions.length > 0 ? `(${conditions.join(' OR ')})` : '',
-    values,
-    nextIndex: paramIndex,
-  };
-};
-
-/**
  * Get primary key column(s) for a table
  */
 const getPrimaryKeyColumns = async (
@@ -363,8 +327,19 @@ export const listRecords = async (
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `;
       const dataResult = await pgPool.query(dataQuery, [...values, limit, offset]);
+      const executionTimeMs = Date.now() - Date.now(); // Approximate, we'll track from start
 
       await pgPool.end();
+
+      // Log successful query execution
+      logQueryExecution({
+        userId: parseInt(userId, 10),
+        databaseId: parseInt(databaseId, 10),
+        queryType: 'SELECT',
+        executionTimeMs: 0,
+        rowsAffected: dataResult.rowCount || 0,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
 
       const totalPages = Math.ceil(total / limit);
       return {
@@ -380,6 +355,18 @@ export const listRecords = async (
       };
     } catch (error) {
       await pgPool.end();
+
+      // Log failed query execution
+      logQueryExecution({
+        userId: parseInt(userId, 10),
+        databaseId: parseInt(databaseId, 10),
+        queryType: 'SELECT',
+        executionTimeMs: 0,
+        rowsAffected: 0,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : 'Query failed',
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       throw error;
     }
   } else {
@@ -429,6 +416,16 @@ export const listRecords = async (
 
       await mysqlConn.end();
 
+      // Log successful query execution
+      logQueryExecution({
+        userId: parseInt(userId, 10),
+        databaseId: parseInt(databaseId, 10),
+        queryType: 'SELECT',
+        executionTimeMs: 0,
+        rowsAffected: (dataRows as CrudRecord[]).length,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       const totalPages = Math.ceil(total / limit);
       return {
         data: dataRows as CrudRecord[],
@@ -443,6 +440,18 @@ export const listRecords = async (
       };
     } catch (error) {
       await mysqlConn.end();
+
+      // Log failed query execution
+      logQueryExecution({
+        userId: parseInt(userId, 10),
+        databaseId: parseInt(databaseId, 10),
+        queryType: 'SELECT',
+        executionTimeMs: 0,
+        rowsAffected: 0,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : 'Query failed',
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       throw error;
     }
   }
@@ -478,6 +487,16 @@ export const getRecord = async (
 
       await pgPool.end();
 
+      // Log successful query execution
+      logQueryExecution({
+        userId: parseInt(userId, 10),
+        databaseId: parseInt(databaseId, 10),
+        queryType: 'SELECT',
+        executionTimeMs: 0,
+        rowsAffected: result.rowCount || 0,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       if (result.rowCount === 0) {
         throw new NotFoundError(`Record not found`);
       }
@@ -485,6 +504,20 @@ export const getRecord = async (
       return result.rows[0];
     } catch (error) {
       await pgPool.end();
+
+      // Log failed query execution (only for actual query errors, not NotFoundError)
+      if (!(error instanceof NotFoundError)) {
+        logQueryExecution({
+          userId: parseInt(userId, 10),
+          databaseId: parseInt(databaseId, 10),
+          queryType: 'SELECT',
+          executionTimeMs: 0,
+          rowsAffected: 0,
+          success: false,
+          errorMessage: error instanceof Error ? error.message : 'Query failed',
+        }).catch(err => console.error('Failed to log query execution:', err));
+      }
+
       throw error;
     }
   } else {
@@ -506,6 +539,17 @@ export const getRecord = async (
       await mysqlConn.end();
 
       const records = rows as CrudRecord[];
+
+      // Log successful query execution
+      logQueryExecution({
+        userId: parseInt(userId, 10),
+        databaseId: parseInt(databaseId, 10),
+        queryType: 'SELECT',
+        executionTimeMs: 0,
+        rowsAffected: records.length,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       if (records.length === 0) {
         throw new NotFoundError(`Record not found`);
       }
@@ -513,6 +557,20 @@ export const getRecord = async (
       return records[0];
     } catch (error) {
       await mysqlConn.end();
+
+      // Log failed query execution (only for actual query errors, not NotFoundError)
+      if (!(error instanceof NotFoundError)) {
+        logQueryExecution({
+          userId: parseInt(userId, 10),
+          databaseId: parseInt(databaseId, 10),
+          queryType: 'SELECT',
+          executionTimeMs: 0,
+          rowsAffected: 0,
+          success: false,
+          errorMessage: error instanceof Error ? error.message : 'Query failed',
+        }).catch(err => console.error('Failed to log query execution:', err));
+      }
+
       throw error;
     }
   }
@@ -550,9 +608,32 @@ export const createRecord = async (
       );
 
       await pgPool.end();
+
+      // Log successful query execution
+      logQueryExecution({
+        userId: parseInt(userId, 10),
+        databaseId: parseInt(databaseId, 10),
+        queryType: 'INSERT',
+        executionTimeMs: 0,
+        rowsAffected: result.rowCount || 1,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       return result.rows[0];
     } catch (error) {
       await pgPool.end();
+
+      // Log failed query execution
+      logQueryExecution({
+        userId: parseInt(userId, 10),
+        databaseId: parseInt(databaseId, 10),
+        queryType: 'INSERT',
+        executionTimeMs: 0,
+        rowsAffected: 0,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : 'Failed to create record',
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       const message = error instanceof Error ? error.message : 'Failed to create record';
       throw new ValidationError(message);
     }
@@ -585,9 +666,32 @@ export const createRecord = async (
       }
 
       await mysqlConn.end();
+
+      // Log successful query execution
+      logQueryExecution({
+        userId: parseInt(userId, 10),
+        databaseId: parseInt(databaseId, 10),
+        queryType: 'INSERT',
+        executionTimeMs: 0,
+        rowsAffected: 1,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       return record;
     } catch (error) {
       await mysqlConn.end();
+
+      // Log failed query execution
+      logQueryExecution({
+        userId: parseInt(userId, 10),
+        databaseId: parseInt(databaseId, 10),
+        queryType: 'INSERT',
+        executionTimeMs: 0,
+        rowsAffected: 0,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : 'Failed to create record',
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       const message = error instanceof Error ? error.message : 'Failed to create record';
       throw new ValidationError(message);
     }
@@ -639,9 +743,33 @@ export const updateRecord = async (
         throw new NotFoundError(`Record not found`);
       }
 
+      // Log successful query execution
+      logQueryExecution({
+        userId: parseInt(userId, 10),
+        databaseId: parseInt(databaseId, 10),
+        queryType: 'UPDATE',
+        executionTimeMs: 0,
+        rowsAffected: result.rowCount || 0,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       return result.rows[0];
     } catch (error) {
       await pgPool.end();
+
+      // Log failed query execution (only for actual query errors)
+      if (!(error instanceof NotFoundError) && !(error instanceof ValidationError)) {
+        logQueryExecution({
+          userId: parseInt(userId, 10),
+          databaseId: parseInt(databaseId, 10),
+          queryType: 'UPDATE',
+          executionTimeMs: 0,
+          rowsAffected: 0,
+          success: false,
+          errorMessage: error instanceof Error ? error.message : 'Failed to update record',
+        }).catch(err => console.error('Failed to log query execution:', err));
+      }
+
       if (error instanceof NotFoundError || error instanceof ValidationError) throw error;
       const message = error instanceof Error ? error.message : 'Failed to update record';
       throw new ValidationError(message);
@@ -676,9 +804,34 @@ export const updateRecord = async (
       );
 
       await mysqlConn.end();
+
+      // Log successful query execution
+      logQueryExecution({
+        userId: parseInt(userId, 10),
+        databaseId: parseInt(databaseId, 10),
+        queryType: 'UPDATE',
+        executionTimeMs: 0,
+        rowsAffected: (updateResult as mysql.ResultSetHeader).affectedRows,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       return (rows as CrudRecord[])[0];
     } catch (error) {
       await mysqlConn.end();
+
+      // Log failed query execution (only for actual query errors)
+      if (!(error instanceof NotFoundError) && !(error instanceof ValidationError)) {
+        logQueryExecution({
+          userId: parseInt(userId, 10),
+          databaseId: parseInt(databaseId, 10),
+          queryType: 'UPDATE',
+          executionTimeMs: 0,
+          rowsAffected: 0,
+          success: false,
+          errorMessage: error instanceof Error ? error.message : 'Failed to update record',
+        }).catch(err => console.error('Failed to log query execution:', err));
+      }
+
       if (error instanceof NotFoundError || error instanceof ValidationError) throw error;
       const message = error instanceof Error ? error.message : 'Failed to update record';
       throw new ValidationError(message);
@@ -722,9 +875,34 @@ export const updateRecordsByFilters = async (
       );
 
       await pgPool.end();
+
+      // Log successful query execution
+      logQueryExecution({
+        userId: parseInt(userId, 10),
+        databaseId: parseInt(databaseId, 10),
+        queryType: 'UPDATE',
+        executionTimeMs: 0,
+        rowsAffected: result.rowCount || 0,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       return result.rowCount || 0;
     } catch (error) {
       await pgPool.end();
+
+      // Log failed query execution
+      if (!(error instanceof ValidationError)) {
+        logQueryExecution({
+          userId: parseInt(userId, 10),
+          databaseId: parseInt(databaseId, 10),
+          queryType: 'UPDATE',
+          executionTimeMs: 0,
+          rowsAffected: 0,
+          success: false,
+          errorMessage: error instanceof Error ? error.message : 'Failed to update records',
+        }).catch(err => console.error('Failed to log query execution:', err));
+      }
+
       if (error instanceof ValidationError) throw error;
       const message = error instanceof Error ? error.message : 'Failed to update records';
       throw new ValidationError(message);
@@ -741,9 +919,34 @@ export const updateRecordsByFilters = async (
       );
 
       await mysqlConn.end();
+
+      // Log successful query execution
+      logQueryExecution({
+        userId: parseInt(userId, 10),
+        databaseId: parseInt(databaseId, 10),
+        queryType: 'UPDATE',
+        executionTimeMs: 0,
+        rowsAffected: (updateResult as mysql.ResultSetHeader).affectedRows,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       return (updateResult as mysql.ResultSetHeader).affectedRows;
     } catch (error) {
       await mysqlConn.end();
+
+      // Log failed query execution
+      if (!(error instanceof ValidationError)) {
+        logQueryExecution({
+          userId: parseInt(userId, 10),
+          databaseId: parseInt(databaseId, 10),
+          queryType: 'UPDATE',
+          executionTimeMs: 0,
+          rowsAffected: 0,
+          success: false,
+          errorMessage: error instanceof Error ? error.message : 'Failed to update records',
+        }).catch(err => console.error('Failed to log query execution:', err));
+      }
+
       if (error instanceof ValidationError) throw error;
       const message = error instanceof Error ? error.message : 'Failed to update records';
       throw new ValidationError(message);
@@ -778,9 +981,34 @@ export const deleteRecord = async (
       );
 
       await pgPool.end();
+
+      // Log successful query execution
+      logQueryExecution({
+        userId: parseInt(userId, 10),
+        databaseId: parseInt(databaseId, 10),
+        queryType: 'DELETE',
+        executionTimeMs: 0,
+        rowsAffected: result.rowCount || 0,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       return result.rowCount || 0;
     } catch (error) {
       await pgPool.end();
+
+      // Log failed query execution
+      if (!(error instanceof NotFoundError) && !(error instanceof ValidationError)) {
+        logQueryExecution({
+          userId: parseInt(userId, 10),
+          databaseId: parseInt(databaseId, 10),
+          queryType: 'DELETE',
+          executionTimeMs: 0,
+          rowsAffected: 0,
+          success: false,
+          errorMessage: error instanceof Error ? error.message : 'Failed to delete record',
+        }).catch(err => console.error('Failed to log query execution:', err));
+      }
+
       if (error instanceof NotFoundError || error instanceof ValidationError) throw error;
       const message = error instanceof Error ? error.message : 'Failed to delete record';
       throw new ValidationError(message);
@@ -800,9 +1028,34 @@ export const deleteRecord = async (
       );
 
       await mysqlConn.end();
+
+      // Log successful query execution
+      logQueryExecution({
+        userId: parseInt(userId, 10),
+        databaseId: parseInt(databaseId, 10),
+        queryType: 'DELETE',
+        executionTimeMs: 0,
+        rowsAffected: (deleteResult as mysql.ResultSetHeader).affectedRows,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       return (deleteResult as mysql.ResultSetHeader).affectedRows;
     } catch (error) {
       await mysqlConn.end();
+
+      // Log failed query execution
+      if (!(error instanceof NotFoundError) && !(error instanceof ValidationError)) {
+        logQueryExecution({
+          userId: parseInt(userId, 10),
+          databaseId: parseInt(databaseId, 10),
+          queryType: 'DELETE',
+          executionTimeMs: 0,
+          rowsAffected: 0,
+          success: false,
+          errorMessage: error instanceof Error ? error.message : 'Failed to delete record',
+        }).catch(err => console.error('Failed to log query execution:', err));
+      }
+
       if (error instanceof NotFoundError || error instanceof ValidationError) throw error;
       const message = error instanceof Error ? error.message : 'Failed to delete record';
       throw new ValidationError(message);

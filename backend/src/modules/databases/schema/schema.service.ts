@@ -1530,6 +1530,9 @@ export const executeSavedQueryService = async (
   // Execute the query on the user's database
   const conn = await getDatabaseConnection(userId, databaseId);
   const startTime = Date.now();
+  const queryType = detectQueryType(sql);
+  const userIdNum = parseInt(userId, 10);
+  const databaseIdNum = parseInt(databaseId, 10);
   
   if (conn.engine === 'postgres') {
     const pgPool = createPgPool(conn);
@@ -1537,6 +1540,16 @@ export const executeSavedQueryService = async (
       const result = await pgPool.query(sql);
       const executionTimeMs = Date.now() - startTime;
       await pgPool.end();
+
+      // Log successful query execution
+      logQueryExecution({
+        userId: userIdNum,
+        databaseId: databaseIdNum,
+        queryType,
+        executionTimeMs,
+        rowsAffected: result.rowCount || 0,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
 
       return {
         success: true,
@@ -1546,7 +1559,20 @@ export const executeSavedQueryService = async (
         executionTimeMs,
       };
     } catch (error: any) {
+      const executionTimeMs = Date.now() - startTime;
       await pgPool.end();
+
+      // Log failed query execution
+      logQueryExecution({
+        userId: userIdNum,
+        databaseId: databaseIdNum,
+        queryType,
+        executionTimeMs,
+        rowsAffected: 0,
+        success: false,
+        errorMessage: error.message || 'Query execution failed',
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       throw new ValidationError(error.message || 'Query execution failed');
     }
   } else {
@@ -1555,6 +1581,16 @@ export const executeSavedQueryService = async (
       const [rows, fields] = await mysqlConn.execute(sql);
       const executionTimeMs = Date.now() - startTime;
       await mysqlConn.end();
+
+      // Log successful query execution
+      logQueryExecution({
+        userId: userIdNum,
+        databaseId: databaseIdNum,
+        queryType,
+        executionTimeMs,
+        rowsAffected: Array.isArray(rows) ? rows.length : (rows as { affectedRows?: number }).affectedRows || 0,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
 
       if (Array.isArray(rows) && fields) {
         return {
@@ -1574,7 +1610,20 @@ export const executeSavedQueryService = async (
         };
       }
     } catch (error: any) {
+      const executionTimeMs = Date.now() - startTime;
       await mysqlConn.end();
+
+      // Log failed query execution
+      logQueryExecution({
+        userId: userIdNum,
+        databaseId: databaseIdNum,
+        queryType,
+        executionTimeMs,
+        rowsAffected: 0,
+        success: false,
+        errorMessage: error.message || 'Query execution failed',
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       throw new ValidationError(error.message || 'Query execution failed');
     }
   }
@@ -1716,6 +1765,9 @@ export const executePublicQueryService = async (
   };
   
   const startTime = Date.now();
+  const queryType = detectQueryType(sql);
+  const ownerUserId = parseInt(savedQuery.user_id, 10);
+  const databaseIdNum = parseInt(databaseId, 10);
   
   if (conn.engine === 'postgres') {
     const pgPool = createPgPool(conn);
@@ -1723,6 +1775,16 @@ export const executePublicQueryService = async (
       const result = await pgPool.query(sql);
       const executionTimeMs = Date.now() - startTime;
       await pgPool.end();
+
+      // Log successful query execution (tracked under API owner's account)
+      logQueryExecution({
+        userId: ownerUserId,
+        databaseId: databaseIdNum,
+        queryType,
+        executionTimeMs,
+        rowsAffected: result.rowCount || 0,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
 
       return {
         success: true,
@@ -1732,7 +1794,20 @@ export const executePublicQueryService = async (
         executionTimeMs,
       };
     } catch (error: any) {
+      const executionTimeMs = Date.now() - startTime;
       await pgPool.end();
+
+      // Log failed query execution
+      logQueryExecution({
+        userId: ownerUserId,
+        databaseId: databaseIdNum,
+        queryType,
+        executionTimeMs,
+        rowsAffected: 0,
+        success: false,
+        errorMessage: error.message || 'Query execution failed',
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       throw new ValidationError(error.message || 'Query execution failed');
     }
   } else {
@@ -1741,6 +1816,16 @@ export const executePublicQueryService = async (
       const [rows, fields] = await mysqlConn.execute(sql);
       const executionTimeMs = Date.now() - startTime;
       await mysqlConn.end();
+
+      // Log successful query execution (tracked under API owner's account)
+      logQueryExecution({
+        userId: ownerUserId,
+        databaseId: databaseIdNum,
+        queryType,
+        executionTimeMs,
+        rowsAffected: Array.isArray(rows) ? rows.length : (rows as { affectedRows?: number }).affectedRows || 0,
+        success: true,
+      }).catch(err => console.error('Failed to log query execution:', err));
 
       if (Array.isArray(rows) && fields) {
         return {
@@ -1760,7 +1845,20 @@ export const executePublicQueryService = async (
         };
       }
     } catch (error: any) {
+      const executionTimeMs = Date.now() - startTime;
       await mysqlConn.end();
+
+      // Log failed query execution
+      logQueryExecution({
+        userId: ownerUserId,
+        databaseId: databaseIdNum,
+        queryType,
+        executionTimeMs,
+        rowsAffected: 0,
+        success: false,
+        errorMessage: error.message || 'Query execution failed',
+      }).catch(err => console.error('Failed to log query execution:', err));
+
       throw new ValidationError(error.message || 'Query execution failed');
     }
   }

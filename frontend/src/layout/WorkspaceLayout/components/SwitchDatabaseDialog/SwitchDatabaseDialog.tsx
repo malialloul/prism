@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ButtonLoadingSkeleton } from '../../../../components';
 import { useDisconnectDatabase, useReconnectDatabase } from '../../../../api/entities/databases';
+import { isDemoModeActive } from '../../../../context/TourContext';
 import {
   StyledDialog,
   DialogHeader,
@@ -72,6 +73,20 @@ export default function SwitchDatabaseDialog({
 
   const handleSwitch = () => {
     if (!currentDatabase || !targetDatabase) return;
+    
+    // In demo mode, simulate the switch without calling backend
+    if (isDemoModeActive()) {
+      setIsSwitching(true);
+      onSwitchingStart();
+      // Simulate a brief delay then complete the switch
+      setTimeout(() => {
+        onSwitched(targetDatabase.id);
+        onClose();
+        setIsSwitching(false);
+      }, 500);
+      return;
+    }
+    
     setIsSwitching(true);
     onSwitchingStart();
     disconnectDatabase(currentDatabase.id);

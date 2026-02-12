@@ -1,5 +1,5 @@
 import { Container, Typography, Grid } from '@mui/material';
-import { Storage, Bolt, Language, BarChart, Description, Lock } from '@mui/icons-material';
+import { Storage, Bolt, BarChart, Description, Lock, Build } from '@mui/icons-material';
 import {
   FeaturesWrapper,
   HeaderBox,
@@ -22,9 +22,9 @@ const features = [
     gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
   },
   {
-    icon: Language,
-    title: 'Multi-Language Code',
-    description: 'Get production-ready code in Java (Spring Boot), JavaScript (Express), or .NET (C#).',
+    icon: Build,
+    title: 'Visual Query Builder',
+    description: 'Build complex SQL queries visually with our step-by-step wizard. No SQL knowledge required.',
     gradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
   },
   {
@@ -42,7 +42,7 @@ const features = [
   {
     icon: Lock,
     title: 'Privacy First',
-    description: 'All databases sensitive data are encrypted.',
+    description: 'All database credentials are encrypted. Your data stays secure.',
     gradient: 'linear-gradient(135deg, #ec4899 0%, #d946ef 100%)',
   },
 ];

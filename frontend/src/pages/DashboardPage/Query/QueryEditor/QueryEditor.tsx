@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { ButtonLoadingSkeleton, usePermissions, AccessRestricted } from '../../../../components';
+import { ButtonLoadingSkeleton, usePermissions, AccessRestrictedDialog } from '../../../../components';
 import {
   Tooltip,
   IconButton,
@@ -276,7 +276,7 @@ export default function QueryEditor({
               </span>
             </SavedQueriesHeader>
             <SavedQueriesList>
-              {savedQueries.map((query) => (
+              {savedQueries.map((query: SavedQueryDto) => (
                 <SavedQueryItem key={query.id} onClick={() => handleLoadQuery(query)}>
                   <SavedQueryName>{query.name}</SavedQueryName>
                   <IconButton
@@ -433,18 +433,13 @@ export default function QueryEditor({
       </Dialog>
 
       {/* Create Database Access Restricted Dialog */}
-      <Dialog open={showCreateDbRestricted} onClose={() => setShowCreateDbRestricted(false)} maxWidth="sm" fullWidth>
-        <DialogContent sx={{ p: 0 }}>
-          <AccessRestricted
-            message="Create Database Access Restricted"
-            description="You don't have permission to create databases. Please contact the account owner to request access."
-            permission="createDatabase"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowCreateDbRestricted(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
+      <AccessRestrictedDialog
+        open={showCreateDbRestricted}
+        onClose={() => setShowCreateDbRestricted(false)}
+        message="Create Database Access Restricted"
+        description="You don't have permission to create databases. Please contact the account owner to request access."
+        permission="createDatabase"
+      />
     </EditorWrapper>
   );
 }

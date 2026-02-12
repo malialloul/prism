@@ -45,11 +45,11 @@ export default function Navigation() {
             <Button color="inherit" href="#how-it-works">
               How It Works
             </Button>
-            <Button color="inherit" href="#pricing">
-              Pricing
+            <Button color="inherit" href="#about">
+              About Us
             </Button>
-            <Button color="inherit" href="#docs">
-              Docs
+            <Button color="inherit" href="#contact">
+              Contact
             </Button>
           </NavLinks>
 

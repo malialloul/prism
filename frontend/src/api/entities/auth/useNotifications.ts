@@ -7,12 +7,27 @@ import type { NotificationDto } from '../../models/NotificationDto';
 import type { PasswordActionResponseDto } from '../../models/PasswordActionResponseDto';
 import type { NotificationPayload } from '../../../services';
 import { websocketService } from '../../../services';
+import { isDemoModeActive } from '../../../context/TourContext';
+
+// Empty notifications data for demo mode
+const DEMO_NOTIFICATIONS: NotificationsResponseDto = {
+  status: 'success',
+  message: 'Demo mode - no notifications',
+  data: {
+    notifications: [],
+    unreadCount: 0,
+  },
+};
 
 export function useNotifications() {
   const queryClient = useQueryClient();
+  const isDemo = isDemoModeActive();
 
-  // Subscribe to real-time notifications
+  // Subscribe to real-time notifications (skip in demo mode)
   useEffect(() => {
+    // Skip WebSocket connection in demo mode
+    if (isDemo) return;
+
     // Connect WebSocket when this hook is used
     websocketService.connect();
 
@@ -117,13 +132,19 @@ export function useNotifications() {
       unsubPermissionsUpdated();
       unsubShareStatusChanged();
     };
-  }, [queryClient]);
+  }, [queryClient, isDemo]);
 
   return useQuery<NotificationsResponseDto, ApiError>({
     queryKey: ['notifications'],
-    queryFn: () => NotificationService.getNotifications(),
-    staleTime: 30000, // 30 seconds - rely more on WebSocket
-    refetchInterval: 60000, // Fallback: Refetch every 60 seconds
+    queryFn: () => {
+      if (isDemo) {
+        return Promise.resolve(DEMO_NOTIFICATIONS);
+      }
+      return NotificationService.getNotifications();
+    },
+    staleTime: isDemo ? Infinity : 30000,
+    refetchInterval: isDemo ? false : 60000,
+    placeholderData: isDemo ? DEMO_NOTIFICATIONS : undefined,
   });
 }
 
