@@ -15,6 +15,7 @@ export const ROUTES = {
 
   // Protected routes
   SETTINGS: '/settings',
+  FEEDBACK: '/feedback',
 
   // Dashboard routes
   DASHBOARD: {

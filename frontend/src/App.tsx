@@ -27,6 +27,7 @@ const ChangePassword = lazy(() => import("./pages/ChangePassword/ChangePassword"
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword/ForgotPassword"));
 const OAuthCallback = lazy(() => import("./pages/OAuthCallback/OAuthCallback"));
 const Settings = lazy(() => import("./pages/Settings/Settings"));
+const Feedback = lazy(() => import("./pages/Feedback/Feedback"));
 
 // Workspace layout (shared between Dashboard and APIs)
 const WorkspaceLayout = lazy(() => import("./layout/WorkspaceLayout/WorkspaceLayout").then(m => ({ default: m.default })));
@@ -136,6 +137,13 @@ const App: React.FC = () => {
                       <Route path={ROUTES.SETTINGS} element={
                         <ProtectedRoute blockSharedAccess>
                           <Settings />
+                        </ProtectedRoute>
+                      } />
+
+                      {/* Feedback */}
+                      <Route path={ROUTES.FEEDBACK} element={
+                        <ProtectedRoute>
+                          <Feedback />
                         </ProtectedRoute>
                       } />
 

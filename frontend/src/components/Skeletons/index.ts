@@ -9,3 +9,6 @@ export { default as BuildQuerySkeleton } from './BuildQuerySkeleton';
 export { default as OpenApiSkeleton } from './OpenApiSkeleton';
 export { default as QueryWizardSkeleton } from './QueryWizardSkeleton';
 export { default as WorkspaceLayoutSkeleton } from './WorkspaceLayoutSkeleton';
+export { FeedbackItemSkeleton } from './FeedbackItemSkeleton';
+export { MySubmissionsSkeleton } from './MySubmissionsSkeleton';
+export { AllFeedbackSkeleton } from './AllFeedbackSkeleton';

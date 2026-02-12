@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Menu, MenuItem, ListItemIcon, ListItemText, Divider, Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import SettingsIcon from '@mui/icons-material/Settings';
+import FeedbackIcon from '@mui/icons-material/Feedback';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { clearAuthToken, getUserFromToken, isSharedAccessSession } from '../../api/httpClient';
 import { queryClient } from '../../App';
@@ -168,6 +169,12 @@ export default function UserAvatar({ variant = 'dark', initial = 'D' }: UserAvat
             <ListItemText>Settings</ListItemText>
           </MenuItem>
         )}
+        <MenuItem onClick={() => { handleMenuClose(); navigate(ROUTES.FEEDBACK); }}>
+          <ListItemIcon>
+            <FeedbackIcon fontSize="small" sx={{ color: iconColor }} />
+          </ListItemIcon>
+          <ListItemText>Feedback</ListItemText>
+        </MenuItem>
         <Divider sx={{ borderColor: dividerColor }} />
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>
