@@ -37,7 +37,6 @@ export function useAllFeedback(params: FeedbackFilterParams = {}, enabled = true
   return useQuery<PaginatedFeedbackResponse>({
     queryKey: [...ALL_FEEDBACK_QUERY_KEY, params],
     queryFn: () => FeedbackService.getAllFeedback(params),
-    staleTime: 30000,
     enabled,
   });
 }
@@ -49,7 +48,6 @@ export function useFeedbackStats(enabled = true) {
   return useQuery({
     queryKey: FEEDBACK_STATS_QUERY_KEY,
     queryFn: () => FeedbackService.getStats(),
-    staleTime: 30000,
     enabled,
   });
 }
