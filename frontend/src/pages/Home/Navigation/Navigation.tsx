@@ -65,47 +65,47 @@ export default function Navigation() {
                   variant="contained"
                   component={RouterLink}
                   to={ROUTES.DASHBOARD.ROOT}
-                  sx={{{
+                  sx={{
                     background: "linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)",
-                "&:hover": {
-                  background:
-                "linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)",
+                    "&:hover": {
+                      background:
+                        "linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)",
                     },
                   }}
                 >
-                Dashboard
-              </Button>
-            <UserAvatar variant={darkMode ? 'dark' : 'light'} />
-          </>
-          ) : (
-          <>
-            <Button
-              variant="text"
-              component={RouterLink}
-              to={ROUTES.SIGN_IN}
-              color="inherit"
-              sx={{ fontWeight: 500 }}
-            >
-              Sign In
-            </Button>
-            <Button
-              variant="contained"
-              component={RouterLink}
-              to={ROUTES.SIGN_UP}
-              sx={{{
+                  Dashboard
+                </Button>
+                <UserAvatar variant={darkMode ? 'dark' : 'light'} />
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="text"
+                  component={RouterLink}
+                  to={ROUTES.SIGN_IN}
+                  color="inherit"
+                  sx={{ fontWeight: 500 }}
+                >
+                  Sign In
+                </Button>
+                <Button
+                  variant="contained"
+                  component={RouterLink}
+                  to={ROUTES.SIGN_UP}
+                  sx={{
                     background: "linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)",
-            "&:hover": {
-              background:
-            "linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)",
+                    "&:hover": {
+                      background:
+                        "linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)",
                     },
                   }}
                 >
-            Sign Up
-          </Button>
-        </>
+                  Sign Up
+                </Button>
+              </>
             )}
-      </RightBox>
-    </StyledToolbar>
+          </RightBox>
+        </StyledToolbar>
       </Container >
     </StyledAppBar >
   );

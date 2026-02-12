@@ -1,6 +1,6 @@
 import { styled } from '@mui/material/styles';
 import { Box } from '@mui/material';
-import { getDashboardColors } from '../../../styles/theme';
+import { getWorkspaceColors } from '../../../styles/theme';
 
 export const UsageContainer = styled(Box)({
   display: 'flex',
@@ -11,7 +11,7 @@ export const UsageContainer = styled(Box)({
 export const PlanBadge = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'planType',
 })<{ planType?: 'free' | 'pro' | 'enterprise' }>(({ theme, planType = 'free' }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   
   const getPlanColors = () => {
     switch (planType) {
@@ -66,7 +66,7 @@ export const PlanInfo = styled(Box)({
 });
 
 export const PlanName = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1rem',
     fontWeight: 600,
@@ -75,7 +75,7 @@ export const PlanName = styled('span')(({ theme }) => {
 });
 
 export const UpgradeButton = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'inline-flex',
     alignItems: 'center',
@@ -95,7 +95,7 @@ export const UpgradeButton = styled(Box)(({ theme }) => {
 });
 
 export const UsageStats = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -113,7 +113,7 @@ export const StatItem = styled(Box)({
 });
 
 export const StatLabel = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     fontWeight: 500,
@@ -124,7 +124,7 @@ export const StatLabel = styled('span')(({ theme }) => {
 });
 
 export const StatValue = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1.25rem',
     fontWeight: 600,
@@ -133,7 +133,7 @@ export const StatValue = styled('span')(({ theme }) => {
 });
 
 export const StatSubtext = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textTertiary,
@@ -141,7 +141,7 @@ export const StatSubtext = styled('span')(({ theme }) => {
 });
 
 export const ProgressBar = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     height: '6px',
     backgroundColor: colors.backgroundHover,
@@ -154,7 +154,7 @@ export const ProgressBar = styled(Box)(({ theme }) => {
 export const ProgressFill = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'percentage' && prop !== 'status',
 })<{ percentage: number; status?: 'normal' | 'warning' | 'danger' }>(({ theme, percentage, status = 'normal' }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   
   const getColor = () => {
     switch (status) {

@@ -1,6 +1,6 @@
 import { styled } from '@mui/material/styles';
 import { Box, Tabs, Tab, Chip } from '@mui/material';
-import { getDashboardColors } from '../../styles/theme';
+import { getWorkspaceColors } from '../../styles/theme';
 
 export const ApisPageWrapper = styled(Box)({
   display: 'flex',
@@ -10,7 +10,7 @@ export const ApisPageWrapper = styled(Box)({
 });
 
 export const ApisHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -22,7 +22,7 @@ export const ApisHeader = styled(Box)(({ theme }) => {
 });
 
 export const ApisTitle = styled('h2')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1.25rem',
     fontWeight: 600,
@@ -32,7 +32,7 @@ export const ApisTitle = styled('h2')(({ theme }) => {
 });
 
 export const ApisTabs = styled(Tabs)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     minHeight: 'auto',
     '& .MuiTabs-indicator': {
@@ -43,7 +43,7 @@ export const ApisTabs = styled(Tabs)(({ theme }) => {
 });
 
 export const ApisTab = styled(Tab)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     minHeight: 'auto',
     padding: '0.5rem 1rem',
@@ -72,7 +72,7 @@ export const ApisContent = styled(Box)({
 
 
 export const EndpointGroup = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: colors.backgroundSecondary,
     borderRadius: '0.5rem',
@@ -82,7 +82,7 @@ export const EndpointGroup = styled(Box)(({ theme }) => {
 });
 
 export const EndpointGroupHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -97,7 +97,7 @@ export const EndpointGroupHeader = styled(Box)(({ theme }) => {
 });
 
 export const EndpointGroupTitle = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 600,
@@ -108,7 +108,7 @@ export const EndpointGroupTitle = styled('span')(({ theme }) => {
 export const EndpointItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'selected',
 })<{ selected?: boolean }>(({ theme, selected }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -152,7 +152,7 @@ export const MethodBadge = styled(Chip, {
 });
 
 export const EndpointPath = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.8rem',
     fontFamily: 'monospace',
@@ -165,7 +165,7 @@ export const EndpointPath = styled('span')(({ theme }) => {
 });
 
 export const EndpointDescription = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textMuted,
@@ -173,7 +173,7 @@ export const EndpointDescription = styled('span')(({ theme }) => {
 });
 
 export const TryItPanel = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     flex: 1,
     display: 'flex',
@@ -186,7 +186,7 @@ export const TryItPanel = styled(Box)(({ theme }) => {
 });
 
 export const TryItHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -204,7 +204,7 @@ export const TryItTitle = styled(Box)({
 });
 
 export const TryItEndpoint = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1rem',
     fontWeight: 600,
@@ -220,7 +220,7 @@ export const TryItBody = styled(Box)({
 });
 
 export const TryItSection = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem',
     borderBottom: `1px solid ${colors.border}`,
@@ -231,7 +231,7 @@ export const TryItSection = styled(Box)(({ theme }) => {
 });
 
 export const SectionTitle = styled('h4')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.8rem',
     fontWeight: 600,
@@ -253,7 +253,7 @@ export const ParameterRow = styled(Box)({
 });
 
 export const ParameterLabel = styled('label')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.8rem',
     fontWeight: 500,
@@ -263,7 +263,7 @@ export const ParameterLabel = styled('label')(({ theme }) => {
 });
 
 export const ParameterInput = styled('input')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     flex: 1,
     padding: '0.5rem 0.75rem',
@@ -284,7 +284,7 @@ export const ParameterInput = styled('input')(({ theme }) => {
 });
 
 export const ParameterType = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.7rem',
     color: colors.textMuted,
@@ -294,7 +294,7 @@ export const ParameterType = styled('span')(({ theme }) => {
 });
 
 export const ExecuteButton = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -319,7 +319,7 @@ export const ExecuteButton = styled(Box)(({ theme }) => {
 });
 
 export const ResponseSection = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     flex: 1,
     display: 'flex',
@@ -330,7 +330,7 @@ export const ResponseSection = styled(Box)(({ theme }) => {
 });
 
 export const ResponseHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -352,7 +352,7 @@ export const ResponseStatus = styled(Box, {
 }));
 
 export const ResponseTime = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textMuted,
@@ -360,7 +360,7 @@ export const ResponseTime = styled('span')(({ theme }) => {
 });
 
 export const ResponseBody = styled('pre')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     flex: 1,
     margin: 0,
@@ -376,7 +376,7 @@ export const ResponseBody = styled('pre')(({ theme }) => {
 });
 
 export const EmptyTryIt = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     flex: 1,
     display: 'flex',
@@ -389,7 +389,7 @@ export const EmptyTryIt = styled(Box)(({ theme }) => {
 });
 
 export const NoDatabaseMessage = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     flexDirection: 'column',
@@ -404,7 +404,7 @@ export const NoDatabaseMessage = styled(Box)(({ theme }) => {
 });
 
 export const RequestBodyEditor = styled('textarea')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '100%',
     minHeight: '150px',
@@ -427,7 +427,7 @@ export const RequestBodyEditor = styled('textarea')(({ theme }) => {
 });
 
 export const FilterChip = styled(Chip)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     height: '28px',
     fontSize: '0.75rem',
@@ -451,7 +451,7 @@ export const FiltersContainer = styled(Box)({
 });
 
 export const AddFilterButton = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'inline-flex',
     alignItems: 'center',
@@ -468,7 +468,7 @@ export const AddFilterButton = styled(Box)(({ theme }) => {
 });
 
 export const SelectInput = styled('select')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.5rem 0.75rem',
     fontSize: '0.8rem',

@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Box } from '@mui/material';
-import { getDashboardColors } from '../../../styles/theme';
+import { getWorkspaceColors } from '../../../styles/theme';
 
 export const StyledDialog = styled(Dialog)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     '& .MuiDialog-paper': {
       backgroundColor: colors.backgroundSecondary,
@@ -15,7 +15,7 @@ export const StyledDialog = styled(Dialog)(({ theme }) => {
 });
 
 export const StyledDialogTitle = styled(DialogTitle)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -27,7 +27,7 @@ export const StyledDialogTitle = styled(DialogTitle)(({ theme }) => {
 });
 
 export const ModalTitle = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1.125rem',
     fontWeight: 600,
@@ -36,7 +36,7 @@ export const ModalTitle = styled('span')(({ theme }) => {
 });
 
 export const CloseButton = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -58,7 +58,7 @@ export const StyledDialogContent = styled(DialogContent)({
 });
 
 export const IconContainer = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: 64,
     height: 64,
@@ -76,7 +76,7 @@ export const IconContainer = styled(Box)(({ theme }) => {
 });
 
 export const Description = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     color: colors.textSecondary,
@@ -87,7 +87,7 @@ export const Description = styled('p')(({ theme }) => {
 });
 
 export const EmailDisplay = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     color: colors.text,
     fontWeight: 500,
@@ -95,7 +95,7 @@ export const EmailDisplay = styled('span')(({ theme }) => {
 });
 
 export const VerificationInput = styled(TextField)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     '& .MuiOutlinedInput-root': {
       backgroundColor: colors.backgroundTertiary,
@@ -124,7 +124,7 @@ export const VerificationInput = styled(TextField)(({ theme }) => {
 });
 
 export const HelpText = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textMuted,
@@ -139,7 +139,7 @@ export const StyledDialogActions = styled(DialogActions)({
 });
 
 export const CancelButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     color: colors.textSecondary,
     '&:hover': {
@@ -149,7 +149,7 @@ export const CancelButton = styled(Button)(({ theme }) => {
 });
 
 export const SubmitButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: colors.primary,
     color: '#fff',

@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Box, Button, TextField, Dialog } from '@mui/material';
-import { getDashboardColors } from '../../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../../styles/theme';
 
 export const StyledDialog = styled(Dialog)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     '& .MuiDialog-paper': {
       backgroundColor: colors.backgroundCard,
@@ -16,7 +16,7 @@ export const StyledDialog = styled(Dialog)(({ theme }) => {
 });
 
 export const DialogHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1.25rem 1.5rem',
     borderBottom: `1px solid ${colors.border}`,
@@ -24,7 +24,7 @@ export const DialogHeader = styled(Box)(({ theme }) => {
 });
 
 export const DialogTitle = styled('h2')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: 0,
     fontSize: '1.125rem',
@@ -34,7 +34,7 @@ export const DialogTitle = styled('h2')(({ theme }) => {
 });
 
 export const DialogSubtitle = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: '0.25rem 0 0 0',
     fontSize: '0.8125rem',
@@ -52,7 +52,7 @@ export const DialogContent = styled(Box)(() => {
 });
 
 export const DialogFooter = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem 1.5rem',
     borderTop: `1px solid ${colors.border}`,
@@ -70,7 +70,7 @@ export const FormGroup = styled(Box)({
 });
 
 export const FormLabel = styled('label')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'block',
     fontSize: '0.8125rem',
@@ -81,7 +81,7 @@ export const FormLabel = styled('label')(({ theme }) => {
 });
 
 export const StyledTextField = styled(TextField)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     '& .MuiOutlinedInput-root': {
       backgroundColor: colors.backgroundTertiary,
@@ -108,7 +108,7 @@ export const StyledTextField = styled(TextField)(({ theme }) => {
 });
 
 export const CancelButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: 'transparent',
     color: colors.textSecondary,
@@ -126,7 +126,7 @@ export const CancelButton = styled(Button)(({ theme }) => {
 });
 
 export const DeleteButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: colors.error,
     color: 'white',
@@ -143,7 +143,7 @@ export const DeleteButton = styled(Button)(({ theme }) => {
 });
 
 export const WarningBox = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem',
     backgroundColor: colors.warningLight,

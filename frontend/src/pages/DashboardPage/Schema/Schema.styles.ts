@@ -1,8 +1,7 @@
 import { styled } from "@mui/material/styles";
 import { Box, Tabs, Tab, Button } from "@mui/material";
-import { getDashboardColors } from "../../../styles/theme";
+import { getWorkspaceColors } from "../../../styles/theme";
 
-// Shared styled components (copied from DashboardPage.styles.ts)
 export const ContentHeader = styled(Box)({
   display: 'flex',
   alignItems: 'center',
@@ -11,7 +10,7 @@ export const ContentHeader = styled(Box)({
 });
 
 export const ContentTitle = styled('h1')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1.5rem',
     fontWeight: 600,
@@ -21,7 +20,7 @@ export const ContentTitle = styled('h1')(({ theme }) => {
 });
 
 export const StyledTabs = styled(Tabs)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     minHeight: 'auto',
     '& .MuiTabs-indicator': {
@@ -32,7 +31,7 @@ export const StyledTabs = styled(Tabs)(({ theme }) => {
 });
 
 export const StyledTab = styled(Tab)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     minHeight: 'auto',
     padding: '0.5rem 1rem',
@@ -55,7 +54,7 @@ export const QuickActionsBar = styled(Box)({
 export const QuickActionButton = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'variant',
 })<{ variant?: 'primary' | 'secondary' }>(({ theme, variant = 'secondary' }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -93,7 +92,7 @@ export const TabPanel = styled(Box)({
 });
 
 export const TabsContainer = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -105,7 +104,7 @@ export const TabsContainer = styled(Box)(({ theme }) => {
 
 // Schema-specific styled components
 export const SchemaWrapper = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     display: "flex",
     flexDirection: "column",
@@ -121,7 +120,7 @@ export const SchemaContent = styled(Box)({
 });
 
 export const SchemaExplorerPane = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     width: "320px",
     flexShrink: 0,
@@ -139,7 +138,7 @@ export const SchemaDetailsPane = styled(Box)({
 });
 
 export const SchemaTabs = styled(Tabs)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     minHeight: "42px",
     "& .MuiTabs-indicator": {
@@ -149,7 +148,7 @@ export const SchemaTabs = styled(Tabs)(({ theme }) => {
 });
 
 export const SchemaTab = styled(Tab)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     textTransform: "none",
     minHeight: "42px",
@@ -162,7 +161,7 @@ export const SchemaTab = styled(Tab)(({ theme }) => {
 });
 
 export const SchemaActionButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     textTransform: "none",
     fontSize: "0.875rem",
@@ -177,7 +176,7 @@ export const SchemaActionButton = styled(Button)(({ theme }) => {
 });
 
 export const EmptyStateContainer = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     display: "flex",
     flexDirection: "column",

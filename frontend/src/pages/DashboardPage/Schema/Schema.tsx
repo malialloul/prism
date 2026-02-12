@@ -1,30 +1,24 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Box, Backdrop, CircularProgress, Typography } from "@mui/material";
-import { useWorkspace } from "../WorkspaceLayout";
-import { ROUTES } from "../../../constants";
+import { Backdrop, Box, CircularProgress, Typography } from "@mui/material";
+import { useWorkspace } from "../../../layout";
 import {
   ContentHeader,
   ContentTitle,
   QuickActionsBar,
   QuickActionButton,
-  StyledTabs,
-  StyledTab,
-  TabPanel,
-  TabsContainer,
 } from "./Schema.styles";
 import { SchemaExplorer, ObjectDetailsPanel } from "./SchemaExplorer";
 import { CreateTableDialog, AddColumnDialog, DeleteTableDialog, TableEditor } from "./TableEditor";
 
 // Icons
 import TableViewIcon from "@mui/icons-material/TableView";
-import { SchemaSkeleton } from "../../../components/Skeletons";
+import SchemaSkeleton from "../../../components/Skeletons/SchemaSkeleton";
 
 type SelectedObjectType = 'table';
 
 export default function Schema() {
-  const navigate = useNavigate();
-  const workspace = useWorkspace();
+  const workspace = useWorkspace()!;
+  const { connectedDatabase, isLoading, setSchemaVersion } = workspace;
 
   // Schema Explorer state
   const [selectedObjectName, setSelectedObjectName] = useState<string | null>(null);
@@ -40,31 +34,13 @@ export default function Schema() {
   // Import state (lifted from SchemaExplorer for full-page loading)
   const [isImporting, setIsImporting] = useState(false);
 
-  const connectedDatabase = workspace?.connectedDatabase;
-  const isSwitchingDatabase = workspace?.isSwitchingDatabase;
-  const setSchemaVersion = workspace?.setSchemaVersion;
-
-  // Show loading skeleton while context is loading or switching databases
-  if (!workspace || isSwitchingDatabase || !connectedDatabase) {
-    return (
-      <>
-        <ContentHeader>
-          <ContentTitle>Schema Explorer</ContentTitle>
-        </ContentHeader>
-        <TabsContainer>
-          <StyledTabs value={1}>
-            <StyledTab label="Overview" disabled />
-            <StyledTab label="Schema" />
-            <StyledTab label="Query" disabled />
-            <StyledTab label="ER Diagram" disabled />
-          </StyledTabs>
-        </TabsContainer>
-        <TabPanel>
-          <SchemaSkeleton />
-        </TabPanel>
-      </>
-    );
+  // Show skeleton while loading
+  if (isLoading) {
+    return <SchemaSkeleton />;
   }
+
+  // TypeScript safety - WorkspaceLayout handles redirect if no connected database
+  if (!connectedDatabase) return null;
 
   const handleSelectObject = (name: string, type: SelectedObjectType) => {
     setSelectedObjectName(name);
@@ -148,20 +124,7 @@ export default function Schema() {
         </QuickActionsBar>
       </ContentHeader>
 
-      <TabsContainer>
-        <StyledTabs value={1} onChange={(_e, newValue) => {
-          if (newValue === 0) navigate(ROUTES.DASHBOARD.OVERVIEW);
-          if (newValue === 2) navigate(ROUTES.DASHBOARD.QUERY);
-          if (newValue === 3) navigate(ROUTES.DASHBOARD.ER_DIAGRAM);
-        }}>
-          <StyledTab label="Overview" />
-          <StyledTab label="Schema" />
-          <StyledTab label="Query" />
-          <StyledTab label="ER Diagram" />
-        </StyledTabs>
-      </TabsContainer>
-
-      <TabPanel sx={{ display: 'flex', gap: '1.5rem', flexDirection: 'row', flex: 1 }}>
+      <Box sx={{ display: 'flex', gap: '1.5rem', flexDirection: 'row', flex: 1 }}>
         <SchemaExplorer
           databaseId={connectedDatabase.id}
           onSelectObject={handleSelectObject}
@@ -182,7 +145,7 @@ export default function Schema() {
             onNavigateToTable={(tableName) => handleSelectObject(tableName, 'table')}
           />
         )}
-      </TabPanel>
+      </Box>
 
       {/* Table Management Dialogs */}
       <CreateTableDialog

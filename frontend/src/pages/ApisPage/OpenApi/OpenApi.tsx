@@ -1,25 +1,16 @@
 import { Box } from "@mui/material";
 import { ApisContent } from "./OpenApi.styles";
 import { OpenApiPanel } from "./OpenApiPanel";
-import { useWorkspace } from "../../DashboardPage/WorkspaceLayout";
-import { useApisContext } from "../ApisLayout";
-import { usePermissions, AccessRestricted, OpenApiSkeleton } from "../../../components";
+import { useWorkspace } from "../../../layout";
+import { useApisContext } from "../../../layout";
+import { usePermissions, AccessRestricted } from "../../../components";
 
 export default function OpenApi() {
-  const workspace = useWorkspace();
+  const workspace = useWorkspace()!;
   const { openApiRefreshKey } = useApisContext();
   const { canTryOpenApi } = usePermissions();
-
-  // Show loading skeleton while context is loading or switching databases
-  if (!workspace || workspace.isSwitchingDatabase) {
-    return (
-      <ApisContent>
-        <OpenApiSkeleton />
-      </ApisContent>
-    );
-  }
-
   const { connectedDatabase } = workspace;
+
   if (!connectedDatabase) return null;
 
   // Show permission warning if not allowed

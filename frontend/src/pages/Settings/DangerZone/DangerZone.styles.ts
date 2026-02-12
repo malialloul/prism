@@ -1,6 +1,6 @@
 import { styled } from '@mui/material/styles';
 import { Box, Button } from '@mui/material';
-import { getDashboardColors } from '../../../styles/theme';
+import { getWorkspaceColors } from '../../../styles/theme';
 
 export const DangerContainer = styled(Box)({
   display: 'flex',
@@ -9,7 +9,7 @@ export const DangerContainer = styled(Box)({
 });
 
 export const DangerItem = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -28,7 +28,7 @@ export const DangerInfo = styled(Box)({
 });
 
 export const DangerTitle = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 500,
@@ -37,7 +37,7 @@ export const DangerTitle = styled('span')(({ theme }) => {
 });
 
 export const DangerDescription = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textTertiary,
@@ -47,7 +47,7 @@ export const DangerDescription = styled('span')(({ theme }) => {
 export const DangerButton = styled(Button, {
   shouldForwardProp: (prop) => prop !== 'severity',
 })<{ severity?: 'warning' | 'danger' }>(({ theme, severity = 'warning' }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   
   const getStyles = () => {
     if (severity === 'danger') {
@@ -88,7 +88,7 @@ export const DangerButton = styled(Button, {
 });
 
 export const WarningBox = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'flex-start',
@@ -101,7 +101,7 @@ export const WarningBox = styled(Box)(({ theme }) => {
 });
 
 export const WarningIcon = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     color: colors.error,
     flexShrink: 0,
@@ -109,7 +109,7 @@ export const WarningIcon = styled(Box)(({ theme }) => {
 });
 
 export const WarningText = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.8125rem',
     color: colors.error,

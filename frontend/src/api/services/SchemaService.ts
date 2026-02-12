@@ -34,11 +34,11 @@ export class SchemaService {
 
   /**
    * GET /databases/{databaseId}/schema/full
-   * Get complete schema with all tables and their columns
+   * Get complete schema with all tables and their full details (columns, constraints, indexes)
    */
   public static getFullSchema(
     databaseId: number
-  ): CancelablePromise<{ tables: Array<{ name: string; columns: Array<{ name: string; type: string }> }>; count: number }> {
+  ): CancelablePromise<{ tables: TableDetailsDto[]; count: number }> {
     return __request(OpenAPI, {
       method: 'GET',
       url: `/databases/${databaseId}/schema/full`,

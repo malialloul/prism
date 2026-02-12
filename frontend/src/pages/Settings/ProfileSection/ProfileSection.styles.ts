@@ -1,6 +1,6 @@
 import { styled } from '@mui/material/styles';
 import { Box } from '@mui/material';
-import { getDashboardColors } from '../../../styles/theme';
+import { getWorkspaceColors } from '../../../styles/theme';
 
 export const ProfileContainer = styled(Box)({
   display: 'flex',
@@ -9,7 +9,7 @@ export const ProfileContainer = styled(Box)({
 });
 
 export const AvatarWrapper = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '80px',
     height: '80px',
@@ -30,7 +30,7 @@ export const ProfileInfo = styled(Box)({
 });
 
 export const UserName = styled('h3')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1.125rem',
     fontWeight: 600,
@@ -40,7 +40,7 @@ export const UserName = styled('h3')(({ theme }) => {
 });
 
 export const UserEmail = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     color: colors.textSecondary,
@@ -49,7 +49,7 @@ export const UserEmail = styled('p')(({ theme }) => {
 });
 
 export const MemberSince = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textTertiary,
@@ -58,7 +58,7 @@ export const MemberSince = styled('p')(({ theme }) => {
 });
 
 export const EditButton = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'inline-flex',
     alignItems: 'center',

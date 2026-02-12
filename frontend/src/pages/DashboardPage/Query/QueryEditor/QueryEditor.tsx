@@ -19,7 +19,7 @@ import { useExecuteQuery, useSavedQueries, useSaveQuery, useDeleteSavedQuery } f
 import type { QueryResultDto, SavedQueryDto } from '../../../../api/models/SchemaDto';
 import { toastService } from '../../../../services';
 import { Pagination } from '../../../../components';
-import { useWorkspace } from '../../WorkspaceLayout';
+import { useWorkspace } from '../../../../layout';
 import {
   EditorWrapper,
   EditorHeader,

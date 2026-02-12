@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Box, Button } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 export const TwoFactorSectionContainer = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -22,7 +22,7 @@ export const TwoFactorInfo = styled(Box)({
 });
 
 export const TwoFactorIcon = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '40px',
     height: '40px',
@@ -42,7 +42,7 @@ export const TwoFactorText = styled(Box)({
 });
 
 export const TwoFactorTitle = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 500,
@@ -51,7 +51,7 @@ export const TwoFactorTitle = styled('span')(({ theme }) => {
 });
 
 export const TwoFactorDescription = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textTertiary,
@@ -59,7 +59,7 @@ export const TwoFactorDescription = styled('span')(({ theme }) => {
 });
 
 export const EnableButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'inline-flex',
     alignItems: 'center',

@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Box, Dialog, IconButton, Tabs as MuiTabs, Tab as MuiTab } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 export const TableEditorDialog = styled(Dialog)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     '& .MuiDialog-paper': {
       backgroundColor: colors.backgroundCard,
@@ -23,7 +23,7 @@ export const TableEditorDialog = styled(Dialog)(({ theme }) => {
 });
 
 export const DialogHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1.5rem 2rem',
     background: theme.palette.mode === 'dark'
@@ -43,7 +43,7 @@ export const HeaderContent = styled(Box)({
 });
 
 export const TableIcon = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '48px',
     height: '48px',
@@ -67,7 +67,7 @@ export const HeaderInfo = styled(Box)({
 });
 
 export const DialogTitle = styled('h2')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: 0,
     fontSize: '1.375rem',
@@ -78,7 +78,7 @@ export const DialogTitle = styled('h2')(({ theme }) => {
 });
 
 export const DialogSubtitle = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -89,7 +89,7 @@ export const DialogSubtitle = styled(Box)(({ theme }) => {
 });
 
 export const StatBadge = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'inline-flex',
     alignItems: 'center',
@@ -105,7 +105,7 @@ export const StatBadge = styled(Box)(({ theme }) => {
 });
 
 export const WarningBadge = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'inline-flex',
     alignItems: 'center',
@@ -121,7 +121,7 @@ export const WarningBadge = styled(Box)(({ theme }) => {
 });
 
 export const CloseButton = styled(IconButton)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     color: colors.textSecondary,
     backgroundColor: colors.backgroundTertiary,
@@ -134,7 +134,7 @@ export const CloseButton = styled(IconButton)(({ theme }) => {
 });
 
 export const DialogFooter = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem 2rem',
     borderTop: `1px solid ${colors.border}`,
@@ -147,7 +147,7 @@ export const DialogFooter = styled(Box)(({ theme }) => {
 });
 
 export const StyledTabs = styled(MuiTabs)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0 2rem',
     backgroundColor: colors.backgroundSecondary,
@@ -162,7 +162,7 @@ export const StyledTabs = styled(MuiTabs)(({ theme }) => {
 });
 
 export const StyledTab = styled(MuiTab)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     minHeight: '56px',
     textTransform: 'none',

@@ -1,6 +1,6 @@
 import { styled } from '@mui/material/styles';
 import { Box } from '@mui/material';
-import { getDashboardColors } from '../../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../../styles/theme';
 
 export const ColumnsTabContent = styled(Box)(() => {
   return {
@@ -15,7 +15,7 @@ export const ColumnsTabContent = styled(Box)(() => {
 });
 
 export const ColumnsTable = styled('table')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '100%',
     borderCollapse: 'collapse',

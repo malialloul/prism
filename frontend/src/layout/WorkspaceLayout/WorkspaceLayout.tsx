@@ -1,0 +1,409 @@
+import { useState, useEffect, useRef, createContext, useContext } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { ROUTES } from "../../constants";
+import {
+    WorkspaceWrapper,
+    WorkspaceHeader,
+    WorkspaceBody,
+    WorkspaceContent,
+    SwitchingOverlay,
+    SwitchingContent,
+    SwitchingTitle,
+    SwitchingSubtitle,
+} from "./WorkspaceLayout.styles";
+import Navbar from "./components/Navbar/Navbar";
+import Sidebar from "./components/Sidebar/Sidebar";
+import DatabaseActionsPanel from "./components/DatabaseActionsPanel/DatabaseActionsPanel";
+import DeleteDatabaseDialog from "./components/DeleteDatabaseDialog/DeleteDatabaseDialog";
+import SwitchDatabaseDialog from "./components/SwitchDatabaseDialog/SwitchDatabaseDialog";
+import EmptyState from "./components/EmptyState/EmptyState";
+import { WorkspaceLayoutSkeleton } from "../../components/Skeletons";
+import { AccessRestricted, usePermissions } from "../../components";
+import { CircularProgress, Dialog, DialogContent, DialogActions, Button } from "@mui/material";
+import { useDatabases, useRefreshDatabase, useDisconnectDatabase, useReconnectDatabase } from "../../api/entities/databases";
+import { DatabaseDto } from "../../api/models/DatabaseDto";
+
+// Context for sharing workspace state (database connections, etc.) with child routes
+export interface WorkspaceContextType {
+    databases: DatabaseDto[];
+    selectedDatabaseId: number | null;
+    setSelectedDatabaseId: (id: number | null) => void;
+    connectedDatabase: DatabaseDto | null;
+    selectedDatabase: DatabaseDto | null;
+    isLoading: boolean;
+    isSwitchingDatabase: boolean;
+    handleRefresh: (id?: number) => void;
+    handleDisconnect: (id: number) => void;
+    handleCreateDatabase: (engine?: DatabaseDto['engine']) => void;
+    handleConnectDatabase: () => void;
+    schemaVersion: number;
+    setSchemaVersion: React.Dispatch<React.SetStateAction<number>>;
+    initialQuery: string;
+    setInitialQuery: React.Dispatch<React.SetStateAction<string>>;
+}
+
+const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
+
+export const useWorkspace = (): WorkspaceContextType | null => {
+    const context = useContext(WorkspaceContext);
+    return context;
+};
+
+export default function WorkspaceLayout() {
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    // Determine active main tab from URL
+    const getMainTabFromPath = () => {
+        if (location.pathname.startsWith(ROUTES.APIS.ROOT)) return 1;
+        return 0; // Dashboard (overview, schema, query)
+    };
+
+    const mainTab = getMainTabFromPath();
+
+    // Fetch databases from API
+    const { data: databasesData, isLoading, refetch: refetchDatabases } = useDatabases();
+
+    // Database mutations
+    const { mutate: refreshDatabase } = useRefreshDatabase();
+    const { mutate: disconnectDatabase } = useDisconnectDatabase();
+    const { mutate: reconnectDatabase } = useReconnectDatabase();
+
+    // Get databases from API
+    const databases: DatabaseDto[] = databasesData?.databases || [];
+
+    const [selectedDatabaseId, setSelectedDatabaseId] = useState<number | null>(null);
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+    const [isConnectDialogOpen, setIsConnectDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [databaseToDelete, setDatabaseToDelete] = useState<DatabaseDto | null>(null);
+    const [isSwitchDialogOpen, setIsSwitchDialogOpen] = useState(false);
+    const [databaseToSwitchTo, setDatabaseToSwitchTo] = useState<DatabaseDto | null>(null);
+    const [isSwitchingDatabase, setIsSwitchingDatabase] = useState(false);
+    const [pendingSwitchDatabaseId, setPendingSwitchDatabaseId] = useState<number | null>(null);
+    const [initialCreateEngine, setInitialCreateEngine] = useState<DatabaseDto['engine'] | undefined>(undefined);
+    const [isAccessRestrictedDialogOpen, setIsAccessRestrictedDialogOpen] = useState(false);
+
+    // Permission check
+    const { canConnectDatabase } = usePermissions();
+
+    // Schema version and initial query for child routes
+    const [schemaVersion, setSchemaVersion] = useState(0);
+    const [initialQuery, setInitialQuery] = useState<string>('');
+
+    // Track if we've already auto-refreshed on mount
+    const hasAutoRefreshed = useRef(false);
+
+
+    // Get the currently connected database
+    const connectedDatabase = databases.find((db) => db.status === 'connected') || null;
+
+    // Redirect to overview if trying to access protected routes without a connected database
+    useEffect(() => {
+        if (!isLoading && !connectedDatabase) {
+            const protectedPaths = [ROUTES.APIS.ROOT, '/schema', '/query', '/er-diagram'];
+            const isProtectedRoute = protectedPaths.some(path => location.pathname.includes(path));
+            if (isProtectedRoute) {
+                navigate(ROUTES.DASHBOARD.OVERVIEW, { replace: true });
+            }
+        }
+    }, [isLoading, connectedDatabase, location.pathname, navigate]);
+
+    // Watch for when the pending database becomes connected after switching
+    useEffect(() => {
+        if (pendingSwitchDatabaseId && isSwitchingDatabase) {
+            const targetDb = databases.find((db) => db.id === pendingSwitchDatabaseId);
+            if (targetDb && targetDb.status === 'connected') {
+                setIsSwitchingDatabase(false);
+                setPendingSwitchDatabaseId(null);
+            }
+        }
+    }, [databases, pendingSwitchDatabaseId, isSwitchingDatabase]);
+
+    // Auto-refresh connected databases on mount
+    useEffect(() => {
+        if (!hasAutoRefreshed.current && databases.length > 0) {
+            hasAutoRefreshed.current = true;
+            databases
+                .filter((db) => db.status === 'connected')
+                .forEach((db) => refreshDatabase(db.id));
+        }
+    }, [databases, refreshDatabase]);
+
+    // Auto-select last connected database on initial load
+    useEffect(() => {
+        if (databases.length > 0 && selectedDatabaseId === null) {
+            const lastConnected = databases.reduce((latest, db) => {
+                if (!latest) return db;
+                return db.lastConnectedAt > latest.lastConnectedAt ? db : latest;
+            }, databases[0]);
+            setSelectedDatabaseId(lastConnected.id);
+        }
+    }, [databases, selectedDatabaseId]);
+
+    const selectedDatabase = databases.find((db) => db.id === selectedDatabaseId) || null;
+
+    const handleMainTabChange = (tab: number) => {
+        if (tab === 0) {
+            navigate(ROUTES.DASHBOARD.OVERVIEW);
+        } else if (tab === 1) {
+            navigate(ROUTES.APIS.BUILD);
+        }
+    };
+
+    const handleRefresh = (id?: number) => {
+        if (id) {
+            refreshDatabase(id);
+        } else {
+            refetchDatabases();
+            databases
+                .filter((db) => db.status === 'connected')
+                .forEach((db) => refreshDatabase(db.id));
+        }
+    };
+
+    const handleDisconnect = (id: number) => {
+        disconnectDatabase(id);
+    };
+
+    const handleSelectDatabase = (id: number) => {
+        const targetDb = databases.find((db) => db.id === id);
+        if (!targetDb) return;
+
+        if (targetDb.status !== 'connected') {
+            // Check permission before attempting to connect
+            if (!canConnectDatabase) {
+                setIsAccessRestrictedDialogOpen(true);
+                return;
+            }
+            if (connectedDatabase && connectedDatabase.id !== id) {
+                setDatabaseToSwitchTo(targetDb);
+                setIsSwitchDialogOpen(true);
+            } else {
+                setSelectedDatabaseId(id);
+                reconnectDatabase(id);
+            }
+        } else {
+            setSelectedDatabaseId(id);
+        }
+    };
+
+    const handleDeleteDatabase = (id: number) => {
+        const db = databases.find((d) => d.id === id);
+        if (db) {
+            setDatabaseToDelete(db);
+            setIsDeleteDialogOpen(true);
+        }
+    };
+
+    const handleDatabaseDeleted = () => {
+        setIsDeleteDialogOpen(false);
+        setDatabaseToDelete(null);
+        if (selectedDatabaseId === databaseToDelete?.id) {
+            setSelectedDatabaseId(null);
+        }
+        refetchDatabases();
+    };
+
+    const handleCreateDatabase = (engine?: DatabaseDto['engine']) => {
+        setInitialCreateEngine(engine);
+        setIsCreateDialogOpen(true);
+    };
+
+    const handleConnectDatabase = () => {
+        setIsConnectDialogOpen(true);
+    };
+
+    const handleDatabaseConnected = async (databaseId?: number) => {
+        // Refetch databases and wait for it to complete
+        await refetchDatabases();
+        // If a database ID is provided, select it
+        if (databaseId) {
+            setSelectedDatabaseId(databaseId);
+        }
+    };
+
+    const handleSwitchingStart = () => {
+        setIsSwitchingDatabase(true);
+    };
+
+    const handleSwitched = () => {
+        if (databaseToSwitchTo) {
+            setSelectedDatabaseId(databaseToSwitchTo.id);
+            // Track which database we're waiting for to become connected
+            setPendingSwitchDatabaseId(databaseToSwitchTo.id);
+        }
+        setIsSwitchDialogOpen(false);
+        setDatabaseToSwitchTo(null);
+        // Keep isSwitchingDatabase true - it will be set to false by the useEffect
+        // when the target database becomes connected
+        refetchDatabases();
+    };
+
+    const handleSwitchCancelled = () => {
+        setIsSwitchDialogOpen(false);
+        setDatabaseToSwitchTo(null);
+        setIsSwitchingDatabase(false);
+        setPendingSwitchDatabaseId(null);
+    };
+
+    const hasNoDatabases = !isLoading && databases.length === 0;
+
+    const contextValue: WorkspaceContextType = {
+        databases,
+        selectedDatabaseId,
+        setSelectedDatabaseId,
+        connectedDatabase,
+        selectedDatabase,
+        isLoading,
+        isSwitchingDatabase,
+        handleRefresh,
+        handleDisconnect,
+        handleCreateDatabase,
+        handleConnectDatabase,
+        schemaVersion,
+        setSchemaVersion,
+        initialQuery,
+        setInitialQuery,
+    };
+
+    // Show empty state when no databases exist
+    if (hasNoDatabases) {
+        return (
+            <WorkspaceContext.Provider value={contextValue}>
+                <WorkspaceWrapper>
+                    <WorkspaceHeader>
+                        <Navbar
+                            onRefresh={() => handleRefresh()}
+                            activeMainTab={mainTab}
+                            onMainTabChange={handleMainTabChange}
+                            hasConnectedDatabase={!!connectedDatabase}
+                        />
+                    </WorkspaceHeader>
+                    <WorkspaceBody>
+                        <Sidebar
+                            databases={databases}
+                            selectedId={selectedDatabaseId}
+                            onSelect={handleSelectDatabase}
+                            onDisconnect={handleDisconnect}
+                            onDelete={handleDeleteDatabase}
+                            onAddDatabase={handleCreateDatabase}
+                        />
+                        <WorkspaceContent>
+                            {mainTab === 0 ? (
+                                <EmptyState
+                                    onCreatePostgres={() => handleCreateDatabase("postgres")}
+                                    onCreateMySQL={() => handleCreateDatabase("mysql")}
+                                    onConnect={handleConnectDatabase}
+                                />
+                            ) : (
+                                <Outlet />
+                            )}
+                        </WorkspaceContent>
+                    </WorkspaceBody>
+                    <DatabaseActionsPanel
+                        isCreateDialogOpen={isCreateDialogOpen}
+                        isConnectDialogOpen={isConnectDialogOpen}
+                        initialCreateEngine={initialCreateEngine}
+                        onOpenCreateDialog={() => setIsCreateDialogOpen(true)}
+                        onCloseCreateDialog={() => {
+                            setIsCreateDialogOpen(false);
+                            setInitialCreateEngine(undefined);
+                        }}
+                        onOpenConnectDialog={() => setIsConnectDialogOpen(true)}
+                        onCloseConnectDialog={() => setIsConnectDialogOpen(false)}
+                        onDatabaseConnected={handleDatabaseConnected}
+                    />
+                </WorkspaceWrapper>
+            </WorkspaceContext.Provider>
+        );
+    }
+
+    return (
+        <WorkspaceContext.Provider value={contextValue}>
+            <WorkspaceWrapper>
+                <WorkspaceHeader>
+                    <Navbar
+                        onRefresh={() => handleRefresh()}
+                        activeMainTab={mainTab}
+                        onMainTabChange={handleMainTabChange}
+                        hasConnectedDatabase={!!connectedDatabase}
+                    />
+                </WorkspaceHeader>
+                <WorkspaceBody>
+                    <Sidebar
+                        databases={databases}
+                        selectedId={selectedDatabaseId}
+                        onSelect={handleSelectDatabase}
+                        onDisconnect={handleDisconnect}
+                        onDelete={handleDeleteDatabase}
+                        onAddDatabase={handleCreateDatabase}
+                    />
+                    <WorkspaceContent>
+                        <Outlet />
+                    </WorkspaceContent>
+                </WorkspaceBody>
+                <DatabaseActionsPanel
+                    isCreateDialogOpen={isCreateDialogOpen}
+                    isConnectDialogOpen={isConnectDialogOpen}
+                    initialCreateEngine={initialCreateEngine}
+                    onOpenCreateDialog={() => setIsCreateDialogOpen(true)}
+                    onCloseCreateDialog={() => {
+                        setIsCreateDialogOpen(false);
+                        setInitialCreateEngine(undefined);
+                    }}
+                    onOpenConnectDialog={() => setIsConnectDialogOpen(true)}
+                    onCloseConnectDialog={() => setIsConnectDialogOpen(false)}
+                    onDatabaseConnected={handleDatabaseConnected}
+                />
+                <DeleteDatabaseDialog
+                    open={isDeleteDialogOpen}
+                    database={databaseToDelete}
+                    onClose={() => {
+                        setIsDeleteDialogOpen(false);
+                        setDatabaseToDelete(null);
+                    }}
+                    onDeleted={handleDatabaseDeleted}
+                />
+                <SwitchDatabaseDialog
+                    open={isSwitchDialogOpen}
+                    currentDatabase={connectedDatabase}
+                    targetDatabase={databaseToSwitchTo}
+                    onClose={handleSwitchCancelled}
+                    onSwitchingStart={handleSwitchingStart}
+                    onSwitched={handleSwitched}
+                />
+                {/* Switching Database Overlay */}
+                {isSwitchingDatabase && (
+                    <SwitchingOverlay>
+                        <SwitchingContent>
+                            <CircularProgress size={48} />
+                            <SwitchingTitle>Switching Database</SwitchingTitle>
+                            <SwitchingSubtitle>
+                                Connecting to {databaseToSwitchTo?.name || 'database'}...
+                            </SwitchingSubtitle>
+                        </SwitchingContent>
+                    </SwitchingOverlay>
+                )}
+                {/* Access Restricted Dialog */}
+                <Dialog
+                    open={isAccessRestrictedDialogOpen}
+                    onClose={() => setIsAccessRestrictedDialogOpen(false)}
+                    maxWidth="sm"
+                    fullWidth
+                >
+                    <DialogContent>
+                        <AccessRestricted
+                            message="Connect Database Restricted"
+                            description="You don't have permission to connect to databases. Please contact the account owner to request access."
+                            permission="connectDatabase"
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setIsAccessRestrictedDialogOpen(false)}>Close</Button>
+                    </DialogActions>
+                </Dialog>
+            </WorkspaceWrapper>
+        </WorkspaceContext.Provider>
+    );
+}

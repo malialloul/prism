@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Box, IconButton, Tabs, Tab } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 export const NavbarWrapper = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -28,7 +28,7 @@ export const Logo = styled(Box)({
 });
 
 export const LogoIcon = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '2rem',
     height: '2rem',
@@ -44,7 +44,7 @@ export const LogoIcon = styled(Box)(({ theme }) => {
 });
 
 export const LogoText = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1.25rem',
     fontWeight: 700,
@@ -54,7 +54,7 @@ export const LogoText = styled('span')(({ theme }) => {
 });
 
 export const NavTabs = styled(Tabs)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     minHeight: 'auto',
     '& .MuiTabs-indicator': {
@@ -65,7 +65,7 @@ export const NavTabs = styled(Tabs)(({ theme }) => {
 });
 
 export const NavTab = styled(Tab)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     minHeight: 'auto',
     minWidth: 'auto',
@@ -91,7 +91,7 @@ export const RightSection = styled(Box)({
 });
 
 export const ActionButton = styled(IconButton)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     color: colors.textSecondary,
     padding: '0.5rem',

@@ -1,13 +1,13 @@
 import { styled } from '@mui/material/styles';
 import { Box } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 export const ChartsContainer = styled(Box)({
   display: 'contents',
 });
 
 export const ChartCard = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: colors.backgroundCard,
     border: `1px solid ${colors.border}`,
@@ -26,7 +26,7 @@ export const ChartHeader = styled(Box)({
 });
 
 export const ChartTitle = styled('h3')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: 0,
     fontSize: '1rem',
@@ -57,7 +57,7 @@ export const LegendDot = styled(Box, {
 }));
 
 export const LegendLabel = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textSecondary,
@@ -103,7 +103,7 @@ export const LinePath = styled('svg')({
 });
 
 export const ChartAxis = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     justifyContent: 'space-between',
@@ -113,7 +113,7 @@ export const ChartAxis = styled(Box)(({ theme }) => {
 });
 
 export const AxisLabel = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.6875rem',
     color: colors.textMuted,
@@ -121,7 +121,7 @@ export const AxisLabel = styled('span')(({ theme }) => {
 });
 
 export const ChartTooltip = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     position: 'absolute',
     backgroundColor: colors.backgroundTertiary,
@@ -135,7 +135,7 @@ export const ChartTooltip = styled(Box)(({ theme }) => {
 });
 
 export const TooltipValue = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 600,
@@ -144,7 +144,7 @@ export const TooltipValue = styled('span')(({ theme }) => {
 });
 
 export const TooltipLabel = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textMuted,
@@ -154,7 +154,7 @@ export const TooltipLabel = styled('span')(({ theme }) => {
 });
 
 export const ChartStats = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     gap: '1.5rem',
@@ -170,7 +170,7 @@ export const ChartStat = styled(Box)({
 });
 
 export const ChartStatValue = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1.25rem',
     fontWeight: 700,
@@ -179,7 +179,7 @@ export const ChartStatValue = styled('span')(({ theme }) => {
 });
 
 export const ChartStatLabel = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textMuted,
@@ -187,7 +187,7 @@ export const ChartStatLabel = styled('span')(({ theme }) => {
 });
 
 export const TimeRangeSelector = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -201,7 +201,7 @@ export const TimeRangeSelector = styled(Box)(({ theme }) => {
 export const TimeRangeButton = styled('button', {
   shouldForwardProp: (prop) => prop !== 'active',
 })<{ active?: boolean }>(({ theme, active }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.375rem 0.75rem',
     borderRadius: '0.375rem',

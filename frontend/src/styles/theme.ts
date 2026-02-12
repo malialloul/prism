@@ -20,8 +20,8 @@ export const authColors = {
   info: '#EAB308',
 };
 
-// Dashboard colors - dark theme focused for developers
-export const dashboardColorsDark = {
+// Workspace colors - dark theme focused for developers
+export const workspaceColorsDark = {
   // Primary palette
   primary: '#8b5cf6',
   primaryHover: '#7c3aed',
@@ -82,8 +82,8 @@ export const dashboardColorsDark = {
   gradientSuccess: 'linear-gradient(135deg, #22c55e 0%, #06b6d4 100%)',
 };
 
-// Dashboard colors - light theme
-export const dashboardColorsLight = {
+// Workspace colors - light theme
+export const workspaceColorsLight = {
   // Primary palette
   primary: '#8b5cf6',
   primaryHover: '#7c3aed',
@@ -144,12 +144,12 @@ export const dashboardColorsLight = {
   gradientSuccess: 'linear-gradient(135deg, #22c55e 0%, #06b6d4 100%)',
 };
 
-// Function to get dashboard colors based on mode
-export const getDashboardColors = (darkMode: boolean) => 
-  darkMode ? dashboardColorsDark : dashboardColorsLight;
+// Function to get workspace colors based on mode
+export const getWorkspaceColors = (darkMode: boolean) => 
+  darkMode ? workspaceColorsDark : workspaceColorsLight;
 
 // Keep backward compatibility
-export const dashboardColors = dashboardColorsDark;
+export const workspaceColors = workspaceColorsDark;
 
 const createAppTheme = (darkMode = false) =>
     createTheme({

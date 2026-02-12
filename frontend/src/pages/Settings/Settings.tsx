@@ -25,7 +25,7 @@ import {
   SectionBody,
 } from './Settings.styles';
 import { Box } from '@mui/material';
-import { getDashboardColors } from '../../styles/theme';
+import { getWorkspaceColors } from '../../styles/theme';
 import { useTheme as useMuiTheme } from '@mui/material/styles';
 import { getUserFromToken, clearAuthToken } from '../../api/httpClient';
 
@@ -34,7 +34,7 @@ type SettingsSection = 'account' | 'security' | 'sharing' | 'danger';
 const Settings = () => {
   const navigate = useNavigate();
   const muiTheme = useMuiTheme();
-  const colors = getDashboardColors(muiTheme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(muiTheme.palette.mode === 'dark');
   const [activeSection, setActiveSection] = useState<SettingsSection>('account');
 
   // Get actual user data from JWT token

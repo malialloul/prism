@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Box, IconButton, Collapse } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 export const ExplorerWrapper = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: colors.backgroundCard,
     border: `1px solid ${colors.border}`,
@@ -17,7 +17,7 @@ export const ExplorerWrapper = styled(Box)(({ theme }) => {
 });
 
 export const ExplorerHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem 1.25rem',
     borderBottom: `1px solid ${colors.border}`,
@@ -28,7 +28,7 @@ export const ExplorerHeader = styled(Box)(({ theme }) => {
 });
 
 export const ExplorerTitle = styled('h3')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: 0,
     fontSize: '0.9375rem',
@@ -52,7 +52,7 @@ export const TreeSection = styled(Box)(() => {
 export const TreeSectionHeader = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'expanded',
 })<{ expanded?: boolean }>(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -70,7 +70,7 @@ export const TreeSectionHeader = styled(Box, {
 export const SectionIcon = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'type',
 })<{ type: 'table' }>(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '1.25rem',
     height: '1.25rem',
@@ -86,7 +86,7 @@ export const SectionIcon = styled(Box, {
 });
 
 export const SectionName = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.8125rem',
     fontWeight: 500,
@@ -96,7 +96,7 @@ export const SectionName = styled('span')(({ theme }) => {
 });
 
 export const SectionCount = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.6875rem',
     color: colors.textMuted,
@@ -120,7 +120,7 @@ export const TreeItemList = styled(Collapse)({
 export const TreeItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'selected',
 })<{ selected?: boolean }>(({ theme, selected }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -140,7 +140,7 @@ export const TreeItem = styled(Box, {
 export const ItemName = styled('span', {
   shouldForwardProp: (prop) => prop !== 'selected',
 })<{ selected?: boolean }>(({ theme, selected }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.8125rem',
     color: selected ? colors.primary : colors.text,
@@ -151,7 +151,7 @@ export const ItemName = styled('span', {
 export const ExpandIcon = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'expanded',
 })<{ expanded?: boolean }>(({ theme, expanded }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '1rem',
     height: '1rem',
@@ -166,7 +166,7 @@ export const ExpandIcon = styled(Box, {
 });
 
 export const ActionButton = styled(IconButton)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.375rem',
     color: colors.textSecondary,
@@ -178,7 +178,7 @@ export const ActionButton = styled(IconButton)(({ theme }) => {
 });
 
 export const EmptyState = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     flexDirection: 'column',

@@ -1,104 +1,86 @@
-import { Box, Skeleton } from '@mui/material';
+import { Box, Skeleton, useTheme } from '@mui/material';
 
 /**
- * Skeleton for OpenAPI page
+ * Skeleton for OpenAPI page - matches Swagger-style layout
  */
 export default function OpenApiSkeleton() {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
   return (
-    <Box sx={{ display: 'flex', height: '100%', gap: 2, p: 2, backgroundColor: '#0a0a0f' }}>
-      {/* API list sidebar */}
-      <Box sx={{ width: '300px', flexShrink: 0 }}>
-        {/* Search */}
-        <Skeleton
-          variant="rectangular"
-          height={40}
-          sx={{ borderRadius: 1, mb: 2, bgcolor: 'rgba(255,255,255,0.04)' }}
-        />
-
-        {/* API Items */}
-        {[1, 2, 3, 4, 5].map((i) => (
-          <Box
-            key={i}
-            sx={{
-              p: '12px',
-              mb: 1,
-              borderRadius: '8px',
-              border: '1px solid rgba(255,255,255,0.08)',
-              bgcolor: i === 1 ? 'rgba(102,126,234,0.1)' : 'transparent',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-              <Skeleton
-                variant="rectangular"
-                width={40}
-                height={20}
-                sx={{ borderRadius: '4px', bgcolor: i === 1 ? '#22c55e' : 'rgba(255,255,255,0.1)' }}
-              />
-              <Skeleton variant="text" width={120} height={20} sx={{ bgcolor: 'rgba(255,255,255,0.08)' }} />
-            </Box>
-            <Skeleton variant="text" width="100%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
+    <Box sx={{
+      height: '100%',
+      width: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      backgroundColor: isDark ? '#1a1a2e' : '#fafafa',
+    }}>
+      {/* Swagger-style Header */}
+      <Box sx={{
+        background: isDark
+          ? 'linear-gradient(135deg, #1a365d 0%, #2d3748 100%)'
+          : 'linear-gradient(135deg, #89bf04 0%, #547f00 100%)',
+        p: 3,
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Box>
+            <Skeleton variant="text" width={200} height={32} sx={{ bgcolor: 'rgba(255,255,255,0.15)' }} />
+            <Skeleton variant="text" width={180} height={18} sx={{ bgcolor: 'rgba(255,255,255,0.1)', mt: 0.5 }} />
           </Box>
-        ))}
-      </Box>
-
-      {/* API Detail Panel */}
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {/* Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Skeleton variant="rectangular" width={50} height={28} sx={{ borderRadius: '6px', bgcolor: '#22c55e' }} />
-          <Skeleton variant="text" width={200} height={28} sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+          <Skeleton variant="circular" width={40} height={40} sx={{ bgcolor: 'rgba(255,255,255,0.15)' }} />
         </Box>
 
-        {/* Endpoint URL */}
-        <Box
-          sx={{
-            p: '12px',
-            borderRadius: '8px',
-            bgcolor: 'rgba(255,255,255,0.04)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-          }}
-        >
-          <Skeleton variant="text" width="80%" height={20} sx={{ bgcolor: 'rgba(255,255,255,0.08)' }} />
-          <Skeleton variant="circular" width={28} height={28} sx={{ bgcolor: 'rgba(255,255,255,0.06)' }} />
-        </Box>
-
-        {/* Parameters */}
-        <Box>
-          <Skeleton variant="text" width={100} height={24} sx={{ bgcolor: 'rgba(255,255,255,0.08)', mb: 1 }} />
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {[1, 2, 3].map((i) => (
-              <Box key={i} sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <Skeleton variant="text" width={100} height={18} sx={{ bgcolor: 'rgba(255,255,255,0.06)' }} />
-                <Skeleton
-                  variant="rectangular"
-                  height={36}
-                  sx={{ flex: 1, borderRadius: '6px', bgcolor: 'rgba(255,255,255,0.04)' }}
-                />
-              </Box>
+        {/* Search and Filters */}
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Skeleton
+            variant="rectangular"
+            width={250}
+            height={40}
+            sx={{ borderRadius: '4px', bgcolor: 'rgba(255,255,255,0.1)' }}
+          />
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            {['GET', 'POST', 'PUT', 'DELETE'].map(method => (
+              <Skeleton
+                key={method}
+                variant="rectangular"
+                width={50}
+                height={24}
+                sx={{ borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.15)' }}
+              />
             ))}
           </Box>
         </Box>
+      </Box>
 
-        {/* Action buttons */}
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Skeleton variant="rectangular" width={100} height={40} sx={{ borderRadius: '8px', bgcolor: '#667eea' }} />
-          <Skeleton variant="rectangular" width={80} height={40} sx={{ borderRadius: '8px', bgcolor: 'rgba(255,255,255,0.06)' }} />
-        </Box>
-
-        {/* Response */}
-        <Box sx={{ flex: 1, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-          <Box sx={{ p: '12px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-            <Skeleton variant="text" width={80} height={20} sx={{ bgcolor: 'rgba(255,255,255,0.08)' }} />
+      {/* API List */}
+      <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+        {[1, 2, 3, 4].map((i) => (
+          <Box
+            key={i}
+            sx={{
+              mb: 1,
+              borderRadius: '8px',
+              border: '1px solid',
+              borderColor: 'divider',
+              overflow: 'hidden',
+            }}
+          >
+            {/* API Item Header */}
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              p: 2,
+              bgcolor: 'background.paper',
+            }}>
+              <Skeleton variant="rectangular" width={60} height={24} sx={{ borderRadius: '4px' }} />
+              <Skeleton variant="text" width={200} height={20} />
+              <Box sx={{ flex: 1 }} />
+              <Skeleton variant="text" width={150} height={16} />
+            </Box>
           </Box>
-          <Box sx={{ p: '16px' }}>
-            <Skeleton variant="text" width="90%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.05)', mb: 0.5 }} />
-            <Skeleton variant="text" width="70%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.05)', mb: 0.5 }} />
-            <Skeleton variant="text" width="80%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.05)', mb: 0.5 }} />
-            <Skeleton variant="text" width="60%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
-          </Box>
-        </Box>
+        ))}
       </Box>
     </Box>
   );

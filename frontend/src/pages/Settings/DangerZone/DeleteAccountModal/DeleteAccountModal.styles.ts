@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Box } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 export const StyledDialog = styled(Dialog)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     '& .MuiDialog-paper': {
       backgroundColor: colors.backgroundSecondary,
@@ -15,7 +15,7 @@ export const StyledDialog = styled(Dialog)(({ theme }) => {
 });
 
 export const StyledDialogTitle = styled(DialogTitle)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -27,7 +27,7 @@ export const StyledDialogTitle = styled(DialogTitle)(({ theme }) => {
 });
 
 export const ModalTitle = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1.125rem',
     fontWeight: 600,
@@ -36,7 +36,7 @@ export const ModalTitle = styled('span')(({ theme }) => {
 });
 
 export const CloseButton = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -58,7 +58,7 @@ export const StyledDialogContent = styled(DialogContent)({
 });
 
 export const DangerBox = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem',
     backgroundColor: `${colors.error}15`,
@@ -69,7 +69,7 @@ export const DangerBox = styled(Box)(({ theme }) => {
 });
 
 export const DangerTitle = styled('h4')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 600,
@@ -82,7 +82,7 @@ export const DangerTitle = styled('h4')(({ theme }) => {
 });
 
 export const DangerText = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.8125rem',
     color: colors.textSecondary,
@@ -92,7 +92,7 @@ export const DangerText = styled('p')(({ theme }) => {
 });
 
 export const DangerList = styled('ul')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.8125rem',
     color: colors.textSecondary,
@@ -106,7 +106,7 @@ export const DangerList = styled('ul')(({ theme }) => {
 });
 
 export const StyledTextField = styled(TextField)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     marginBottom: '1rem',
     '& .MuiOutlinedInput-root': {
@@ -131,7 +131,7 @@ export const StyledTextField = styled(TextField)(({ theme }) => {
 });
 
 export const ConfirmationInput = styled(TextField)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     '& .MuiOutlinedInput-root': {
       backgroundColor: colors.backgroundTertiary,
@@ -157,7 +157,7 @@ export const ConfirmationInput = styled(TextField)(({ theme }) => {
 });
 
 export const SuccessContent = styled(DialogContent)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     paddingTop: '2rem',
     paddingBottom: '2rem',
@@ -167,7 +167,7 @@ export const SuccessContent = styled(DialogContent)(({ theme }) => {
 });
 
 export const SuccessIcon = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: 64,
     height: 64,
@@ -185,7 +185,7 @@ export const SuccessIcon = styled(Box)(({ theme }) => {
 });
 
 export const SuccessTitle = styled('h3')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1.125rem',
     fontWeight: 600,
@@ -195,7 +195,7 @@ export const SuccessTitle = styled('h3')(({ theme }) => {
 });
 
 export const SuccessMessage = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     color: colors.textSecondary,
@@ -209,7 +209,7 @@ export const StyledDialogActions = styled(DialogActions)({
 });
 
 export const CancelButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     textTransform: 'none',
     color: colors.textSecondary,
@@ -227,7 +227,7 @@ export const CancelButton = styled(Button)(({ theme }) => {
 });
 
 export const DeleteButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     textTransform: 'none',
     color: 'white',
@@ -248,7 +248,7 @@ export const DeleteButton = styled(Button)(({ theme }) => {
 });
 
 export const ConfirmationHint = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textTertiary,

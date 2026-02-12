@@ -1,9 +1,9 @@
 import { styled } from "@mui/material/styles";
 import { Box, Button, IconButton } from "@mui/material";
-import { getDashboardColors } from "../../../styles/theme";
+import { getWorkspaceColors } from "../../../styles/theme";
 
 export const ShareForm = styled("form")(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     display: "flex",
     flexDirection: "column",
@@ -24,7 +24,7 @@ export const ShareFormRow = styled(Box)({
 });
 
 export const ShareButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     backgroundColor: colors.primary,
     color: "white",
@@ -48,7 +48,7 @@ export const ShareList = styled(Box)({
 });
 
 export const ShareCard = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     display: "flex",
     alignItems: "center",
@@ -72,7 +72,7 @@ export const ShareInfo = styled(Box)({
 });
 
 export const ShareEmail = styled("span")(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     fontSize: "0.9375rem",
     fontWeight: 600,
@@ -81,7 +81,7 @@ export const ShareEmail = styled("span")(({ theme }) => {
 });
 
 export const ShareMeta = styled("span")(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     fontSize: "0.8125rem",
     color: colors.textMuted,
@@ -94,7 +94,7 @@ export const StatusBadge = styled("span", {
   theme,
   status,
 }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   const statusColors = {
     pending: { bg: colors.warningLight, text: colors.warning },
     accepted: { bg: colors.successLight, text: colors.success },
@@ -115,7 +115,7 @@ export const StatusBadge = styled("span", {
 });
 
 export const RevokeButton = styled(IconButton)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     color: colors.error,
     padding: "0.5rem",
@@ -126,7 +126,7 @@ export const RevokeButton = styled(IconButton)(({ theme }) => {
 });
 
 export const TempPasswordBox = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     display: "flex",
     flexDirection: "column",
@@ -140,7 +140,7 @@ export const TempPasswordBox = styled(Box)(({ theme }) => {
 });
 
 export const TempPasswordLabel = styled("span")(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     fontSize: "0.8125rem",
     fontWeight: 600,
@@ -149,7 +149,7 @@ export const TempPasswordLabel = styled("span")(({ theme }) => {
 });
 
 export const TempPasswordValue = styled("code")(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     fontSize: "1.125rem",
     fontWeight: 700,
@@ -164,7 +164,7 @@ export const TempPasswordValue = styled("code")(({ theme }) => {
 });
 
 export const SectionDivider = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     height: "1px",
     backgroundColor: colors.border,
@@ -173,7 +173,7 @@ export const SectionDivider = styled(Box)(({ theme }) => {
 });
 
 export const SectionSubtitle = styled("h4")(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     fontSize: "0.9375rem",
     fontWeight: 600,
@@ -194,7 +194,7 @@ export const SectionHeader = styled(Box)(() => {
 });
 
 export const ClearAllButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     color: colors.error || "#ef5350",
     textTransform: "none",
@@ -210,7 +210,7 @@ export const ClearAllButton = styled(Button)(({ theme }) => {
 });
 
 export const EmptyState = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     textAlign: "center",
     padding: "2rem",
@@ -226,7 +226,7 @@ export const SkeletonContainer = styled(Box)({
 });
 
 export const SkeletonCard = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     display: "flex",
     alignItems: "center",

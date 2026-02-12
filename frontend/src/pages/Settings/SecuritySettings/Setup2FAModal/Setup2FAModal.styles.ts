@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Box, Stepper, Step, StepLabel } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 export const StyledDialog = styled(Dialog)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     '& .MuiDialog-paper': {
       backgroundColor: colors.backgroundSecondary,
@@ -16,7 +16,7 @@ export const StyledDialog = styled(Dialog)(({ theme }) => {
 });
 
 export const StyledDialogTitle = styled(DialogTitle)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -28,7 +28,7 @@ export const StyledDialogTitle = styled(DialogTitle)(({ theme }) => {
 });
 
 export const ModalTitle = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1.125rem',
     fontWeight: 600,
@@ -37,7 +37,7 @@ export const ModalTitle = styled('span')(({ theme }) => {
 });
 
 export const CloseButton = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -55,7 +55,7 @@ export const CloseButton = styled(Box)(({ theme }) => {
 });
 
 export const StyledStepper = styled(Stepper)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem 1.5rem',
     borderBottom: `1px solid ${colors.border}`,
@@ -97,7 +97,7 @@ export const StepContent = styled(Box)({
 });
 
 export const StepDescription = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     color: colors.textSecondary,
@@ -108,7 +108,7 @@ export const StepDescription = styled('p')(({ theme }) => {
 });
 
 export const StyledTextField = styled(TextField)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     marginBottom: '1rem',
     '& .MuiOutlinedInput-root': {
@@ -133,7 +133,7 @@ export const StyledTextField = styled(TextField)(({ theme }) => {
 });
 
 export const QRCodeContainer = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     justifyContent: 'center',
@@ -152,7 +152,7 @@ export const SecretKeyContainer = styled(Box)({
 });
 
 export const SecretKeyLabel = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textSecondary,
@@ -162,7 +162,7 @@ export const SecretKeyLabel = styled('span')(({ theme }) => {
 });
 
 export const SecretKeyValue = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -178,7 +178,7 @@ export const SecretKeyValue = styled(Box)(({ theme }) => {
 });
 
 export const CopyButton = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.25rem',
     borderRadius: '0.25rem',
@@ -194,7 +194,7 @@ export const CopyButton = styled(Box)(({ theme }) => {
 });
 
 export const VerificationInput = styled(TextField)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     marginTop: '1rem',
     '& .MuiOutlinedInput-root': {
@@ -228,7 +228,7 @@ export const SuccessContent = styled(Box)({
 });
 
 export const SuccessIcon = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: 64,
     height: 64,
@@ -246,7 +246,7 @@ export const SuccessIcon = styled(Box)(({ theme }) => {
 });
 
 export const SuccessTitle = styled('h3')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1.125rem',
     fontWeight: 600,
@@ -256,7 +256,7 @@ export const SuccessTitle = styled('h3')(({ theme }) => {
 });
 
 export const SuccessMessage = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     color: colors.textSecondary,
@@ -270,7 +270,7 @@ export const BackupCodesContainer = styled(Box)({
 });
 
 export const BackupCodesTitle = styled('h4')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 600,
@@ -280,7 +280,7 @@ export const BackupCodesTitle = styled('h4')(({ theme }) => {
 });
 
 export const BackupCodesDescription = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textSecondary,
@@ -289,7 +289,7 @@ export const BackupCodesDescription = styled('p')(({ theme }) => {
 });
 
 export const BackupCodesGrid = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, 1fr)',
@@ -321,7 +321,7 @@ export const StyledDialogActions = styled(DialogActions)({
 });
 
 export const CancelButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     color: colors.textSecondary,
     '&:hover': {
@@ -331,7 +331,7 @@ export const CancelButton = styled(Button)(({ theme }) => {
 });
 
 export const SubmitButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: colors.primary,
     color: '#fff',
@@ -346,7 +346,7 @@ export const SubmitButton = styled(Button)(({ theme }) => {
 });
 
 export const SecondaryButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     color: colors.text,
     borderColor: colors.border,

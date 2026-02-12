@@ -22,7 +22,7 @@ import {
   ChartStatValue,
   ChartStatLabel,
 } from './UsageCharts.styles';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 import { AppContext } from '../../../../App';
 import { useQueryStats } from '../../../../api/entities/databases';
 
@@ -59,7 +59,7 @@ const formatDate = (dayIndex: number) => {
 
 export default function UsageCharts({ selectedDatabaseId }: UsageChartsProps) {
   const { darkMode } = useContext(AppContext);
-  const colors = getDashboardColors(darkMode);
+  const colors = getWorkspaceColors(darkMode);
   const [apiTimeRange, setApiTimeRange] = useState<TimeRange>('24h');
   const [queryTimeRange, setQueryTimeRange] = useState<TimeRange>('24h');
 

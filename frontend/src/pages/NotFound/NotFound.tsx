@@ -1,13 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { Box, Container, Typography, Button, useTheme } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import { getDashboardColors } from '../../styles/theme';
+import { getWorkspaceColors } from '../../styles/theme';
 import { ROUTES } from '../../constants';
 
 const NotFound = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
 
   return (
     <Container maxWidth="sm">

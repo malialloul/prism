@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Box, IconButton } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 export const DialogContainer = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '24px',
     minWidth: '500px',
@@ -19,7 +19,7 @@ export const DialogHeader = styled(Box)({
 });
 
 export const DialogTitle = styled('h2')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: 0,
     fontSize: '1.25rem',
@@ -29,7 +29,7 @@ export const DialogTitle = styled('h2')(({ theme }) => {
 });
 
 export const CloseButton = styled(IconButton)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     color: colors.textSecondary,
     '&:hover': {
@@ -45,7 +45,7 @@ export const DetailsSection = styled(Box)({
 });
 
 export const DetailRow = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'flex-start',
@@ -57,7 +57,7 @@ export const DetailRow = styled(Box)(({ theme }) => {
 });
 
 export const DetailIcon = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -80,7 +80,7 @@ export const DetailContent = styled(Box)({
 });
 
 export const DetailLabel = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'block',
     fontSize: '0.75rem',
@@ -93,7 +93,7 @@ export const DetailLabel = styled('span')(({ theme }) => {
 });
 
 export const DetailValue = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'block',
     fontSize: '0.875rem',
@@ -104,7 +104,7 @@ export const DetailValue = styled('span')(({ theme }) => {
 });
 
 export const ConnectionStringBox = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     marginTop: '8px',
     padding: '16px',
@@ -115,7 +115,7 @@ export const ConnectionStringBox = styled(Box)(({ theme }) => {
 });
 
 export const ConnectionStringLabel = styled('div')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -125,7 +125,7 @@ export const ConnectionStringLabel = styled('div')(({ theme }) => {
 });
 
 export const ConnectionStringTitle = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     fontWeight: 500,
@@ -136,7 +136,7 @@ export const ConnectionStringTitle = styled('span')(({ theme }) => {
 });
 
 export const ConnectionStringValue = styled('code')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'block',
     fontSize: '0.8125rem',
@@ -151,7 +151,7 @@ export const ConnectionStringValue = styled('code')(({ theme }) => {
 });
 
 export const CopyButton = styled(IconButton)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '4px',
     color: colors.textSecondary,
@@ -165,7 +165,7 @@ export const CopyButton = styled(IconButton)(({ theme }) => {
 export const StatusBadge = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'status',
 })<{ status: 'connected' | 'disconnected' | 'error' }>(({ theme, status }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   const statusColors = {
     connected: { bg: colors.successLight, color: colors.success },
     disconnected: { bg: colors.warningLight, color: colors.warning },

@@ -1,10 +1,10 @@
 import { styled } from "@mui/material/styles";
 import { Box } from "@mui/material";
-import { getDashboardColors } from "../../../../styles/theme";
+import { getWorkspaceColors } from "../../../../styles/theme";
 import { DatabaseDto } from "../../../../api/models/DatabaseDto";
 
 export const SummaryCard = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     backgroundColor: colors.backgroundCard,
     border: `1px solid ${colors.border}`,
@@ -26,7 +26,7 @@ export const LeftContent = styled(Box)({
 export const DatabaseIcon = styled(Box, {
   shouldForwardProp: (prop) => prop !== "engine",
 })<{ engine: "postgres" | "mysql" }>(({ theme, engine }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     width: "3rem",
     height: "3rem",
@@ -49,7 +49,7 @@ export const DatabaseDetails = styled(Box)({
 });
 
 export const DatabaseName = styled("h3")(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     margin: 0,
     fontSize: "1.125rem",
@@ -65,7 +65,7 @@ export const DatabaseMeta = styled(Box)({
 });
 
 export const MetaItem = styled("span")(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     fontSize: "0.8125rem",
     color: colors.textSecondary,
@@ -78,7 +78,7 @@ export const MetaItem = styled("span")(({ theme }) => {
 export const EngineBadge = styled(Box, {
   shouldForwardProp: (prop) => prop !== "engine",
 })<{ engine: "postgres" | "mysql" }>(({ theme, engine }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     padding: "0.25rem 0.625rem",
     borderRadius: "0.25rem",
@@ -107,7 +107,7 @@ export const StatusIndicator = styled(Box)({
 export const StatusDot = styled(Box, {
   shouldForwardProp: (prop) => prop !== "status",
 })<{ status: DatabaseDto["status"] }>(({ theme, status }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     width: "0.5rem",
     height: "0.5rem",
@@ -119,7 +119,7 @@ export const StatusDot = styled(Box, {
 export const StatusText = styled("span", {
   shouldForwardProp: (prop) => prop !== "status",
 })<{ status: DatabaseDto["status"] }>(({ theme, status }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     fontSize: "0.8125rem",
     fontWeight: 500,
@@ -136,7 +136,7 @@ export const SyncInfo = styled(Box)({
 });
 
 export const SyncLabel = styled("span")(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     fontSize: "0.6875rem",
     color: colors.textMuted,
@@ -146,7 +146,7 @@ export const SyncLabel = styled("span")(({ theme }) => {
 });
 
 export const SyncTime = styled("span")(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     fontSize: "0.8125rem",
     fontWeight: 500,
@@ -163,7 +163,7 @@ export const ActionButtons = styled(Box)({
 export const ActionButton = styled(Box, {
   shouldForwardProp: (prop) => prop !== "variant",
 })<{ variant?: "default" | "danger" }>(({ theme, variant = "default" }) => {
-  const colors = getDashboardColors(theme.palette.mode === "dark");
+  const colors = getWorkspaceColors(theme.palette.mode === "dark");
   return {
     display: "flex",
     alignItems: "center",

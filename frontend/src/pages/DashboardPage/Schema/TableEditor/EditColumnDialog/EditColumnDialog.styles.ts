@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { DialogTitle as MuiDialogTitle, DialogContent as MuiDialogContent, Box, Button, TextField, Select } from '@mui/material';
-import { getDashboardColors } from '../../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../../styles/theme';
 
 export const DialogTitle = styled(MuiDialogTitle)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     color: colors.text,
   };
@@ -21,7 +21,7 @@ export const FormGroup = styled(Box)({
 });
 
 export const FormLabel = styled('label')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'block',
     fontSize: '0.8125rem',
@@ -40,7 +40,7 @@ export const FormRow = styled(Box)({
 });
 
 export const StyledTextField = styled(TextField)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     '& .MuiOutlinedInput-root': {
       backgroundColor: colors.backgroundTertiary,
@@ -67,7 +67,7 @@ export const StyledTextField = styled(TextField)(({ theme }) => {
 });
 
 export const StyledSelect = styled(Select)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: colors.backgroundTertiary,
     borderRadius: '0.5rem',
@@ -89,7 +89,7 @@ export const StyledSelect = styled(Select)(({ theme }) => {
 });
 
 export const CancelButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: 'transparent',
     color: colors.textSecondary,
@@ -107,7 +107,7 @@ export const CancelButton = styled(Button)(({ theme }) => {
 });
 
 export const SubmitButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: colors.primary,
     color: 'white',
@@ -127,7 +127,7 @@ export const SubmitButton = styled(Button)(({ theme }) => {
 });
 
 export const CheckboxLabel = styled('label')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',

@@ -1,6 +1,6 @@
 import { styled } from '@mui/material/styles';
 import { Box } from '@mui/material';
-import { getDashboardColors } from '../../../styles/theme';
+import { getWorkspaceColors } from '../../../styles/theme';
 
 export const SettingsGrid = styled(Box)({
   display: 'flex',
@@ -9,7 +9,7 @@ export const SettingsGrid = styled(Box)({
 });
 
 export const SettingItem = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -33,7 +33,7 @@ export const SettingInfo = styled(Box)({
 });
 
 export const SettingLabel = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 500,
@@ -42,7 +42,7 @@ export const SettingLabel = styled('span')(({ theme }) => {
 });
 
 export const SettingValue = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.8125rem',
     color: colors.textSecondary,
@@ -50,7 +50,7 @@ export const SettingValue = styled('span')(({ theme }) => {
 });
 
 export const ChangeButton = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'inline-flex',
     alignItems: 'center',

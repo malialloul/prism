@@ -4,7 +4,7 @@ import { Close, Visibility, VisibilityOff, Check } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useTheme } from '@mui/material/styles';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 import { useChangePassword } from '../../../../api/entities/auth';
 import {
   StyledDialog,
@@ -49,7 +49,7 @@ const validationSchema = Yup.object({
 
 const ChangePasswordModal = ({ open, onClose }: ChangePasswordModalProps) => {
   const theme = useTheme();
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);

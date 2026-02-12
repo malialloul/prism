@@ -1,6 +1,6 @@
 import { styled } from '@mui/material/styles';
 import { Box, TextField, Select } from '@mui/material';
-import { getDashboardColors } from '../../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../../styles/theme';
 
 export const DataTabContent = styled(Box)(() => {
   return {
@@ -15,7 +15,7 @@ export const DataTabContent = styled(Box)(() => {
 });
 
 export const DataToolbar = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     justifyContent: 'space-between',
@@ -50,7 +50,7 @@ export const SearchContainer = styled(Box)({
 });
 
 export const SearchInput = styled(TextField)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     '& .MuiInputBase-root': {
       height: '32px',
@@ -71,7 +71,7 @@ export const SearchInput = styled(TextField)(({ theme }) => {
 });
 
 export const SortContainer = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -82,7 +82,7 @@ export const SortContainer = styled(Box)(({ theme }) => {
 });
 
 export const SortSelect = styled(Select)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     minWidth: '120px',
     height: '32px',
@@ -101,7 +101,7 @@ export const SortSelect = styled(Select)(({ theme }) => {
 });
 
 export const ActionBar = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     justifyContent: 'space-between',
@@ -115,7 +115,7 @@ export const ActionBar = styled(Box)(({ theme }) => {
 });
 
 export const ActionBarInfo = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     gap: '1rem',
@@ -125,7 +125,7 @@ export const ActionBarInfo = styled(Box)(({ theme }) => {
 });
 
 export const TableContainer = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     flex: 1,
     overflow: 'auto',
@@ -136,7 +136,7 @@ export const TableContainer = styled(Box)(({ theme }) => {
 });
 
 export const EditableTable = styled('table')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '100%',
     borderCollapse: 'collapse',
@@ -173,7 +173,7 @@ export const EditableTable = styled('table')(({ theme }) => {
 });
 
 export const SortableHeader = styled('div')<{ sortable?: boolean; sorted?: boolean }>(({ theme, sortable, sorted }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -187,7 +187,7 @@ export const SortableHeader = styled('div')<{ sortable?: boolean; sorted?: boole
 });
 
 export const EditableCell = styled('td')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     position: 'relative',
     cursor: 'pointer',
@@ -198,7 +198,7 @@ export const EditableCell = styled('td')(({ theme }) => {
 });
 
 export const EditInput = styled('input')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '100%',
     padding: '0.25rem 0.5rem',
@@ -236,7 +236,7 @@ export const ModifiedRowIndicator = styled('span')({
 });
 
 export const PaginationControls = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     justifyContent: 'space-between',
@@ -254,7 +254,7 @@ export const PaginationControls = styled(Box)(({ theme }) => {
 });
 
 export const PaginationInfo = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -269,7 +269,7 @@ export const PaginationInfo = styled(Box)(({ theme }) => {
 });
 
 export const PaginationButtons = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -293,7 +293,7 @@ export const PaginationButtons = styled(Box)(({ theme }) => {
 });
 
 export const PageSizeSelect = styled(Select)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     minWidth: '100px',
     height: '36px',
@@ -320,7 +320,7 @@ export const PageSizeSelect = styled(Select)(({ theme }) => {
 });
 
 export const PageInfo = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',

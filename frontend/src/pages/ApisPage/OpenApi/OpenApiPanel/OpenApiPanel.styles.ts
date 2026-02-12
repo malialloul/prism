@@ -1,6 +1,6 @@
 import { styled } from '@mui/material/styles';
 import { Box, Button, Chip, IconButton } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 export const OpenApiWrapper = styled(Box)({
   display: 'flex',
@@ -10,7 +10,7 @@ export const OpenApiWrapper = styled(Box)({
 });
 
 export const ApiListPanel = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '350px',
     minWidth: '350px',
@@ -24,7 +24,7 @@ export const ApiListPanel = styled(Box)(({ theme }) => {
 });
 
 export const ApiListHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -36,7 +36,7 @@ export const ApiListHeader = styled(Box)(({ theme }) => {
 });
 
 export const ApiListTitle = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 600,
@@ -53,7 +53,7 @@ export const ApiListContent = styled(Box)({
 export const ApiCard = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'selected',
 })<{ selected?: boolean }>(({ theme, selected }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.75rem 1rem',
     marginBottom: '0.5rem',
@@ -77,7 +77,7 @@ export const ApiCardHeader = styled(Box)({
 });
 
 export const ApiCardTitle = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 600,
@@ -90,7 +90,7 @@ export const ApiCardTitle = styled(Box)(({ theme }) => {
 });
 
 export const ApiCardDescription = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textSecondary,
@@ -102,7 +102,7 @@ export const ApiCardDescription = styled(Box)(({ theme }) => {
 });
 
 export const ApiCardPath = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.7rem',
     fontFamily: 'monospace',
@@ -137,7 +137,7 @@ export const OperationBadge = styled(Chip)<{ operation?: string }>(({ operation 
 });
 
 export const TryItPanel = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     flex: 1,
     display: 'flex',
@@ -150,7 +150,7 @@ export const TryItPanel = styled(Box)(({ theme }) => {
 });
 
 export const TryItHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -162,7 +162,7 @@ export const TryItHeader = styled(Box)(({ theme }) => {
 });
 
 export const TryItTitle = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -181,7 +181,7 @@ export const TryItContent = styled(Box)({
 });
 
 export const TryItSection = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem',
     borderBottom: `1px solid ${colors.border}`,
@@ -189,7 +189,7 @@ export const TryItSection = styled(Box)(({ theme }) => {
 });
 
 export const SectionTitle = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     fontWeight: 600,
@@ -201,7 +201,7 @@ export const SectionTitle = styled(Box)(({ theme }) => {
 });
 
 export const ParamInput = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -230,7 +230,7 @@ export const ParamInput = styled(Box)(({ theme }) => {
 });
 
 export const SqlViewSection = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem',
     borderBottom: `1px solid ${colors.border}`,
@@ -238,7 +238,7 @@ export const SqlViewSection = styled(Box)(({ theme }) => {
 });
 
 export const SqlPreview = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.75rem',
     backgroundColor: theme.palette.mode === 'dark' ? '#1e1e2e' : '#f8f8f8',
@@ -254,7 +254,7 @@ export const SqlPreview = styled(Box)(({ theme }) => {
 });
 
 export const ExecuteButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: colors.primary,
     color: '#fff',
@@ -268,7 +268,7 @@ export const ExecuteButton = styled(Button)(({ theme }) => {
 });
 
 export const DeleteButton = styled(IconButton)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     color: colors.textMuted,
     '&:hover': {
@@ -305,7 +305,7 @@ export const ResponseStatus = styled(Box, {
 }));
 
 export const ResponseTime = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textMuted,
@@ -313,7 +313,7 @@ export const ResponseTime = styled(Box)(({ theme }) => {
 });
 
 export const ResponseBody = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     flex: 1,
     overflowY: 'auto',
@@ -330,7 +330,7 @@ export const ResponseBody = styled(Box)(({ theme }) => {
 });
 
 export const EmptyState = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     flexDirection: 'column',
@@ -345,7 +345,7 @@ export const EmptyState = styled(Box)(({ theme }) => {
 });
 
 export const EmptyStateTitle = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1rem',
     fontWeight: 600,
@@ -354,7 +354,7 @@ export const EmptyStateTitle = styled(Box)(({ theme }) => {
 });
 
 export const EmptyStateSubtitle = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     color: colors.textSecondary,
@@ -364,7 +364,7 @@ export const EmptyStateSubtitle = styled(Box)(({ theme }) => {
 });
 
 export const ToggleSqlButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     textTransform: 'none',

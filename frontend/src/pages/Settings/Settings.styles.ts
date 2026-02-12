@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Box } from '@mui/material';
-import { getDashboardColors } from '../../styles/theme';
+import { getWorkspaceColors } from '../../styles/theme';
 
 export const SettingsWrapper = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     minHeight: '100vh',
     backgroundColor: colors.background,
@@ -13,7 +13,7 @@ export const SettingsWrapper = styled(Box)(({ theme }) => {
 });
 
 export const SettingsHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     position: 'sticky',
     top: 0,
@@ -33,7 +33,7 @@ export const SettingsLayout = styled(Box)({
 });
 
 export const SettingsSidebar = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '260px',
     flexShrink: 0,
@@ -48,7 +48,7 @@ export const SettingsSidebar = styled(Box)(({ theme }) => {
 export const SidebarItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'active' && prop !== 'danger',
 })<{ active?: boolean; danger?: boolean }>(({ theme, active, danger }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   
   const getColors = () => {
     if (danger) {
@@ -89,7 +89,7 @@ export const SidebarItem = styled(Box, {
 });
 
 export const SidebarDivider = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     height: '1px',
     backgroundColor: colors.border,
@@ -108,7 +108,7 @@ export const SettingsContent = styled(Box)({
 });
 
 export const PageTitle = styled('h1')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1.75rem',
     fontWeight: 700,
@@ -118,7 +118,7 @@ export const PageTitle = styled('h1')(({ theme }) => {
 });
 
 export const PageSubtitle = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     color: colors.textSecondary,
@@ -127,7 +127,7 @@ export const PageSubtitle = styled('p')(({ theme }) => {
 });
 
 export const SectionCard = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: colors.backgroundCard,
     border: `1px solid ${colors.border}`,
@@ -137,7 +137,7 @@ export const SectionCard = styled(Box)(({ theme }) => {
 });
 
 export const SectionHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1.25rem 1.5rem',
     borderBottom: `1px solid ${colors.border}`,
@@ -145,7 +145,7 @@ export const SectionHeader = styled(Box)(({ theme }) => {
 });
 
 export const SectionTitle = styled('h2')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1rem',
     fontWeight: 600,
@@ -155,7 +155,7 @@ export const SectionTitle = styled('h2')(({ theme }) => {
 });
 
 export const SectionDescription = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.8125rem',
     color: colors.textSecondary,
@@ -184,7 +184,7 @@ export const FormGroup = styled(Box)({
 });
 
 export const FormLabel = styled('label')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 500,
@@ -195,7 +195,7 @@ export const FormLabel = styled('label')(({ theme }) => {
 export const ActionButton = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'variant',
 })<{ variant?: 'primary' | 'secondary' | 'danger' }>(({ theme, variant = 'secondary' }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   
   const getVariantStyles = () => {
     switch (variant) {

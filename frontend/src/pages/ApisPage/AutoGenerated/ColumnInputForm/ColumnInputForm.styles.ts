@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Box } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 export const TryItSection = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem',
     borderBottom: `1px solid ${colors.border}`,
@@ -14,7 +14,7 @@ export const TryItSection = styled(Box)(({ theme }) => {
 });
 
 export const SectionTitle = styled('h4')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.8rem',
     fontWeight: 600,
@@ -36,7 +36,7 @@ export const ParameterRow = styled(Box)({
 });
 
 export const ParameterLabel = styled('label')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.8rem',
     fontWeight: 500,
@@ -46,7 +46,7 @@ export const ParameterLabel = styled('label')(({ theme }) => {
 });
 
 export const ParameterInput = styled('input')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     flex: 1,
     padding: '0.5rem 0.75rem',
@@ -67,7 +67,7 @@ export const ParameterInput = styled('input')(({ theme }) => {
 });
 
 export const ParameterType = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.7rem',
     color: colors.textMuted,

@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Box, Button, Dialog } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 export const StyledDialog = styled(Dialog)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     '& .MuiDialog-paper': {
       backgroundColor: colors.backgroundCard,
@@ -17,7 +17,7 @@ export const StyledDialog = styled(Dialog)(({ theme }) => {
 });
 
 export const DialogHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1.5rem',
     borderBottom: `1px solid ${colors.border}`,
@@ -25,7 +25,7 @@ export const DialogHeader = styled(Box)(({ theme }) => {
 });
 
 export const DialogTitle = styled('h2')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: 0,
     fontSize: '1.25rem',
@@ -35,7 +35,7 @@ export const DialogTitle = styled('h2')(({ theme }) => {
 });
 
 export const DialogSubtitle = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: '0.5rem 0 0 0',
     fontSize: '0.875rem',
@@ -51,7 +51,7 @@ export const DialogContent = styled(Box)({
 });
 
 export const InfoBox = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     gap: '0.75rem',
@@ -63,7 +63,7 @@ export const InfoBox = styled(Box)(({ theme }) => {
 });
 
 export const InfoIcon = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     color: colors.primary,
     display: 'flex',
@@ -76,7 +76,7 @@ export const InfoIcon = styled(Box)(({ theme }) => {
 });
 
 export const InfoText = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: 0,
     fontSize: '0.875rem',
@@ -94,7 +94,7 @@ export const DatabasesContainer = styled(Box)({
 export const DatabaseCard = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'variant',
 })<{ variant: 'from' | 'to' }>(({ theme, variant }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   const borderColor = variant === 'from' ? '#ef4444' : colors.success;
   return {
     padding: '1rem',
@@ -121,7 +121,7 @@ export const DatabaseLabel = styled('span', {
 });
 
 export const DatabaseName = styled('h4')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: 0,
     fontSize: '1rem',
@@ -131,7 +131,7 @@ export const DatabaseName = styled('h4')(({ theme }) => {
 });
 
 export const DatabaseMeta = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: '0.25rem 0 0 0',
     fontSize: '0.875rem',
@@ -140,7 +140,7 @@ export const DatabaseMeta = styled('p')(({ theme }) => {
 });
 
 export const ArrowContainer = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     justifyContent: 'center',
@@ -149,7 +149,7 @@ export const ArrowContainer = styled(Box)(({ theme }) => {
 });
 
 export const DialogFooter = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem 1.5rem',
     borderTop: `1px solid ${colors.border}`,
@@ -160,7 +160,7 @@ export const DialogFooter = styled(Box)(({ theme }) => {
 });
 
 export const CancelButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.625rem 1.25rem',
     borderRadius: '0.5rem',
@@ -174,7 +174,7 @@ export const CancelButton = styled(Button)(({ theme }) => {
 });
 
 export const SwitchButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.625rem 1.25rem',
     borderRadius: '0.5rem',

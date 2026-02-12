@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Box } from '@mui/material';
-import { getDashboardColors } from '../../styles/theme';
+import { getWorkspaceColors } from '../../styles/theme';
 
 export const PaginationContainer = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     justifyContent: 'space-between',
@@ -20,7 +20,7 @@ export const PaginationContainer = styled(Box)(({ theme }) => {
 });
 
 export const PaginationInfo = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -35,7 +35,7 @@ export const PaginationInfo = styled(Box)(({ theme }) => {
 });
 
 export const PaginationButtons = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -59,7 +59,7 @@ export const PaginationButtons = styled(Box)(({ theme }) => {
 });
 
 export const pageSizeSelectStyles = (isDark: boolean) => {
-  const colors = getDashboardColors(isDark);
+  const colors = getWorkspaceColors(isDark);
   return {
     minWidth: '100px',
     height: '36px',
@@ -86,7 +86,7 @@ export const pageSizeSelectStyles = (isDark: boolean) => {
 };
 
 export const PageInfo = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -105,7 +105,7 @@ export const PageInfo = styled(Box)(({ theme }) => {
 });
 
 export const PageSizeContainer = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',

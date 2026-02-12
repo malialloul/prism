@@ -35,25 +35,25 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Skeleton,
   Collapse,
 } from '@mui/material';
+import OpenApiSkeleton from '../../../../components/Skeletons/OpenApiSkeleton';
 import { AppContext } from '../../../../App';
 import { useSavedQueries, useDeleteSavedQuery } from '../../../../api/entities/schema';
 import { SchemaService } from '../../../../api/services/SchemaService';
 import { getAuthToken } from '../../../../api/httpClient';
 import type { DatabaseDto } from '../../../../api/models/DatabaseDto';
 import type { SavedQueryDto } from '../../../../api/models/SchemaDto';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 interface OpenApiPanelProps {
-  connectedDatabase: DatabaseDto | null;
+  connectedDatabase: DatabaseDto;
 }
 
 export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
   const { darkMode } = useContext(AppContext);
-  const colors = getDashboardColors(darkMode);
-  const databaseId = connectedDatabase?.id ? Number(connectedDatabase.id) : undefined;
+  const colors = getWorkspaceColors(darkMode);
+  const databaseId = Number(connectedDatabase.id);
   const { data: savedQueriesData, isLoading, refetch } = useSavedQueries(databaseId);
   const { mutate: deleteQuery } = useDeleteSavedQuery(databaseId || 0, {
     onSuccess: () => refetch(),
@@ -286,15 +286,9 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
     }
   };
 
-  if (isLoading || !connectedDatabase) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Skeleton variant="rectangular" height={80} sx={{ borderRadius: 1, mb: 2 }} />
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} variant="rectangular" height={60} sx={{ borderRadius: 1, mb: 1 }} />
-        ))}
-      </Box>
-    );
+  // Show skeleton while loading
+  if (isLoading) {
+    return <OpenApiSkeleton />;
   }
 
   if (savedApis.length === 0) {
@@ -351,7 +345,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Box>
             <Typography variant="h5" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <ApiIcon /> {connectedDatabase?.name || 'Database'} API
+              <ApiIcon /> {connectedDatabase.name} API
             </Typography>
             <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
               {savedApis.length} endpoints available • Custom APIs
@@ -427,7 +421,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
       </Box>
 
       {/* Export Menu */}
-      <Menu
+      {/* <Menu
         anchorEl={exportMenuAnchor}
         open={Boolean(exportMenuAnchor)}
         onClose={() => setExportMenuAnchor(null)}
@@ -476,7 +470,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
             />
           </MenuItem>
         ))}
-      </Menu>
+      </Menu> */}
 
       {/* API List - Swagger Style */}
       <Box sx={{

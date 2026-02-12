@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Box, IconButton, Popover } from '@mui/material';
-import { getDashboardColors } from '../../styles/theme';
+import { getWorkspaceColors } from '../../styles/theme';
 
 export const BellButton = styled(IconButton)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     position: 'relative',
     color: colors.textSecondary,
@@ -15,7 +15,7 @@ export const BellButton = styled(IconButton)(({ theme }) => {
 });
 
 export const UnreadBadge = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     position: 'absolute',
     top: 4,
@@ -36,7 +36,7 @@ export const UnreadBadge = styled('span')(({ theme }) => {
 });
 
 export const NotificationPopover = styled(Popover)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     '& .MuiPaper-root': {
       width: 360,
@@ -50,7 +50,7 @@ export const NotificationPopover = styled(Popover)(({ theme }) => {
 });
 
 export const NotificationHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -61,7 +61,7 @@ export const NotificationHeader = styled(Box)(({ theme }) => {
 });
 
 export const NotificationTitle = styled('h3')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: 0,
     fontSize: '0.9375rem',
@@ -71,7 +71,7 @@ export const NotificationTitle = styled('h3')(({ theme }) => {
 });
 
 export const MarkAllButton = styled('button')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     background: 'none',
     border: 'none',
@@ -99,7 +99,7 @@ export const NotificationList = styled(Box)({
 export const NotificationItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isRead',
 })<{ isRead?: boolean }>(({ theme, isRead }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     gap: '0.75rem',
@@ -120,7 +120,7 @@ export const NotificationItem = styled(Box, {
 export const NotificationIcon = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'type',
 })<{ type: string }>(({ theme, type }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   const typeColors: Record<string, { bg: string; color: string }> = {
     account_shared: { bg: colors.primaryLight, color: colors.primary },
     share_accepted: { bg: colors.successLight, color: colors.success },
@@ -147,7 +147,7 @@ export const NotificationContent = styled(Box)({
 });
 
 export const NotificationItemTitle = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'block',
     fontSize: '0.875rem',
@@ -158,7 +158,7 @@ export const NotificationItemTitle = styled('span')(({ theme }) => {
 });
 
 export const NotificationMessage = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'block',
     fontSize: '0.8125rem',
@@ -168,7 +168,7 @@ export const NotificationMessage = styled('span')(({ theme }) => {
 });
 
 export const NotificationTime = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'block',
     fontSize: '0.75rem',
@@ -178,7 +178,7 @@ export const NotificationTime = styled('span')(({ theme }) => {
 });
 
 export const EmptyNotifications = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     flexDirection: 'column',
@@ -196,7 +196,7 @@ export const EmptyNotifications = styled(Box)(({ theme }) => {
 });
 
 export const TempPasswordBox = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     flexDirection: 'column',
@@ -243,7 +243,7 @@ export const TempPasswordBox = styled(Box)(({ theme }) => {
 });
 
 export const NotificationActions = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     gap: '0.25rem',

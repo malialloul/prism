@@ -1,6 +1,6 @@
 import { styled } from '@mui/material/styles';
 import { Box, Button, Dialog, TextField, ToggleButtonGroup, ToggleButton } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 export const ActionsWrapper = styled(Box)({
   display: 'flex',
@@ -9,7 +9,7 @@ export const ActionsWrapper = styled(Box)({
 });
 
 export const ActionCard = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     flex: '1 1 200px',
     display: 'flex',
@@ -32,7 +32,7 @@ export const ActionCard = styled(Button)(({ theme }) => {
 export const ActionIconBox = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'variant',
 })<{ variant: 'create' | 'connect' }>(({ theme, variant }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '2.5rem',
     height: '2.5rem',
@@ -53,7 +53,7 @@ export const ActionContent = styled(Box)({
 });
 
 export const ActionTitle = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 600,
@@ -62,7 +62,7 @@ export const ActionTitle = styled('span')(({ theme }) => {
 });
 
 export const ActionDescription = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textMuted,
@@ -70,7 +70,7 @@ export const ActionDescription = styled('span')(({ theme }) => {
 });
 
 export const StyledDialog = styled(Dialog)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     '& .MuiDialog-paper': {
       backgroundColor: colors.backgroundCard,
@@ -84,7 +84,7 @@ export const StyledDialog = styled(Dialog)(({ theme }) => {
 });
 
 export const DialogHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1.5rem',
     borderBottom: `1px solid ${colors.border}`,
@@ -92,7 +92,7 @@ export const DialogHeader = styled(Box)(({ theme }) => {
 });
 
 export const DialogTitle = styled('h2')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: 0,
     fontSize: '1.25rem',
@@ -102,7 +102,7 @@ export const DialogTitle = styled('h2')(({ theme }) => {
 });
 
 export const DialogSubtitle = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: '0.5rem 0 0 0',
     fontSize: '0.875rem',
@@ -124,7 +124,7 @@ export const FormGroup = styled(Box)({
 });
 
 export const FormLabel = styled('label')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 500,
@@ -133,7 +133,7 @@ export const FormLabel = styled('label')(({ theme }) => {
 });
 
 export const FormHint = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textMuted,
@@ -141,7 +141,7 @@ export const FormHint = styled('span')(({ theme }) => {
 });
 
 export const StyledTextField = styled(TextField)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     '& .MuiOutlinedInput-root': {
       backgroundColor: colors.backgroundTertiary,
@@ -185,7 +185,7 @@ export const EngineToggleGroup = styled(ToggleButtonGroup)({
 });
 
 export const EngineToggleButton = styled(ToggleButton)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     flex: 1,
     padding: '1rem',
@@ -212,7 +212,7 @@ export const EngineToggleButton = styled(ToggleButton)(({ theme }) => {
 export const EngineIcon = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'engine',
 })<{ engine: 'postgres' | 'mysql' }>(({ theme, engine }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '2.5rem',
     height: '2.5rem',
@@ -228,7 +228,7 @@ export const EngineIcon = styled(Box, {
 });
 
 export const EngineName = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 500,
@@ -237,7 +237,7 @@ export const EngineName = styled('span')(({ theme }) => {
 });
 
 export const DialogFooter = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem 1.5rem',
     borderTop: `1px solid ${colors.border}`,
@@ -248,7 +248,7 @@ export const DialogFooter = styled(Box)(({ theme }) => {
 });
 
 export const CancelButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.625rem 1.25rem',
     borderRadius: '0.5rem',
@@ -262,7 +262,7 @@ export const CancelButton = styled(Button)(({ theme }) => {
 });
 
 export const SubmitButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.625rem 1.25rem',
     borderRadius: '0.5rem',
@@ -287,7 +287,7 @@ export const FormRow = styled(Box)({
 });
 
 export const SSLToggle = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -300,7 +300,7 @@ export const SSLToggle = styled(Box)(({ theme }) => {
 });
 
 export const AutoConnectToggle = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -319,7 +319,7 @@ export const AutoConnectLabel = styled(Box)({
 });
 
 export const AutoConnectTitle = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 500,
@@ -328,7 +328,7 @@ export const AutoConnectTitle = styled('span')(({ theme }) => {
 });
 
 export const AutoConnectDescription = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textMuted,
@@ -342,7 +342,7 @@ export const SSLLabel = styled(Box)({
 });
 
 export const SSLTitle = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 500,
@@ -351,7 +351,7 @@ export const SSLTitle = styled('span')(({ theme }) => {
 });
 
 export const SSLDescription = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textMuted,
@@ -359,7 +359,7 @@ export const SSLDescription = styled('span')(({ theme }) => {
 });
 
 export const TestConnectionButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.625rem 1.25rem',
     borderRadius: '0.5rem',
@@ -381,7 +381,7 @@ export const TestConnectionButton = styled(Button)(({ theme }) => {
 export const ConnectionStatus = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'status',
 })<{ status: 'success' | 'error' | 'testing' }>(({ theme, status }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   
   const statusColors = {
     success: {

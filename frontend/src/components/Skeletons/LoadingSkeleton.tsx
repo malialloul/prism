@@ -1,6 +1,6 @@
 import { Box, Skeleton } from '@mui/material';
 import { useTheme as useMuiTheme } from '@mui/material/styles';
-import { getDashboardColors } from '../../styles/theme';
+import { getWorkspaceColors } from '../../styles/theme';
 
 interface LoadingSkeletonProps {
   /**
@@ -20,7 +20,7 @@ export function ButtonLoadingSkeleton({
   size = 'medium',
 }: Pick<LoadingSkeletonProps, 'size'>) {
   const muiTheme = useMuiTheme();
-  const colors = getDashboardColors(muiTheme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(muiTheme.palette.mode === 'dark');
 
   const sizeMap = {
     small: { width: 16, height: 16 },
@@ -79,7 +79,7 @@ export function BadgeLoadingSkeleton() {
 
 export function ContentLoadingSkeleton() {
   const muiTheme = useMuiTheme();
-  const colors = getDashboardColors(muiTheme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(muiTheme.palette.mode === 'dark');
 
   return (
     <Box

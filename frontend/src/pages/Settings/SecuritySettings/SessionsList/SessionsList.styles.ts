@@ -1,6 +1,6 @@
 import { styled } from '@mui/material/styles';
 import { Box } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 export const SessionsHeader = styled(Box)({
   display: 'flex',
@@ -9,7 +9,7 @@ export const SessionsHeader = styled(Box)({
 });
 
 export const SessionsTitle = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 500,
@@ -18,7 +18,7 @@ export const SessionsTitle = styled('span')(({ theme }) => {
 });
 
 export const LogoutAllButton = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'inline-flex',
     alignItems: 'center',
@@ -47,7 +47,7 @@ export const SessionsListContainer = styled(Box)({
 export const SessionItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isCurrent',
 })<{ isCurrent?: boolean }>(({ theme, isCurrent }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -66,7 +66,7 @@ export const SessionInfo = styled(Box)({
 });
 
 export const DeviceIcon = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '40px',
     height: '40px',
@@ -86,7 +86,7 @@ export const SessionDetails = styled(Box)({
 });
 
 export const SessionDevice = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.875rem',
     fontWeight: 500,
@@ -98,7 +98,7 @@ export const SessionDevice = styled('span')(({ theme }) => {
 });
 
 export const CurrentBadge = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.625rem',
     fontWeight: 600,
@@ -111,7 +111,7 @@ export const CurrentBadge = styled('span')(({ theme }) => {
 });
 
 export const SessionMeta = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textTertiary,
@@ -119,7 +119,7 @@ export const SessionMeta = styled('span')(({ theme }) => {
 });
 
 export const RevokeButton = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'inline-flex',
     alignItems: 'center',

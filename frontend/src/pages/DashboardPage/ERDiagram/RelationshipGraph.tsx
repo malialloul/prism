@@ -8,7 +8,6 @@ import {
     ToggleButtonGroup,
     alpha,
     useTheme,
-    Skeleton,
     Slider,
     Divider,
 } from '@mui/material';
@@ -29,7 +28,8 @@ import 'reactflow/dist/style.css';
 
 import TableNode from './TableNode';
 import CrowsFootEdge from './CrowsFootEdge';
-import { SchemaService } from '../../../api/services/SchemaService';
+import type { TableDetailsDto } from '../../../api/models/SchemaDto';
+import ERDiagramSkeleton from '../../../components/Skeletons/ERDiagramSkeleton';
 
 // Icons
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
@@ -51,27 +51,15 @@ const nodeTypes = { tableNode: TableNode };
 const edgeTypes = { crowsFoot: CrowsFootEdge };
 
 interface RelationshipGraphProps {
-    databaseId: number;
+    tables: TableDetailsDto[];
+    error: string | null;
+    onRefresh: () => void;
 }
 
-interface SchemaInfo {
-    [tableName: string]: {
-        columns: Array<{ name: string; type: string }>;
-        primaryKeys: string[];
-        foreignKeys: Array<{
-            columnName: string;
-            foreignTable: string;
-            foreignColumn: string;
-        }>;
-    };
-}
-
-const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => {
+const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ tables, error, onRefresh }) => {
     const theme = useTheme();
     const [nodes, setNodes] = useState<Node[]>([]);
     const [edges, setEdges] = useState<Edge[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [layoutDirection, setLayoutDirection] = useState<'LR' | 'TB'>('LR');
     const [fullscreen, setFullscreen] = useState(false);
@@ -88,31 +76,45 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
     const [isTextMode, setIsTextMode] = useState(false);
     const [textInput, setTextInput] = useState('');
 
-    const buildGraph = useCallback((schema: SchemaInfo) => {
-        const tableNames = Object.keys(schema);
+    const buildGraph = useCallback((tablesData: TableDetailsDto[]) => {
+        const tableNames = tablesData.map(t => t.name);
         console.log('Building graph for tables:', tableNames);
 
+        // Extract FK info from constraints
+        const getForeignKeys = (table: TableDetailsDto) => {
+            const fkConstraints = table.constraints?.filter(c => c.type === 'FOREIGN KEY') || [];
+            return fkConstraints
+                .map(c => ({
+                    columnName: c.columns?.[0] || '',
+                    foreignTable: c.referencedTable || '',
+                    foreignColumn: c.referencedColumns?.[0] || '',
+                }))
+                .filter(fk => fk.columnName && fk.foreignTable);
+        };
+
         // Separate join tables (2+ FKs) from regular tables
-        const joinTables = tableNames.filter((t) => (schema[t].foreignKeys || []).length >= 2);
-        const regularTables = tableNames.filter((t) => !joinTables.includes(t));
+        const joinTables = tablesData.filter(t => getForeignKeys(t).length >= 2);
+        const regularTables = tablesData.filter(t => !joinTables.includes(t));
 
         const posMap: Record<string, { x: number; y: number }> = {};
         const newNodes: Node[] = [];
 
         // Layout regular tables in a grid first
-        regularTables.forEach((tableName, idx) => {
+        regularTables.forEach((table, idx) => {
             const x = (idx % 4) * 320;
             const y = Math.floor(idx / 4) * 200;
-            posMap[tableName] = { x, y };
+            posMap[table.name] = { x, y };
+            const fks = getForeignKeys(table);
+            const pks = table.columns.filter(c => c.isPrimaryKey).map(c => c.name);
 
             newNodes.push({
-                id: tableName,
+                id: table.name,
                 type: 'tableNode',
                 data: {
-                    tableName,
-                    columns: schema[tableName].columns || [],
-                    primaryKeys: schema[tableName].primaryKeys || [],
-                    foreignKeys: schema[tableName].foreignKeys || [],
+                    tableName: table.name,
+                    columns: table.columns.map(c => ({ name: c.name, type: c.type })),
+                    primaryKeys: pks,
+                    foreignKeys: fks,
                     showColumns: true,
                 },
                 position: { x, y },
@@ -120,9 +122,9 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
         });
 
         // Place join tables near their referenced tables
-        joinTables.forEach((tableName, jIdx) => {
-            const fks = schema[tableName].foreignKeys || [];
-            const referenced = Array.from(new Set(fks.map((f) => f.foreignTable))).filter((r) => posMap[r]);
+        joinTables.forEach((table, jIdx) => {
+            const fks = getForeignKeys(table);
+            const referenced = Array.from(new Set(fks.map(f => f.foreignTable))).filter(r => posMap[r]);
             let x: number, y: number;
 
             if (referenced.length > 0) {
@@ -137,15 +139,17 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
                 y = Math.floor(idx / 4) * 200;
             }
 
-            posMap[tableName] = { x, y };
+            posMap[table.name] = { x, y };
+            const pks = table.columns.filter(c => c.isPrimaryKey).map(c => c.name);
+
             newNodes.push({
-                id: tableName,
+                id: table.name,
                 type: 'tableNode',
                 data: {
-                    tableName,
-                    columns: schema[tableName].columns || [],
-                    primaryKeys: schema[tableName].primaryKeys || [],
-                    foreignKeys: schema[tableName].foreignKeys || [],
+                    tableName: table.name,
+                    columns: table.columns.map(c => ({ name: c.name, type: c.type })),
+                    primaryKeys: pks,
+                    foreignKeys: fks,
                     showColumns: true,
                 },
                 position: { x, y },
@@ -156,18 +160,19 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
         const newEdges: Edge[] = [];
         let edgeId = 0;
 
-        Object.entries(schema).forEach(([tableName, tableInfo]) => {
-            console.log(`Creating edges for ${tableName}, FKs:`, tableInfo.foreignKeys);
-            tableInfo.foreignKeys?.forEach((fk) => {
+        tablesData.forEach(table => {
+            const fks = getForeignKeys(table);
+            console.log(`Creating edges for ${table.name}, FKs:`, fks);
+            fks.forEach(fk => {
                 console.log(`  Checking FK: ${fk.columnName} -> ${fk.foreignTable}, exists in posMap: ${!!posMap[fk.foreignTable]}`);
                 if (fk.foreignTable && posMap[fk.foreignTable]) {
                     newEdges.push({
                         id: `e${edgeId++}`,
-                        source: tableName,
+                        source: table.name,
                         target: fk.foreignTable,
                         type: 'crowsFoot',
                         data: { label: `${fk.columnName}` },
-                        sourceHandle: `${tableName}:${fk.columnName}`,
+                        sourceHandle: `${table.name}:${fk.columnName}`,
                         targetHandle: `${fk.foreignTable}:${fk.foreignColumn}`,
                         style: { stroke: '#8B5CF6' },
                     });
@@ -182,71 +187,6 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
         setNodes(layoutedNodes);
         setEdges(newEdges);
     }, [layoutDirection]);
-
-    // Load schema and build graph
-    const loadSchema = useCallback(async () => {
-        if (!databaseId) return;
-
-        setLoading(true);
-        setError(null);
-
-        try {
-            // Get full schema with foreign key information
-            const response = await SchemaService.getFullSchema(databaseId);
-            const tables = response.tables || [];
-
-            console.log('Tables loaded:', tables.length);
-
-            // Also get detailed table info for foreign keys
-            const schemaInfo: SchemaInfo = {};
-
-            for (const table of tables) {
-                try {
-                    const details = await SchemaService.getTableDetails(databaseId, table.name);
-                    const tableDetails = details.table;
-
-                    console.log(`Table ${table.name} constraints:`, tableDetails.constraints);
-
-                    const fkConstraints = tableDetails.constraints?.filter(c => c.type === 'FOREIGN KEY') || [];
-                    console.log(`Table ${table.name} FK constraints:`, fkConstraints);
-
-                    schemaInfo[table.name] = {
-                        columns: tableDetails.columns.map(c => ({ name: c.name, type: c.type })),
-                        primaryKeys: tableDetails.columns.filter(c => c.isPrimaryKey).map(c => c.name),
-                        foreignKeys: fkConstraints
-                            .map(c => {
-                                // Use referencedTable and referencedColumns from ConstraintDto
-                                const fk = {
-                                    columnName: c.columns?.[0] || '',
-                                    foreignTable: c.referencedTable || '',
-                                    foreignColumn: c.referencedColumns?.[0] || '',
-                                };
-                                console.log(`  FK: ${fk.columnName} -> ${fk.foreignTable}.${fk.foreignColumn}`);
-                                return fk;
-                            })
-                            .filter(fk => fk.columnName && fk.foreignTable),
-                    };
-                } catch (err) {
-                    console.error(`Error getting details for ${table.name}:`, err);
-                    // If we can't get details, use basic info
-                    schemaInfo[table.name] = {
-                        columns: table.columns,
-                        primaryKeys: [],
-                        foreignKeys: [],
-                    };
-                }
-            }
-
-            console.log('Schema info built:', schemaInfo);
-            buildGraph(schemaInfo);
-        } catch (err: any) {
-            console.error('Error loading schema:', err);
-            setError(err?.message || 'Failed to load schema');
-        } finally {
-            setLoading(false);
-        }
-    }, [databaseId, buildGraph]);
-
 
     const applyDagreLayout = useCallback((ns: Node[], es: Edge[], direction: 'LR' | 'TB' = 'LR'): Node[] => {
         try {
@@ -283,9 +223,12 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
         }
     }, []);
 
+    // Build graph when tables change
     useEffect(() => {
-        loadSchema();
-    }, [loadSchema]);
+        if (tables.length > 0) {
+            buildGraph(tables);
+        }
+    }, [tables, buildGraph]);
 
     const onNodesChange = useCallback((changes: NodeChange[]) => {
         setNodes((nds) => applyNodeChanges(changes, nds));
@@ -513,94 +456,6 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
         }
     }, [saveToHistory]);
 
-    if (loading) {
-        return (
-            <Box sx={{
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-            }}>
-                {/* Toolbar Skeleton */}
-                <Box
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 2,
-                        px: 2,
-                        py: 1,
-                        bgcolor: 'background.paper',
-                        borderBottom: '1px solid',
-                        borderColor: 'divider',
-                    }}
-                >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Skeleton variant="rounded" width={100} height={32} />
-                        <Skeleton variant="rounded" width={40} height={32} />
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Skeleton variant="circular" width={32} height={32} />
-                        <Skeleton variant="circular" width={32} height={32} />
-                        <Skeleton variant="circular" width={32} height={32} />
-                    </Box>
-                </Box>
-
-                {/* Graph Area Skeleton */}
-                <Box sx={{
-                    flex: 1,
-                    p: 3,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 2,
-                }}>
-                    {/* Simulated table nodes skeleton */}
-                    <Box sx={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                        gap: 3,
-                        maxWidth: '100%',
-                    }}>
-                        {[1, 2, 3, 4, 5, 6].map((i) => (
-                            <Box
-                                key={i}
-                                sx={{
-                                    bgcolor: 'background.paper',
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    borderRadius: 2,
-                                    overflow: 'hidden',
-                                }}
-                            >
-                                {/* Table header skeleton */}
-                                <Box sx={{
-                                    px: 2,
-                                    py: 1.5,
-                                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
-                                    borderBottom: '1px solid',
-                                    borderColor: 'divider',
-                                }}>
-                                    <Skeleton variant="text" width="60%" height={20} />
-                                </Box>
-                                {/* Table columns skeleton */}
-                                <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                    {[1, 2, 3, 4].map((j) => (
-                                        <Box key={j} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Skeleton variant="circular" width={16} height={16} />
-                                            <Skeleton variant="text" width="40%" height={16} />
-                                            <Skeleton variant="text" width="30%" height={16} sx={{ ml: 'auto' }} />
-                                        </Box>
-                                    ))}
-                                </Box>
-                            </Box>
-                        ))}
-                    </Box>
-                </Box>
-
-               
-            </Box>
-        );
-    }
-
     if (error) {
         return (
             <Box sx={{
@@ -612,14 +467,15 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
                 gap: 2,
             }}>
                 <Typography color="error">{error}</Typography>
-                <IconButton onClick={loadSchema}>
+                <IconButton onClick={onRefresh}>
                     <RefreshIcon />
                 </IconButton>
             </Box>
         );
     }
 
-    if (nodes.length === 0) {
+    // Only show empty state when we actually have no tables (not when nodes are still being built)
+    if (tables.length === 0) {
         return (
             <Box sx={{
                 height: '100%',
@@ -633,6 +489,11 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
                 <Typography color="text.secondary">No tables found in this database</Typography>
             </Box>
         );
+    }
+
+    // Show skeleton while nodes are being built from tables
+    if (tables.length > 0 && nodes.length === 0) {
+        return <ERDiagramSkeleton />;
     }
 
     return (
@@ -852,7 +713,7 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ databaseId }) => 
                     <Divider orientation="vertical" flexItem />
 
                     <Tooltip title="Refresh Schema">
-                        <IconButton size="small" onClick={loadSchema}>
+                        <IconButton size="small" onClick={onRefresh}>
                             <RefreshIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>

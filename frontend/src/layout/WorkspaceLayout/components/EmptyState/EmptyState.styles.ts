@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Box } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 export const EmptyStateContainer = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     flexDirection: 'column',
@@ -19,7 +19,7 @@ export const EmptyStateContainer = styled(Box)(({ theme }) => {
 });
 
 export const EmptyStateIcon = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '120px',
     height: '120px',
@@ -47,7 +47,7 @@ export const EmptyStateIcon = styled(Box)(({ theme }) => {
 });
 
 export const EmptyStateTitle = styled('h2')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '24px',
     fontWeight: 700,
@@ -57,7 +57,7 @@ export const EmptyStateTitle = styled('h2')(({ theme }) => {
 });
 
 export const EmptyStateDescription = styled('p')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '16px',
     color: colors.textMuted,
@@ -77,7 +77,7 @@ export const EmptyStateActions = styled(Box)({
 export const ActionCard = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'cardVariant',
 })<{ cardVariant: 'postgres' | 'mysql' | 'connect' }>(({ theme, cardVariant }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   
   const getVariantStyles = () => {
     switch (cardVariant) {
@@ -133,7 +133,7 @@ export const ActionCard = styled(Box, {
 export const ActionCardIcon = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'variant',
 })<{ variant: 'postgres' | 'mysql' | 'connect' }>(({ theme, variant }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   
   const getVariantStyles = () => {
     switch (variant) {
@@ -172,7 +172,7 @@ export const ActionCardIcon = styled(Box, {
 export const ActionCardTitle = styled('span', {
   shouldForwardProp: (prop) => prop !== 'variant',
 })<{ variant: 'postgres' | 'mysql' | 'connect' }>(({ theme, variant }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   
   const getColor = () => {
     switch (variant) {
@@ -193,7 +193,7 @@ export const ActionCardTitle = styled('span', {
 });
 
 export const ActionCardSubtitle = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '12px',
     color: colors.textMuted,
@@ -201,7 +201,7 @@ export const ActionCardSubtitle = styled('span')(({ theme }) => {
 });
 
 export const FeaturesList = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     flexWrap: 'wrap',
@@ -215,7 +215,7 @@ export const FeaturesList = styled(Box)(({ theme }) => {
 });
 
 export const FeatureItem = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',

@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Box, IconButton } from '@mui/material';
-import { getDashboardColors } from '../../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../../styles/theme';
 
 export const DetailsPanel = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: colors.backgroundCard,
     border: `1px solid ${colors.border}`,
@@ -17,7 +17,7 @@ export const DetailsPanel = styled(Box)(({ theme }) => {
 });
 
 export const DetailsPanelHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem 1.25rem',
     borderBottom: `1px solid ${colors.border}`,
@@ -34,7 +34,7 @@ export const DetailsTitle = styled(Box)({
 });
 
 export const DetailsTitleText = styled('h3')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: 0,
     fontSize: '0.9375rem',
@@ -46,7 +46,7 @@ export const DetailsTitleText = styled('h3')(({ theme }) => {
 export const TypeBadge = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'type',
 })<{ type: 'table' }>(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.25rem 0.5rem',
     borderRadius: '0.25rem',
@@ -72,7 +72,7 @@ export const DetailsSection = styled(Box)({
 });
 
 export const DetailsSectionTitle = styled('h4')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: '0 0 0.75rem 0',
     fontSize: '0.8125rem',
@@ -84,7 +84,7 @@ export const DetailsSectionTitle = styled('h4')(({ theme }) => {
 });
 
 export const ColumnsTable = styled('table')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '100%',
     borderCollapse: 'collapse',
@@ -119,7 +119,7 @@ export const ColumnsTable = styled('table')(({ theme }) => {
 export const ColumnBadge = styled('span', {
   shouldForwardProp: (prop) => prop !== 'variant',
 })<{ variant: 'primary' | 'foreign' | 'nullable' | 'type' }>(({ theme, variant }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   const styles = {
     primary: {
       backgroundColor: colors.warningLight,
@@ -148,7 +148,7 @@ export const ColumnBadge = styled('span', {
 });
 
 export const ActionButton = styled(IconButton)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.375rem',
     color: colors.textSecondary,
@@ -160,7 +160,7 @@ export const ActionButton = styled(IconButton)(({ theme }) => {
 });
 
 export const TableActionsBar = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     gap: '0.5rem',
@@ -173,7 +173,7 @@ export const TableActionsBar = styled(Box)(({ theme }) => {
 export const TableActionButton = styled('button', {
   shouldForwardProp: (prop) => prop !== 'variant',
 })<{ variant?: 'default' | 'danger' }>(({ theme, variant = 'default' }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   const isDelete = variant === 'danger';
   return {
     display: 'inline-flex',
@@ -200,7 +200,7 @@ export const TableActionButton = styled('button', {
 });
 
 export const EmptyState = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     flexDirection: 'column',
@@ -227,7 +227,7 @@ export const StatRow = styled(Box)(() => {
 });
 
 export const StatItem = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -248,7 +248,7 @@ export const StatItem = styled(Box)(({ theme }) => {
 });
 
 export const ForeignKeyLink = styled('button')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'inline-flex',
     alignItems: 'center',

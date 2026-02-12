@@ -1,6 +1,6 @@
 import { styled } from '@mui/material/styles';
 import { Box, Tabs, Tab } from '@mui/material';
-import { getDashboardColors } from '../../../styles/theme';
+import { getWorkspaceColors } from '../../../styles/theme';
 
 export const ContentHeader = styled(Box)({
   display: 'flex',
@@ -10,7 +10,7 @@ export const ContentHeader = styled(Box)({
 });
 
 export const ContentTitle = styled('h1')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1.5rem',
     fontWeight: 600,
@@ -20,7 +20,7 @@ export const ContentTitle = styled('h1')(({ theme }) => {
 });
 
 export const StyledTabs = styled(Tabs)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     minHeight: 'auto',
     '& .MuiTabs-indicator': {
@@ -31,7 +31,7 @@ export const StyledTabs = styled(Tabs)(({ theme }) => {
 });
 
 export const StyledTab = styled(Tab)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     minHeight: 'auto',
     padding: '0.5rem 1rem',
@@ -54,7 +54,7 @@ export const TabPanel = styled(Box)({
 });
 
 export const TabsContainer = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',

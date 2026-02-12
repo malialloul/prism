@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import {
   Box,
   CircularProgress,
@@ -23,9 +23,9 @@ import { useExecuteQuery } from '../../../../api/entities/schema/useExecuteQuery
 import { SAVED_QUERIES_KEY } from '../../../../api/entities/schema/useSavedQueries';
 import { SchemaService } from '../../../../api/services/SchemaService';
 import { toastService } from '../../../../services';
-import { QueryWizardSkeleton } from '../../../../components';
 import QueryWizard from './QueryWizard/QueryWizard';
 import { DatabaseEngine, extractParameters, SchemaColumn, SchemaTable, WizardState } from './QueryWizard/types';
+import QueryWizardSkeleton from '../../../../components/Skeletons/QueryWizardSkeleton';
 
 interface QueryWizardWrapperProps {
   connectedDatabase: {
@@ -442,7 +442,7 @@ export default function QueryWizardWrapper({
     URL.revokeObjectURL(url);
   }, [queryResult]);
 
-  // Loading state - show full-page skeleton matching wizard design
+  // Show skeleton while loading schema
   if (schemaLoading) {
     return (
       <Container>

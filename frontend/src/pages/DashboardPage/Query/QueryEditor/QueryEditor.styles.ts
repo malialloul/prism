@@ -1,9 +1,9 @@
 import { styled } from '@mui/material/styles';
 import { Box, Button, TextField } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 export const EditorWrapper = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: colors.backgroundCard,
     border: `1px solid ${colors.border}`,
@@ -16,7 +16,7 @@ export const EditorWrapper = styled(Box)(({ theme }) => {
 });
 
 export const EditorHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.75rem 1.25rem',
     borderBottom: `1px solid ${colors.border}`,
@@ -28,7 +28,7 @@ export const EditorHeader = styled(Box)(({ theme }) => {
 });
 
 export const EditorTitle = styled('h3')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     margin: 0,
     fontSize: '0.9375rem',
@@ -44,7 +44,7 @@ export const EditorActions = styled(Box)({
 });
 
 export const RunButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: colors.success,
     color: 'white',
@@ -65,7 +65,7 @@ export const RunButton = styled(Button)(({ theme }) => {
 });
 
 export const SaveButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: 'transparent',
     color: colors.textSecondary,
@@ -90,7 +90,7 @@ export const EditorContent = styled(Box)({
 });
 
 export const SqlEditorArea = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     flex: '0 0 auto',
     padding: '0.75rem',
@@ -101,7 +101,7 @@ export const SqlEditorArea = styled(Box)(({ theme }) => {
 });
 
 export const SqlTextarea = styled('textarea')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '100%',
     height: '100%',
@@ -135,7 +135,7 @@ export const ResultsArea = styled(Box)({
 });
 
 export const ResultsHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.5rem 1rem',
     borderBottom: `1px solid ${colors.border}`,
@@ -147,7 +147,7 @@ export const ResultsHeader = styled(Box)(({ theme }) => {
 });
 
 export const ResultsTitle = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.8125rem',
     fontWeight: 500,
@@ -156,7 +156,7 @@ export const ResultsTitle = styled('span')(({ theme }) => {
 });
 
 export const ResultsMeta = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textMuted,
@@ -173,7 +173,7 @@ export const ResultsContent = styled(Box)({
 });
 
 export const ResultsTable = styled('table')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '100%',
     borderCollapse: 'collapse',
@@ -207,7 +207,7 @@ export const ResultsTable = styled('table')(({ theme }) => {
 });
 
 export const NullValue = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     color: colors.textMuted,
     fontStyle: 'italic',
@@ -215,7 +215,7 @@ export const NullValue = styled('span')(({ theme }) => {
 });
 
 export const ErrorMessage = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem',
     backgroundColor: colors.errorLight,
@@ -228,7 +228,7 @@ export const ErrorMessage = styled(Box)(({ theme }) => {
 });
 
 export const SuccessMessage = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem',
     backgroundColor: colors.successLight,
@@ -240,7 +240,7 @@ export const SuccessMessage = styled(Box)(({ theme }) => {
 });
 
 export const EmptyResults = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     flexDirection: 'column',
@@ -259,7 +259,7 @@ export const EmptyResults = styled(Box)(({ theme }) => {
 
 // Saved queries sidebar
 export const SavedQueriesPanel = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '240px',
     borderRight: `1px solid ${colors.border}`,
@@ -270,7 +270,7 @@ export const SavedQueriesPanel = styled(Box)(({ theme }) => {
 });
 
 export const SavedQueriesHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.75rem 1rem',
     borderBottom: `1px solid ${colors.border}`,
@@ -292,7 +292,7 @@ export const SavedQueriesList = styled(Box)({
 export const SavedQueryItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'selected',
 })<{ selected?: boolean }>(({ theme, selected }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.5rem 0.75rem',
     borderRadius: '0.375rem',
@@ -308,7 +308,7 @@ export const SavedQueryItem = styled(Box, {
 });
 
 export const SavedQueryName = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.8125rem',
     color: colors.text,
@@ -324,7 +324,7 @@ export const SaveQueryDialog = styled(Box)({
 });
 
 export const SaveQueryInput = styled(TextField)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     '& .MuiOutlinedInput-root': {
       backgroundColor: colors.backgroundTertiary,
@@ -348,7 +348,7 @@ export const SaveQueryInput = styled(TextField)(({ theme }) => {
 });
 
 export const ExportButton = styled(Button)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: 'transparent',
     color: colors.textSecondary,
@@ -366,7 +366,7 @@ export const ExportButton = styled(Button)(({ theme }) => {
 });
 
 export const ResultsToolbar = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.75rem 1rem',
     borderBottom: `1px solid ${colors.border}`,

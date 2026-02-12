@@ -1,6 +1,6 @@
 import { styled } from '@mui/material/styles';
 import { Box } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 
 export const StatsGrid = styled(Box)(({ theme }) => ({
   display: 'grid',
@@ -15,7 +15,7 @@ export const StatsGrid = styled(Box)(({ theme }) => ({
 }));
 
 export const StatCard = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     backgroundColor: colors.backgroundCard,
     border: `1px solid ${colors.border}`,
@@ -40,7 +40,7 @@ export const StatHeader = styled(Box)({
 export const StatIconBox = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'variant',
 })<{ variant: 'primary' | 'secondary' | 'success' | 'warning' | 'info' }>(({ theme, variant }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   const variantColors = {
     primary: { bg: colors.primaryLight, color: colors.primary },
     secondary: { bg: colors.secondaryLight, color: colors.secondary },
@@ -67,7 +67,7 @@ export const StatIconBox = styled(Box, {
 export const StatTrend = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'positive',
 })<{ positive?: boolean }>(({ theme, positive }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -88,7 +88,7 @@ export const StatContent = styled(Box)({
 });
 
 export const StatValue = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '1.75rem',
     fontWeight: 700,
@@ -98,7 +98,7 @@ export const StatValue = styled('span')(({ theme }) => {
 });
 
 export const StatLabel = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.8125rem',
     color: colors.textSecondary,
@@ -106,7 +106,7 @@ export const StatLabel = styled('span')(({ theme }) => {
 });
 
 export const StatSubValue = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.6875rem',
     color: colors.textMuted,
@@ -115,7 +115,7 @@ export const StatSubValue = styled('span')(({ theme }) => {
 });
 
 export const StatFooter = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -127,7 +127,7 @@ export const StatFooter = styled(Box)(({ theme }) => {
 });
 
 export const StatChange = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     color: colors.textMuted,

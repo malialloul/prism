@@ -1,10 +1,10 @@
 import { styled } from '@mui/material/styles';
 import { Box, IconButton } from '@mui/material';
-import { getDashboardColors } from '../../../../styles/theme';
+import { getWorkspaceColors } from '../../../../styles/theme';
 import { DatabaseDto } from '../../../../api/models/DatabaseDto';
 
 export const SidebarWrapper = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '280px',
     minWidth: '280px',
@@ -19,7 +19,7 @@ export const SidebarWrapper = styled(Box)(({ theme }) => {
 });
 
 export const SidebarHeader = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem 1.25rem',
     borderBottom: `1px solid ${colors.border}`,
@@ -30,7 +30,7 @@ export const SidebarHeader = styled(Box)(({ theme }) => {
 });
 
 export const HeaderTitle = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     fontSize: '0.75rem',
     fontWeight: 600,
@@ -41,7 +41,7 @@ export const HeaderTitle = styled('span')(({ theme }) => {
 });
 
 export const AddButton = styled(IconButton)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.375rem',
     borderRadius: '0.375rem',
@@ -63,7 +63,7 @@ export const DatabaseList = styled(Box)({
 export const DatabaseItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'selected',
 })<{ selected?: boolean }>(({ theme, selected }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -83,7 +83,7 @@ export const DatabaseItem = styled(Box, {
 export const DatabaseIconBox = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'engine',
 })<{ engine: 'postgres' | 'mysql' }>(({ theme, engine }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     position: 'relative',
     width: '2.25rem',
@@ -106,7 +106,7 @@ export const DatabaseInfo = styled(Box)({
 });
 
 export const DatabaseName = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'block',
     fontSize: '0.875rem',
@@ -119,7 +119,7 @@ export const DatabaseName = styled('span')(({ theme }) => {
 });
 
 export const DatabaseMeta = styled('span')(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -132,7 +132,7 @@ export const DatabaseMeta = styled('span')(({ theme }) => {
 export const StatusDot = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'status',
 })<{ status: DatabaseDto['status'] }>(({ theme, status }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '0.5rem',
     height: '0.5rem',
@@ -146,7 +146,7 @@ export const StatusDot = styled(Box, {
 export const ConnectionButton = styled(IconButton, {
   shouldForwardProp: (prop) => prop !== 'isConnected',
 })<{ isConnected?: boolean }>(({ theme, isConnected }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.375rem',
     borderRadius: '0.375rem',
@@ -163,7 +163,7 @@ export const ConnectionButton = styled(IconButton, {
 });
 
 export const DeleteButton = styled(IconButton)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.375rem',
     borderRadius: '0.375rem',
@@ -180,7 +180,7 @@ export const DeleteButton = styled(IconButton)(({ theme }) => {
 });
 
 export const InfoButton = styled(IconButton)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '0.375rem',
     borderRadius: '0.375rem',
@@ -199,7 +199,7 @@ export const InfoButton = styled(IconButton)(({ theme }) => {
 export const AllDatabasesItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'selected',
 })<{ selected?: boolean }>(({ theme, selected }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -218,7 +218,7 @@ export const AllDatabasesItem = styled(Box, {
 });
 
 export const AllDatabasesIcon = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     width: '2.25rem',
     height: '2.25rem',
@@ -232,7 +232,7 @@ export const AllDatabasesIcon = styled(Box)(({ theme }) => {
 });
 
 export const SidebarFooter = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     padding: '1rem',
     borderTop: `1px solid ${colors.border}`,
@@ -243,7 +243,7 @@ export const SidebarFooter = styled(Box)(({ theme }) => {
 });
 
 export const FooterButton = styled(Box)(({ theme }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     display: 'flex',
     alignItems: 'center',
@@ -264,7 +264,7 @@ export const FooterButton = styled(Box)(({ theme }) => {
 export const HostedBadge = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isHosted',
 })<{ isHosted?: boolean }>(({ theme, isHosted }) => {
-  const colors = getDashboardColors(theme.palette.mode === 'dark');
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
   return {
     position: 'absolute',
     bottom: '-2px',

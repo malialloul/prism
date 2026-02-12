@@ -1,25 +1,17 @@
 import { Box } from "@mui/material";
 import { ApisContent } from "./BuildQuery.styles";
 import QueryWizardWrapper from "./QueryWizardWrapper/QueryWizardWrapper";
-import { useWorkspace } from "../../DashboardPage/WorkspaceLayout";
-import { useApisContext } from "../ApisLayout";
-import { usePermissions, AccessRestricted, QueryWizardSkeleton } from "../../../components";
+import { useWorkspace } from "../../../layout";
+import { useApisContext } from "../../../layout";
+import { usePermissions, AccessRestricted } from "../../../components";
 
 export default function BuildQuery() {
-  const workspace = useWorkspace();
+  const workspace = useWorkspace()!;
   const { triggerOpenApiRefresh } = useApisContext();
   const { canCreateApi } = usePermissions();
-
-  // Show loading skeleton while context is loading or switching databases
-  if (!workspace || workspace.isSwitchingDatabase) {
-    return (
-      <ApisContent>
-        <QueryWizardSkeleton />
-      </ApisContent>
-    );
-  }
-
   const { connectedDatabase } = workspace;
+
+  // TypeScript safety - WorkspaceLayout handles redirect if no connected database
   if (!connectedDatabase) return null;
 
   // Show permission warning if not allowed
