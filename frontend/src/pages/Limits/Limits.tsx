@@ -155,7 +155,7 @@ const Limits = () => {
         <Box>
           <PageTitle>Your Plan Limits</PageTitle>
           <PageSubtitle>
-            View your current usage and plan limits. Upgrade to increase limits.
+            View your current usage and plan limits.
           </PageSubtitle>
           <VersionBadge>
             <RocketLaunchIcon sx={{ fontSize: '1rem' }} />
