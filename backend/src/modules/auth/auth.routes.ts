@@ -35,6 +35,10 @@ import {
   googleOAuthCallbackHandler,
   githubOAuthHandler,
   githubOAuthCallbackHandler,
+  createApiTokenHandler,
+  getApiTokensHandler,
+  revokeApiTokenHandler,
+  revealApiTokenHandler,
 } from './auth.controller';
 import { authMiddleware, blockSharedAccess, requireSharedAccess } from '../../middleware/auth';
 
@@ -93,5 +97,11 @@ router.delete('/permission-requests/:requestId', authMiddleware, requireSharedAc
 
 // Get current permissions for shared user (fetches from DB, not from stale JWT)
 router.get('/my-permissions', authMiddleware, requireSharedAccess, getMyPermissionsHandler);
+
+// API Token routes (protected) - blocked for shared access users
+router.post('/api-tokens', authMiddleware, blockSharedAccess, createApiTokenHandler);
+router.get('/api-tokens', authMiddleware, blockSharedAccess, getApiTokensHandler);
+router.get('/api-tokens/:tokenId/reveal', authMiddleware, blockSharedAccess, revealApiTokenHandler);
+router.delete('/api-tokens/:tokenId', authMiddleware, blockSharedAccess, revokeApiTokenHandler);
 
 export default router;

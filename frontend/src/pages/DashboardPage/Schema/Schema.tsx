@@ -9,6 +9,7 @@ import {
 } from "./Schema.styles";
 import { SchemaExplorer, ObjectDetailsPanel } from "./SchemaExplorer";
 import { CreateTableDialog, AddColumnDialog, DeleteTableDialog, TableEditor } from "./TableEditor";
+import { toastService } from "../../../services";
 
 // Icons
 import TableViewIcon from "@mui/icons-material/TableView";
@@ -57,17 +58,15 @@ export default function Schema() {
   };
 
   const handleCreateTable = () => {
-    setIsCreateTableDialogOpen(true);
+    toastService.info('Coming Soon');
   };
 
-  const handleAddColumn = (tableName: string) => {
-    setTableToModify(tableName);
-    setIsAddColumnDialogOpen(true);
+  const handleAddColumn = (_tableName: string) => {
+    toastService.info('Coming Soon');
   };
 
-  const handleDeleteTable = (tableName: string) => {
-    setTableToModify(tableName);
-    setIsDeleteTableDialogOpen(true);
+  const handleDeleteTable = (_tableName: string) => {
+    toastService.info('Coming Soon');
   };
 
   const handleEditTable = (tableName: string) => {

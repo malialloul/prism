@@ -29,6 +29,10 @@ import {
   getMyPermissionRequestsService,
   respondPermissionRequestService,
   cancelPermissionRequestService,
+  createApiTokenService,
+  getApiTokensService,
+  revokeApiTokenService,
+  revealApiTokenService,
 } from './auth.service';
 import { 
   SignupDto, 
@@ -50,6 +54,7 @@ import {
   SharedLoginDto,
   CreatePermissionRequestDto,
   RespondPermissionRequestDto,
+  CreateApiTokenDto,
 } from './auth.types';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { AuthorizationError } from '../../utils/errors';
@@ -77,6 +82,10 @@ import type {
   PermissionRequestsResponseDto,
   CreatePermissionRequestResponseDto,
   RespondPermissionRequestResponseDto,
+  CreateApiTokenResponseDto,
+  ApiTokensResponseDto,
+  RevokeApiTokenResponseDto,
+  RevealApiTokenResponseDto,
 } from './auth.types';
 
 export const signupHandler = asyncHandler(async (
@@ -676,4 +685,93 @@ export const githubOAuthCallbackHandler = asyncHandler(async (
     const errorMessage = err.message || 'Authentication failed';
     res.redirect(`${oauthConfig.frontendUrl}/signin?error=${encodeURIComponent(errorMessage)}`);
   }
+});
+
+// =====================
+// API Token Handlers
+// =====================
+
+/**
+ * Create a new API token
+ */
+export const createApiTokenHandler = asyncHandler(async (
+  req: Request<{}, {}, CreateApiTokenDto>,
+  res: Response,
+  _next: NextFunction,
+) => {
+  if (!req.user?.userId) {
+    throw new AuthorizationError('User not authenticated');
+  }
+  
+  const data = await createApiTokenService(req.user.userId, req.body);
+  const result: CreateApiTokenResponseDto = {
+    status: 'success',
+    message: 'API token created successfully',
+    data,
+  };
+  res.status(201).json(result);
+});
+
+/**
+ * Get all API tokens for the current user
+ */
+export const getApiTokensHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  if (!req.user?.userId) {
+    throw new AuthorizationError('User not authenticated');
+  }
+  
+  const data = await getApiTokensService(req.user.userId);
+  const result: ApiTokensResponseDto = {
+    status: 'success',
+    message: 'API tokens retrieved successfully',
+    data,
+  };
+  res.json(result);
+});
+
+/**
+ * Revoke an API token
+ */
+export const revokeApiTokenHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  if (!req.user?.userId) {
+    throw new AuthorizationError('User not authenticated');
+  }
+  
+  const tokenId = parseInt(req.params.tokenId as string, 10);
+  const data = await revokeApiTokenService(req.user.userId, tokenId);
+  const result: RevokeApiTokenResponseDto = {
+    status: 'success',
+    message: data.message,
+  };
+  res.json(result);
+});
+
+/**
+ * Reveal (get plain text) an API token
+ */
+export const revealApiTokenHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  if (!req.user?.userId) {
+    throw new AuthorizationError('User not authenticated');
+  }
+  
+  const tokenId = parseInt(req.params.tokenId as string, 10);
+  const data = await revealApiTokenService(req.user.userId, tokenId);
+  const result: RevealApiTokenResponseDto = {
+    status: 'success',
+    message: 'Token retrieved successfully',
+    data,
+  };
+  res.json(result);
 });

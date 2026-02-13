@@ -402,14 +402,14 @@ export const listRecords = async (
       const orderClause = sortBy ? `ORDER BY \`${sortBy}\` ${sortOrder}` : '';
 
       // Get total count
-      const [countRows] = await mysqlConn.execute(
+      const [countRows] = await mysqlConn.query(
         `SELECT COUNT(*) as total FROM \`${sanitizedTable}\` ${whereClause}`,
         values
       );
       const total = (countRows as Array<{ total: number }>)[0].total;
 
-      // Get records
-      const [dataRows] = await mysqlConn.execute(
+      // Get records - use query() instead of execute() to avoid prepared statement issues with LIMIT/OFFSET
+      const [dataRows] = await mysqlConn.query(
         `SELECT * FROM \`${sanitizedTable}\` ${whereClause} ${orderClause} LIMIT ? OFFSET ?`,
         [...values, limit, offset]
       );

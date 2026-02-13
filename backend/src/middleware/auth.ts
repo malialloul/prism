@@ -5,12 +5,14 @@ import { config } from '../config/env';
 import { AuthenticationError, AuthorizationError } from '../utils/errors';
 import type { SharePermissions } from '../modules/auth/auth.types';
 import { pool } from '../config';
+import { validateApiTokenService } from '../modules/auth/auth.service';
 
 export interface JwtPayload {
   userId: string;
   email: string;
   fullName?: string;
   isSharedAccess?: boolean;
+  isApiToken?: boolean;
   shareId?: number;
   sharedWithEmail?: string;
   permissions?: SharePermissions;
@@ -26,36 +28,87 @@ declare global {
   }
 }
 
-export const authMiddleware = (
+export const authMiddleware = async (
   req: Request,
   _res: Response,
   next: NextFunction,
-): void => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new AuthenticationError('No token provided');
-  }
-
-  const token = authHeader.substring(7);
-
+): Promise<void> => {
   try {
+    // Check for X-API-Key header first
+    const apiKey = req.headers['x-api-key'] as string | undefined;
+    if (apiKey && apiKey.startsWith('prism_')) {
+      const userInfo = await validateApiTokenService(apiKey);
+      if (!userInfo) {
+        throw new AuthenticationError('Invalid or expired API token');
+      }
+      
+      req.user = {
+        userId: userInfo.userId,
+        email: userInfo.email,
+        fullName: userInfo.fullName,
+        isApiToken: true,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600, // Placeholder, not used for API tokens
+      };
+      next();
+      return;
+    }
+
+    // Check for Authorization header
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new AuthenticationError('No token provided');
+    }
+
+    const token = authHeader.substring(7);
+
+    // Check if it's an API token (starts with prism_)
+    if (token.startsWith('prism_')) {
+      const userInfo = await validateApiTokenService(token);
+      if (!userInfo) {
+        throw new AuthenticationError('Invalid or expired API token');
+      }
+      
+      req.user = {
+        userId: userInfo.userId,
+        email: userInfo.email,
+        fullName: userInfo.fullName,
+        isApiToken: true,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600, // Placeholder, not used for API tokens
+      };
+      next();
+      return;
+    }
+
+    // Regular JWT token
     const decoded = jwt.verify(token, config.jwt.secret) as JwtPayload;
     req.user = decoded;
     next();
   } catch (error) {
-    throw new AuthenticationError('Invalid or expired token');
+    if (error instanceof AuthenticationError) {
+      next(error);
+      return;
+    }
+    next(new AuthenticationError('Invalid or expired token'));
   }
 };
 
 /**
  * Middleware to block shared access users from certain routes (like settings)
+ * API token users are allowed (they have full access like account owners)
  */
 export const blockSharedAccess = (
   req: Request,
   _res: Response,
   next: NextFunction,
 ): void => {
+  // API token users have full access, not shared access
+  if (req.user?.isApiToken) {
+    next();
+    return;
+  }
   if (req.user?.isSharedAccess) {
     throw new AuthorizationError('This action is not available for shared access accounts');
   }

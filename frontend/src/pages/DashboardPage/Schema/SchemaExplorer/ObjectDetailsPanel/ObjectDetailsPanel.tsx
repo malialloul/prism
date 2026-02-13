@@ -5,6 +5,7 @@ import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import StorageIcon from '@mui/icons-material/Storage';
 import LinkIcon from '@mui/icons-material/Link';
+import { toastService } from '../../../../../services';
 import {
   DetailsPanel,
   DetailsPanelHeader,
@@ -100,24 +101,24 @@ export default function ObjectDetailsPanel({
         <TableActionsBar>
           <Tooltip title="Add a new column to this table" arrow>
             <TableActionButton
-              onClick={() => onAddColumn?.(objectName)}
+              onClick={() => toastService.info('Coming Soon')}
             >
               <AddIcon />
               Add Column
             </TableActionButton>
           </Tooltip>
-          <Tooltip title="Edit table data and structure" arrow>
+          <Tooltip title="View table data and structure" arrow>
             <TableActionButton
               onClick={() => onEditTable?.(objectName)}
             >
               <EditIcon />
-              Edit Table
+              View Table
             </TableActionButton>
           </Tooltip>
           <Tooltip title="Permanently delete this table" arrow>
             <TableActionButton
               variant="danger"
-              onClick={() => onDeleteTable?.(objectName)}
+              onClick={() => toastService.info('Coming Soon')}
             >
               <DeleteIcon />
               Delete Table

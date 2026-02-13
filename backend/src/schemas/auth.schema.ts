@@ -130,6 +130,29 @@ export const PermissionRequestSchema = registerTable(
   }
 );
 
+// API tokens table - stores user-generated API tokens for auto-generated APIs
+export const ApiTokenSchema = registerTable(
+  "api_tokens",
+  z.object({
+    userId: z.number().int(),
+    name: z.string().max(100),
+    tokenHash: z.string(), // Hashed token for validation
+    tokenEncrypted: z.string(), // Encrypted token for retrieval
+    tokenPrefix: z.string().max(12), // First 12 chars of token for identification (prism_xxxxx)
+    lastUsedAt: z.date().optional(),
+    expiresAt: z.date().optional(), // Optional expiration
+    revokedAt: z.date().optional(),
+  }),
+  {
+    withId: true,
+    withTimestamps: true,
+    columnOverrides: {
+      userId: { references: { table: "users", column: "id" } },
+      tokenHash: { unique: true },
+    },
+  }
+);
+
 // Request/Response schemas (not registered as tables)
 export const SignupSchema = z.object({
   email: z.string().email(),

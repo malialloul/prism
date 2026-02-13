@@ -535,6 +535,27 @@ function PermissionRequestsPanel() {
 }
 
 export default function AccountSharing() {
+  // COMING SOON - Early return to disable functionality while keeping code intact
+  return (
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      minHeight: '300px',
+      gap: 2
+    }}>
+      <PersonAddIcon sx={{ fontSize: 64, color: 'text.secondary', opacity: 0.5 }} />
+      <Typography variant="h5" sx={{ color: 'text.secondary' }}>
+        Coming Soon
+      </Typography>
+      <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center', maxWidth: 400 }}>
+        Account sharing functionality will be available in a future update. Stay tuned!
+      </Typography>
+    </Box>
+  );
+
+  // ============ ORIGINAL CODE BELOW (preserved but unreachable) ============
   const { data: sharesData, isLoading: loadingShares, refetch: refetchShares } = useSharedAccounts();
   const { revokeShare, isLoading: revoking } = useRevokeShare({
     onSuccess: () => {
@@ -787,4 +808,4 @@ export default function AccountSharing() {
       </Dialog>
     </div>
   );
-}
+} 

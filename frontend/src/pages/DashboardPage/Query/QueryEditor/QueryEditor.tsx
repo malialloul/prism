@@ -124,6 +124,13 @@ export default function QueryEditor({
     return /\bcreate\s+database\b/.test(normalizedSql);
   }, []);
 
+  // Helper to check if query is a SELECT statement
+  const isSelectQuery = useCallback((query: string): boolean => {
+    const normalizedSql = query.toLowerCase().replace(/\s+/g, ' ').trim();
+    // Allow SELECT and WITH (for CTEs that typically start SELECT)
+    return /^(select|with)\b/.test(normalizedSql);
+  }, []);
+
   const handleRunQuery = useCallback(() => {
     if (!sql.trim() || !databaseId) return;
 
@@ -140,10 +147,16 @@ export default function QueryEditor({
       return;
     }
 
+    // Only allow SELECT queries - show Coming Soon for other actions
+    if (!isSelectQuery(sql)) {
+      toastService.info('Coming Soon - Only SELECT queries are currently supported');
+      return;
+    }
+
     setExecutedSql(sql);
     setPage(0);
     executeQuery({ sql, page: 0, pageSize });
-  }, [sql, databaseId, executeQuery, pageSize, isCreateDatabaseQuery, canCreateDatabase, handleCreateDatabase]);
+  }, [sql, databaseId, executeQuery, pageSize, isCreateDatabaseQuery, isSelectQuery, canCreateDatabase, handleCreateDatabase]);
 
   // Re-execute query when page or pageSize changes
   useEffect(() => {

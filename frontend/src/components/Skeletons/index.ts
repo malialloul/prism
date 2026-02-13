@@ -2,6 +2,7 @@ export { default as HomeSkeleton } from './HomeSkeleton';
 export { default as AuthSkeleton } from './AuthSkeleton';
 export { default as DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 export { default as SettingsSkeleton } from './SettingsSkeleton';
+export { default as ApiTokensSkeleton } from './ApiTokensSkeleton';
 export { default as OverviewSkeleton } from './OverviewSkeleton';
 export { default as QuerySkeleton } from './QuerySkeleton';
 export { default as ERDiagramSkeleton } from './ERDiagramSkeleton';

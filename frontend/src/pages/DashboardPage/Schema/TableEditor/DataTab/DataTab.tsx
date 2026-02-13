@@ -11,6 +11,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import EditIcon from '@mui/icons-material/Edit';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import { toastService } from '../../../../../services';
 import type { RowData, EditingCell } from '../TableEditor.types';
 import { formatDisplayValue } from '../TableEditor.utils';
 import {
@@ -125,7 +126,7 @@ export default function DataTab({
           <Tooltip title="Add Row" arrow>
             <span>
               <IconButton
-                onClick={onAddRow}
+                onClick={() => toastService.info('Coming Soon')}
                 size="small"
               >
                 <AddIcon />
@@ -135,7 +136,7 @@ export default function DataTab({
           <Tooltip title="Delete Selected" arrow>
             <span>
               <IconButton
-                onClick={onDeleteSelected}
+                onClick={() => toastService.info('Coming Soon')}
                 size="small"
                 disabled={
                   selectedRows.size === 0 ||
@@ -278,7 +279,7 @@ export default function DataTab({
                       <span>
                         <IconButton
                           size="small"
-                          onClick={() => !row._isDeleted && onRowEdit(row)}
+                          onClick={() => toastService.info('Coming Soon')}
                           disabled={row._isDeleted}
                         >
                           <EditIcon sx={{ fontSize: '1rem' }} />

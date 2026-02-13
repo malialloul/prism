@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Tooltip } from '@mui/material';
 import CloudIcon from '@mui/icons-material/Cloud';
 import StorageIcon from '@mui/icons-material/Storage';
+import { toastService } from '../../../../services';
 import {
   SidebarWrapper,
   SidebarHeader,
@@ -75,7 +76,7 @@ export default function Sidebar({
         <HeaderTitle>Databases</HeaderTitle>
         <Tooltip title="Add Database" arrow>
           <AddButton
-            onClick={() => onAddDatabase()}
+            onClick={() => toastService.info('Coming Soon')}
             size="small"
             data-tour="add-database"
           >

@@ -196,7 +196,9 @@ export function generateSQL(state: WizardState, engine: DatabaseEngine): Generat
     // Helper to safely cast placeholder for numeric columns
     const safeNumericPlaceholder = (placeholder: string): string => {
       if (isOptional && isNumericColumn) {
-        return `CAST(NULLIF(${placeholder}, '') AS NUMERIC)`;
+        // MySQL uses DECIMAL or SIGNED, PostgreSQL uses NUMERIC
+        const castType = engine === 'mysql' ? 'DECIMAL' : 'NUMERIC';
+        return `CAST(NULLIF(${placeholder}, '') AS ${castType})`;
       }
       return placeholder;
     };
@@ -298,7 +300,8 @@ export function generateSQL(state: WizardState, engine: DatabaseEngine): Generat
           const toPlaceholder = addParam(`{{${paramName}_to}}`);
           let betweenCond: string;
           if (isOptional && isNumericColumn) {
-            betweenCond = `${col} BETWEEN CAST(NULLIF(${fromPlaceholder}, '') AS NUMERIC) AND CAST(NULLIF(${toPlaceholder}, '') AS NUMERIC)`;
+            const castType = engine === 'mysql' ? 'DECIMAL' : 'NUMERIC';
+            betweenCond = `${col} BETWEEN CAST(NULLIF(${fromPlaceholder}, '') AS ${castType}) AND CAST(NULLIF(${toPlaceholder}, '') AS ${castType})`;
           } else {
             betweenCond = `${col} BETWEEN ${fromPlaceholder} AND ${toPlaceholder}`;
           }
@@ -374,7 +377,8 @@ export function generateSQL(state: WizardState, engine: DatabaseEngine): Generat
         // For optional HAVING params, use pattern that works with empty string
         // When param is empty: ('' = '' OR ...) evaluates to TRUE, skipping the condition
         // Use NULLIF to safely handle the empty string for numeric comparison
-        havingParts.push(`(${placeholder} = '' OR ${aggExpr} ${having.operator} CAST(NULLIF(${placeholder}, '') AS NUMERIC))`);
+        const castType = engine === 'mysql' ? 'DECIMAL' : 'NUMERIC';
+        havingParts.push(`(${placeholder} = '' OR ${aggExpr} ${having.operator} CAST(NULLIF(${placeholder}, '') AS ${castType}))`);
       } else {
         havingParts.push(`${aggExpr} ${having.operator} ${placeholder}`);
       }
@@ -486,10 +490,11 @@ export function generateSQL(state: WizardState, engine: DatabaseEngine): Generat
   // Handle pagination (either fixed LIMIT/OFFSET or parameterized)
   if (state.pagination?.enabled) {
     // Pagination mode - use parameters
+    // Use :pagesize and :offset placeholders that backend will replace
     const pageSizePlaceholder = addParam('{{pagesize}}');
-    const pageCountPlaceholder = addParam('{{pagecount}}');
+    const offsetPlaceholder = addParam('{{offset}}');
     query += `\nLIMIT ${pageSizePlaceholder}`;
-    query += `\nOFFSET (${pageCountPlaceholder} - 1) * ${pageSizePlaceholder}`;
+    query += `\nOFFSET ${offsetPlaceholder}`;
   } else {
     // Fixed mode
     if (state.limit) {

@@ -9,6 +9,7 @@ import {
 import ActiveDatabaseSummary from "./ActiveDatabaseSummary/ActiveDatabaseSummary";
 import OverviewStatsCards from "./OverviewStatsCards/OverviewStatsCards";
 import UsageCharts from "./UsageCharts/UsageCharts";
+import { toastService } from "../../../services";
 
 // Icons
 import AddIcon from "@mui/icons-material/Add";
@@ -29,7 +30,6 @@ export default function Overview() {
     isLoading,
     handleRefresh,
     handleDisconnect,
-    handleCreateDatabase,
     handleConnectDatabase,
   } = workspace;
 
@@ -49,7 +49,7 @@ export default function Overview() {
         <QuickActionsBar>
           <QuickActionButton
             variant="primary"
-            onClick={() => handleCreateDatabase()}
+            onClick={() => toastService.info('Coming Soon')}
           >
             <AddIcon sx={{ fontSize: "1rem" }} />
             Create Database

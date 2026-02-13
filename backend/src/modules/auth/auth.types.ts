@@ -374,3 +374,52 @@ export type PermissionRequestsResponseDto = ApiResponseDto<PermissionRequestsLis
 export type CreatePermissionRequestResponseDto = ApiResponseDto<{ request: PermissionRequestDto }>;
 
 export type RespondPermissionRequestResponseDto = ApiResponseDto<MessageResponseDto>;
+
+// API Token types
+export interface ApiTokenDto {
+  id: number;
+  userId: number;
+  name: string;
+  tokenPrefix: string;
+  lastUsedAt: Date | null;
+  expiresAt: Date | null;
+  revokedAt: Date | null;
+  createdAt: Date;
+}
+
+export interface CreateApiTokenDto {
+  name: string;
+  expiresInDays?: number; // Optional, null = never expires
+}
+
+export interface CreateApiTokenResultDto {
+  token: ApiTokenDto;
+  plainToken: string; // Returned when created for easy copy
+}
+
+export interface ApiTokensListDto {
+  tokens: ApiTokenDto[];
+}
+
+export interface DbApiTokenDto {
+  id: number;
+  user_id: number;
+  name: string;
+  token_hash: string;
+  token_encrypted: string;
+  token_prefix: string;
+  last_used_at: Date | null;
+  expires_at: Date | null;
+  revoked_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface RevealApiTokenResultDto {
+  plainToken: string;
+}
+
+export type CreateApiTokenResponseDto = ApiResponseDto<CreateApiTokenResultDto>;
+export type ApiTokensResponseDto = ApiResponseDto<ApiTokensListDto>;
+export type RevokeApiTokenResponseDto = ApiResponseDto<MessageResponseDto>;
+export type RevealApiTokenResponseDto = ApiResponseDto<RevealApiTokenResultDto>;

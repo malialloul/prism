@@ -46,6 +46,8 @@ import type {
   PermissionRequestDto,
   PermissionRequestsListDto,
   DbPermissionRequestDto,
+  ApiTokenDto,
+  DbApiTokenDto,
 } from './auth.types';
 import { DEFAULT_SHARE_PERMISSIONS } from './auth.types';
 import { ConflictError, AuthenticationError, AuthorizationError, NotFoundError, ValidationError } from '../../utils/errors';
@@ -2213,4 +2215,227 @@ export const exchangeGithubCodeService = async (code: string): Promise<OAuthUser
     providerId: String(userInfo.id),
     avatarUrl: userInfo.avatar_url,
   };
+};
+
+// =====================
+// API Token Services
+// =====================
+
+/**
+ * Generate a secure random API token
+ * Format: prism_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ */
+const generateApiToken = (): string => {
+  const randomBytes = crypto.randomBytes(32);
+  return `prism_${randomBytes.toString('hex')}`;
+};
+
+/**
+ * Encrypt a token for storage (can be decrypted later)
+ */
+const encryptToken = (plainToken: string): string => {
+  const algorithm = 'aes-256-gcm';
+  const key = crypto.scryptSync(config.jwt.secret as string, 'salt', 32);
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv(algorithm, key, iv);
+  
+  let encrypted = cipher.update(plainToken, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  const authTag = cipher.getAuthTag();
+  
+  // Return IV + authTag + encrypted data
+  return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
+};
+
+/**
+ * Decrypt a stored token
+ */
+const decryptToken = (encryptedData: string): string => {
+  const algorithm = 'aes-256-gcm';
+  const key = crypto.scryptSync(config.jwt.secret as string, 'salt', 32);
+  
+  const [ivHex, authTagHex, encrypted] = encryptedData.split(':');
+  const iv = Buffer.from(ivHex, 'hex');
+  const authTag = Buffer.from(authTagHex, 'hex');
+  
+  const decipher = crypto.createDecipheriv(algorithm, key, iv);
+  decipher.setAuthTag(authTag);
+  
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  
+  return decrypted;
+};
+
+/**
+ * Create a new API token for a user
+ */
+export const createApiTokenService = async (
+  userId: string,
+  body: { name: string; expiresInDays?: number },
+): Promise<{ token: ApiTokenDto; plainToken: string }> => {
+  const { name, expiresInDays } = body;
+  
+  // Generate the token
+  const plainToken = generateApiToken();
+  const tokenPrefix = plainToken.substring(0, 12); // prism_xxxxx
+  
+  // Hash the token for validation
+  const tokenHash = await bcrypt.hash(plainToken, 10);
+  
+  // Encrypt the token for retrieval
+  const tokenEncrypted = encryptToken(plainToken);
+  
+  // Calculate expiration date if provided
+  let expiresAt: Date | null = null;
+  if (expiresInDays && expiresInDays > 0) {
+    expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+  }
+  
+  const result = await pool.query<DbApiTokenDto>(
+    `INSERT INTO api_tokens (user_id, name, token_hash, token_encrypted, token_prefix, expires_at)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, user_id, name, token_prefix, last_used_at, expires_at, revoked_at, created_at`,
+    [userId, name, tokenHash, tokenEncrypted, tokenPrefix, expiresAt],
+  );
+  
+  const row = result.rows[0];
+  
+  return {
+    token: {
+      id: row.id,
+      userId: parseInt(row.user_id.toString()),
+      name: row.name,
+      tokenPrefix: row.token_prefix,
+      lastUsedAt: row.last_used_at,
+      expiresAt: row.expires_at,
+      revokedAt: row.revoked_at,
+      createdAt: row.created_at,
+    },
+    plainToken,
+  };
+};
+
+/**
+ * Get all API tokens for a user
+ */
+export const getApiTokensService = async (
+  userId: string,
+): Promise<{ tokens: ApiTokenDto[] }> => {
+  const result = await pool.query<DbApiTokenDto>(
+    `SELECT id, user_id, name, token_prefix, last_used_at, expires_at, revoked_at, created_at
+     FROM api_tokens
+     WHERE user_id = $1 AND revoked_at IS NULL
+     ORDER BY created_at DESC`,
+    [userId],
+  );
+  
+  const tokens = result.rows.map((row) => ({
+    id: row.id,
+    userId: parseInt(row.user_id.toString()),
+    name: row.name,
+    tokenPrefix: row.token_prefix,
+    lastUsedAt: row.last_used_at,
+    expiresAt: row.expires_at,
+    revokedAt: row.revoked_at,
+    createdAt: row.created_at,
+  }));
+  
+  return { tokens };
+};
+
+/**
+ * Revoke an API token
+ */
+export const revokeApiTokenService = async (
+  userId: string,
+  tokenId: number,
+): Promise<MessageResponseDto> => {
+  const result = await pool.query(
+    `UPDATE api_tokens
+     SET revoked_at = NOW(), updated_at = NOW()
+     WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL
+     RETURNING id`,
+    [tokenId, userId],
+  );
+  
+  if (!result.rowCount) {
+    throw new NotFoundError('API token not found or already revoked');
+  }
+  
+  return { message: 'API token revoked successfully' };
+};
+
+/**
+ * Reveal (decrypt) an API token for the user
+ */
+export const revealApiTokenService = async (
+  userId: string,
+  tokenId: number,
+): Promise<{ plainToken: string }> => {
+  const result = await pool.query<{ token_encrypted: string }>(
+    `SELECT token_encrypted
+     FROM api_tokens
+     WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL`,
+    [tokenId, userId],
+  );
+  
+  if (!result.rowCount) {
+    throw new NotFoundError('API token not found');
+  }
+  
+  const plainToken = decryptToken(result.rows[0].token_encrypted);
+  
+  return { plainToken };
+};
+
+/**
+ * Validate an API token and return the user info
+ * Used by auth middleware for API token authentication
+ */
+export const validateApiTokenService = async (
+  token: string,
+): Promise<{ userId: string; email: string; fullName?: string } | null> => {
+  // Extract prefix for faster lookup
+  const tokenPrefix = token.substring(0, 12);
+  
+  // Find all non-revoked tokens with this prefix
+  const result = await pool.query<DbApiTokenDto & { email: string; full_name: string | null }>(
+    `SELECT t.id, t.user_id, t.token_hash, t.expires_at, t.revoked_at,
+            u.email, u.full_name
+     FROM api_tokens t
+     JOIN users u ON t.user_id = u.id
+     WHERE t.token_prefix = $1 AND t.revoked_at IS NULL`,
+    [tokenPrefix],
+  );
+  
+  if (!result.rowCount) {
+    return null;
+  }
+  
+  // Verify the token hash against each matching token
+  for (const row of result.rows) {
+    // Check expiration
+    if (row.expires_at && new Date(row.expires_at) < new Date()) {
+      continue;
+    }
+    
+    const isValid = await bcrypt.compare(token, row.token_hash);
+    if (isValid) {
+      // Update last used timestamp
+      await pool.query(
+        'UPDATE api_tokens SET last_used_at = NOW() WHERE id = $1',
+        [row.id],
+      );
+      
+      return {
+        userId: row.user_id.toString(),
+        email: row.email,
+        fullName: row.full_name ?? undefined,
+      };
+    }
+  }
+  
+  return null;
 };

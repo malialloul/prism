@@ -334,15 +334,34 @@ export default function QueryWizardWrapper({
       // Extract parameters from the state for the OpenAPI spec
       const extractedParams = lastWizardState ? extractParameters(lastWizardState) : [];
 
-      // Transform SQL: replace $1, $2 etc. with :paramName format for backend
+      // Transform SQL: replace positional placeholders with :paramName format for backend
       let sqlForApi = lastExecutedSQL;
-      lastSQLParams.forEach((param, index) => {
-        if (typeof param === 'string' && param.startsWith('{{') && param.endsWith('}}')) {
-          const paramName = param.slice(2, -2); // Remove {{ and }}
-          const placeholderRegex = new RegExp(`\\$${index + 1}(?!\\d)`, 'g');
-          sqlForApi = sqlForApi.replace(placeholderRegex, `:${paramName}`);
-        }
-      });
+      
+      // Check if it's PostgreSQL style ($1, $2...) or MySQL style (?)
+      const hasPostgresPlaceholders = /\$\d+/.test(lastExecutedSQL);
+      
+      if (hasPostgresPlaceholders) {
+        // PostgreSQL: replace $1, $2 etc. with :paramName
+        lastSQLParams.forEach((param, index) => {
+          if (typeof param === 'string' && param.startsWith('{{') && param.endsWith('}}')) {
+            const paramName = param.slice(2, -2); // Remove {{ and }}
+            const placeholderRegex = new RegExp(`\\$${index + 1}(?!\\d)`, 'g');
+            sqlForApi = sqlForApi.replace(placeholderRegex, `:${paramName}`);
+          }
+        });
+      } else {
+        // MySQL: replace ? placeholders in order with :paramName
+        let paramIndex = 0;
+        sqlForApi = sqlForApi.replace(/\?/g, () => {
+          const param = lastSQLParams[paramIndex];
+          paramIndex++;
+          if (typeof param === 'string' && param.startsWith('{{') && param.endsWith('}}')) {
+            const paramName = param.slice(2, -2); // Remove {{ and }}
+            return `:${paramName}`;
+          }
+          return '?'; // Keep as-is if not a named param
+        });
+      }
 
       // Map parameters to the format expected by the backend
       const parameters = extractedParams.map((param) => {

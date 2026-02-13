@@ -5,12 +5,14 @@ import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import SecurityIcon from '@mui/icons-material/Security';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ShareIcon from '@mui/icons-material/Share';
+import KeyIcon from '@mui/icons-material/Key';
 import { ROUTES } from '../../constants';
 import { ThemeToggleButton } from '../../components/ThemeToggle/ThemeToggle';
 import AccountSettings from './AccountSettings/AccountSettings';
 import SecuritySettings from './SecuritySettings/SecuritySettings';
 import DangerZone from './DangerZone/DangerZone';
 import AccountSharing from './AccountSharing';
+import ApiTokens from './ApiTokens';
 import {
   SettingsWrapper,
   SettingsHeader,
@@ -29,7 +31,7 @@ import { getWorkspaceColors } from '../../styles/theme';
 import { useTheme as useMuiTheme } from '@mui/material/styles';
 import { getUserFromToken, clearAuthToken } from '../../api/httpClient';
 
-type SettingsSection = 'account' | 'security' | 'sharing' | 'danger';
+type SettingsSection = 'account' | 'security' | 'sharing' | 'api-tokens' | 'danger';
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -65,6 +67,10 @@ const Settings = () => {
       title: 'Account Sharing',
       subtitle: 'Share access to your account with other users',
     },
+    'api-tokens': {
+      title: 'API Tokens',
+      subtitle: 'Manage tokens for authenticating API requests',
+    },
     danger: {
       title: 'Danger Zone',
       subtitle: 'Irreversible and destructive actions',
@@ -83,6 +89,8 @@ const Settings = () => {
         return <SecuritySettings />;
       case 'sharing':
         return <AccountSharing />;
+      case 'api-tokens':
+        return <ApiTokens />;
       case 'danger':
         return <DangerZone onDeactivateSuccess={handleDeactivateSuccess} onDeleteSuccess={handleDeleteSuccess} />;
       default:
@@ -143,19 +151,26 @@ const Settings = () => {
             <ManageAccountsIcon sx={{ fontSize: 20 }} />
             Account
           </SidebarItem>
-          <SidebarItem
+          {/* <SidebarItem
             active={activeSection === 'security'}
             onClick={() => setActiveSection('security')}
           >
             <SecurityIcon sx={{ fontSize: 20 }} />
             Security
-          </SidebarItem>
+          </SidebarItem> */}
           <SidebarItem
             active={activeSection === 'sharing'}
             onClick={() => setActiveSection('sharing')}
           >
             <ShareIcon sx={{ fontSize: 20 }} />
             Sharing
+          </SidebarItem>
+          <SidebarItem
+            active={activeSection === 'api-tokens'}
+            onClick={() => setActiveSection('api-tokens')}
+          >
+            <KeyIcon sx={{ fontSize: 20 }} />
+            API Tokens
           </SidebarItem>
           <SidebarDivider />
           <SidebarItem

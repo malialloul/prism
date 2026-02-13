@@ -159,6 +159,31 @@ async function createMysqlConnection(conn: Awaited<ReturnType<typeof getDatabase
   });
 }
 
+// Helper to get searchable (text/varchar) columns for a table
+async function getSearchableColumns(
+  conn: { engine: 'postgres' | 'mysql'; database: string },
+  pool: Pool | mysql.Connection,
+  tableName: string
+): Promise<string[]> {
+  if (conn.engine === 'postgres') {
+    const result = await (pool as Pool).query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = $1
+        AND data_type IN ('character varying', 'varchar', 'text', 'char', 'character')
+    `, [tableName]);
+    return result.rows.map((r: { column_name: string }) => r.column_name);
+  } else {
+    const [rows] = await (pool as mysql.Connection).execute(`
+      SELECT COLUMN_NAME as column_name
+      FROM information_schema.columns
+      WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+        AND DATA_TYPE IN ('varchar', 'text', 'char', 'tinytext', 'mediumtext', 'longtext')
+    `, [conn.database, tableName]);
+    return (rows as Array<{ column_name: string }>).map(r => r.column_name);
+  }
+}
+
 /**
  * Get all schema objects (tables only)
  */
@@ -1173,34 +1198,43 @@ export const getTableDataService = async (
     throw new ValidationError('Invalid table name');
   }
 
-  // Build the query
-  let sql = `SELECT * FROM ${quote}${tableName}${quote}`;
-  let countSql = `SELECT COUNT(*) as count FROM ${quote}${tableName}${quote}`;
-
-  // Add search if provided (search across all text columns)
-  if (search) {
-    const searchTerm = search.replace(/'/g, "''");
-    // We'll need to get columns first to build proper search
-    // For now, skip search in the service - frontend handles display filtering
-  }
-
-  // Add ORDER BY
-  if (sortColumn && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(sortColumn)) {
-    sql += ` ORDER BY ${quote}${sortColumn}${quote} ${sortDirection === 'DESC' ? 'DESC' : 'ASC'}`;
-  }
-
-  // Add pagination
-  sql += ` LIMIT ${pageSize} OFFSET ${offset}`;
-
   if (conn.engine === 'postgres') {
     const pgPool = createPgPool(conn);
     try {
+      // Build WHERE clause for search
+      let whereClause = '';
+      const queryParams: unknown[] = [];
+      let paramIndex = 1;
+
+      if (search) {
+        const searchableColumns = await getSearchableColumns(conn, pgPool, tableName);
+        if (searchableColumns.length > 0) {
+          const searchConditions = searchableColumns.map(col => `${quote}${col}${quote}::text ILIKE $${paramIndex}`);
+          whereClause = ` WHERE ${searchConditions.join(' OR ')}`;
+          queryParams.push(`%${search}%`);
+          paramIndex++;
+        }
+      }
+
+      // Build queries
+      let sql = `SELECT * FROM ${quote}${tableName}${quote}${whereClause}`;
+      const countSql = `SELECT COUNT(*) as count FROM ${quote}${tableName}${quote}${whereClause}`;
+
+      // Add ORDER BY
+      if (sortColumn && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(sortColumn)) {
+        sql += ` ORDER BY ${quote}${sortColumn}${quote} ${sortDirection === 'DESC' ? 'DESC' : 'ASC'}`;
+      }
+
+      // Add pagination
+      sql += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+      const dataParams = [...queryParams, pageSize, offset];
+
       // Get total count
-      const countResult = await pgPool.query(countSql);
+      const countResult = await pgPool.query(countSql, queryParams);
       const totalCount = parseInt(countResult.rows[0]?.count || '0', 10);
 
       // Get data
-      const result = await pgPool.query(sql);
+      const result = await pgPool.query(sql, dataParams);
       const executionTimeMs = Date.now() - startTime;
       await pgPool.end();
 
@@ -1224,12 +1258,39 @@ export const getTableDataService = async (
   } else {
     const mysqlConn = await createMysqlConnection(conn);
     try {
+      // Build WHERE clause for search
+      let whereClause = '';
+      const queryParams: unknown[] = [];
+
+      if (search) {
+        const searchableColumns = await getSearchableColumns(conn, mysqlConn, tableName);
+        if (searchableColumns.length > 0) {
+          const searchConditions = searchableColumns.map(col => `${quote}${col}${quote} LIKE ?`);
+          whereClause = ` WHERE ${searchConditions.join(' OR ')}`;
+          // MySQL needs the search term for each column
+          searchableColumns.forEach(() => queryParams.push(`%${search}%`));
+        }
+      }
+
+      // Build queries
+      let sql = `SELECT * FROM ${quote}${tableName}${quote}${whereClause}`;
+      const countSql = `SELECT COUNT(*) as count FROM ${quote}${tableName}${quote}${whereClause}`;
+
+      // Add ORDER BY
+      if (sortColumn && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(sortColumn)) {
+        sql += ` ORDER BY ${quote}${sortColumn}${quote} ${sortDirection === 'DESC' ? 'DESC' : 'ASC'}`;
+      }
+
+      // Add pagination
+      sql += ` LIMIT ? OFFSET ?`;
+      const dataParams = [...queryParams, pageSize, offset];
+
       // Get total count
-      const [countRows] = await mysqlConn.execute(countSql);
+      const [countRows] = await mysqlConn.execute(countSql, queryParams);
       const totalCount = (countRows as Array<{ count: number }>)[0]?.count || 0;
 
       // Get data
-      const [rows, fields] = await mysqlConn.execute(sql);
+      const [rows, fields] = await mysqlConn.execute(sql, dataParams);
       const executionTimeMs = Date.now() - startTime;
       await mysqlConn.end();
 
@@ -1431,8 +1492,11 @@ export const executeSavedQueryService = async (
     const pagecount = params['pagecount'] ? parseInt(params['pagecount']) : 1;
     const offset = (pagecount - 1) * pagesize;
     
-    // Replace pagination placeholders in SQL
-    // Note: SQL might use either :offset or :pagecount depending on how it was generated
+    // Handle legacy expression format: OFFSET (:pagecount - 1) * :pagesize
+    // Replace the entire expression with calculated offset value
+    sql = sql.replace(/OFFSET\s*\(\s*:pagecount\s*-\s*1\s*\)\s*\*\s*:pagesize/gi, `OFFSET ${offset}`);
+    
+    // Replace simple pagination placeholders in SQL
     sql = sql.split(':pagesize').join(String(pagesize));
     sql = sql.split(':pagecount').join(String(pagecount));
     sql = sql.split(':offset').join(String(offset));
@@ -1675,7 +1739,11 @@ export const executePublicQueryService = async (
     const pagecount = params['pagecount'] ? parseInt(params['pagecount']) : 1;
     const offset = (pagecount - 1) * pagesize;
     
-    // Note: SQL might use either :offset or :pagecount depending on how it was generated
+    // Handle legacy expression format: OFFSET (:pagecount - 1) * :pagesize
+    // Replace the entire expression with calculated offset value
+    sql = sql.replace(/OFFSET\s*\(\s*:pagecount\s*-\s*1\s*\)\s*\*\s*:pagesize/gi, `OFFSET ${offset}`);
+    
+    // Replace simple pagination placeholders in SQL
     sql = sql.split(':pagesize').join(String(pagesize));
     sql = sql.split(':pagecount').join(String(pagecount));
     sql = sql.split(':offset').join(String(offset));

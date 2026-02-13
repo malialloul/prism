@@ -15,8 +15,10 @@ import TableChartIcon from '@mui/icons-material/TableChart';
 import ApiIcon from '@mui/icons-material/Api';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import CloudIcon from '@mui/icons-material/Cloud';
+import KeyIcon from '@mui/icons-material/Key';
 import { DatabaseDto } from '../../../../api/models/DatabaseDto';
 import { useQueryStats } from '../../../../api/entities/databases';
+import { useApiTokens } from '../../../../api/entities/auth';
 
 interface OverviewStatsCardsProps {
   databases: DatabaseDto[];
@@ -35,6 +37,10 @@ function formatBytes(bytes: number): string {
 export default function OverviewStatsCards({ databases, selectedDatabaseId }: OverviewStatsCardsProps) {
   // Fetch real query stats from the backend
   const { data: queryStats } = useQueryStats(selectedDatabaseId ?? undefined);
+  
+  // Fetch API tokens count
+  const { data: apiTokensData } = useApiTokens();
+  const apiTokensCount = apiTokensData?.data?.tokens?.length ?? 0;
 
   const stats = useMemo(() => {
     const selectedDb = selectedDatabaseId ? databases.find(db => db.id === selectedDatabaseId) : null;
@@ -108,6 +114,14 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
       trend: { value: 3, positive: true },
       change: 'vs last week',
     },
+    // Only show API Tokens when a specific database is selected
+    ...(selectedDb ? [{
+      label: 'API Tokens',
+      value: apiTokensCount.toString(),
+      icon: <KeyIcon />,
+      variant: 'primary' as const,
+      change: 'active tokens',
+    }] : []),
   ];
 
   return (

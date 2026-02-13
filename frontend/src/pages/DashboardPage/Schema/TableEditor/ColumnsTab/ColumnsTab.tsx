@@ -2,6 +2,7 @@ import { IconButton, Menu, MenuItem } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { toastService } from '../../../../../services';
 import type { ColumnDetailsDto } from '../../../../../api/models/SchemaDto';
 import type { ColumnMenuAnchor } from '../TableEditor.types';
 import { ColumnsTabContent, ColumnsTable } from './ColumnsTab.styles';
@@ -85,13 +86,13 @@ export default function ColumnsTab({
         onClose={onColumnMenuClose}
       >
         <MenuItem
-          onClick={() => columnMenuAnchor && onEditColumn(columnMenuAnchor.column)}
+          onClick={() => { onColumnMenuClose(); toastService.info('Coming Soon'); }}
         >
           <EditIcon sx={{ fontSize: '1rem', mr: 1 }} />
           Edit Column
         </MenuItem>
         <MenuItem
-          onClick={() => columnMenuAnchor && onDeleteColumn(columnMenuAnchor.column)}
+          onClick={() => { onColumnMenuClose(); toastService.info('Coming Soon'); }}
           sx={{ color: 'error.main' }}
         >
           <DeleteIcon sx={{ fontSize: '1rem', mr: 1 }} />

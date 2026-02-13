@@ -253,33 +253,33 @@ export default function SchemaExplorer({
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         >
-          <MenuItem onClick={() => handleExport(false)} disabled={isExporting || hasNoTables}>
+          <MenuItem onClick={() => { setMenuAnchor(null); toastService.info('Coming Soon'); }} disabled={hasNoTables}>
             <ListItemIcon>
               <CodeIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>Export Schema Only</ListItemText>
           </MenuItem>
-          <MenuItem onClick={() => handleExport(true)} disabled={isExporting || hasNoTables}>
+          <MenuItem onClick={() => { setMenuAnchor(null); toastService.info('Coming Soon'); }} disabled={hasNoTables}>
             <ListItemIcon>
               <TableRowsIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>Export Schema + Data</ListItemText>
           </MenuItem>
           <Divider />
-          <MenuItem onClick={handleGenerateDoc} disabled={isGeneratingDoc || hasNoTables}>
+          <MenuItem onClick={() => { setMenuAnchor(null); toastService.info('Coming Soon'); }} disabled={hasNoTables}>
             <ListItemIcon>
               <DescriptionIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>Export Word Document</ListItemText>
           </MenuItem>
-          <MenuItem onClick={handleGenerateExcel} disabled={isGeneratingExcel || hasNoTables}>
+          <MenuItem onClick={() => { setMenuAnchor(null); toastService.info('Coming Soon'); }} disabled={hasNoTables}>
             <ListItemIcon>
               <GridOnIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>Export Excel Spreadsheet</ListItemText>
           </MenuItem>
           <Divider />
-          <MenuItem onClick={handleImportClick} disabled={isImporting}>
+          <MenuItem onClick={() => { setMenuAnchor(null); toastService.info('Coming Soon'); }}>
             <ListItemIcon>
               <FileUploadIcon fontSize="small" />
             </ListItemIcon>
@@ -329,7 +329,7 @@ export default function SchemaExplorer({
                             size="small"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onCreateTable();
+                              toastService.info('Coming Soon');
                             }}
                           >
                             <AddIcon sx={{ fontSize: '0.875rem' }} />
