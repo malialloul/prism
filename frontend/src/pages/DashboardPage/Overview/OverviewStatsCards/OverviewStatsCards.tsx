@@ -7,6 +7,9 @@ import {
   StatContent,
   StatValue,
   StatLabel,
+  LimitBar,
+  LimitBarFill,
+  LimitText,
 } from './OverviewStatsCards.styles';
 
 // Icons
@@ -18,7 +21,7 @@ import CloudIcon from '@mui/icons-material/Cloud';
 import KeyIcon from '@mui/icons-material/Key';
 import { DatabaseDto } from '../../../../api/models/DatabaseDto';
 import { useQueryStats } from '../../../../api/entities/databases';
-import { useApiTokens } from '../../../../api/entities/auth';
+import { useApiTokens, useVersionLimits } from '../../../../api/entities/auth';
 
 interface OverviewStatsCardsProps {
   databases: DatabaseDto[];
@@ -41,6 +44,11 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
   // Fetch API tokens count
   const { data: apiTokensData } = useApiTokens();
   const apiTokensCount = apiTokensData?.data?.tokens?.length ?? 0;
+
+  // Fetch version limits
+  const { data: versionData } = useVersionLimits();
+  const limits = versionData?.data?.limits;
+  const usage = versionData?.data?.usage;
 
   const stats = useMemo(() => {
     const selectedDb = selectedDatabaseId ? databases.find(db => db.id === selectedDatabaseId) : null;
@@ -73,6 +81,13 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
 
   const selectedDb = selectedDatabaseId ? databases.find(db => db.id === selectedDatabaseId) : null;
 
+  // Helper to get progress bar variant based on percentage
+  const getBarVariant = (percentage: number): 'normal' | 'warning' | 'danger' => {
+    if (percentage >= 90) return 'danger';
+    if (percentage >= 70) return 'warning';
+    return 'normal';
+  };
+
   const statsConfig = [
     // Only show Total Databases when no specific database is selected
     ...(!selectedDb ? [{
@@ -80,39 +95,43 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
       value: databases.length.toString(),
       icon: <StorageIcon />,
       variant: 'primary' as const,
-      change: 'vs last month',
+      limit: limits?.maxDatabases,
+      usage: usage?.databases ?? databases.length,
     }] : []),
     {
       label: 'Tables Count',
       value: stats.totalTables.toString(),
       icon: <TableChartIcon />,
       variant: 'secondary' as const,
-      change: 'vs last month',
+      limit: limits?.maxTablesPerDatabase,
+      usage: usage?.tables ?? stats.totalTables,
     },
     {
       label: 'Custom APIs',
       value: stats.customApis.toString(),
       icon: <ApiIcon />,
       variant: 'success' as const,
-      change: 'saved queries',
+      limit: limits?.maxSavedApis,
+      usage: usage?.savedApis ?? stats.customApis,
     },
     {
-      label: 'Queries Executed',
-      value: stats.queriesExecuted >= 1000
-        ? `${(stats.queriesExecuted / 1000).toFixed(1)}K`
-        : stats.queriesExecuted.toString(),
+      label: 'Requests/Month',
+      value: (usage?.requestsThisMonth ?? stats.queriesExecuted) >= 1000
+        ? `${((usage?.requestsThisMonth ?? stats.queriesExecuted) / 1000).toFixed(1)}K`
+        : (usage?.requestsThisMonth ?? stats.queriesExecuted).toString(),
       icon: <QueryStatsIcon />,
       variant: 'warning' as const,
-
-      change: 'queries last hour',
+      limit: limits?.maxRequestsPerMonth,
+      usage: usage?.requestsThisMonth ?? stats.queriesExecuted,
     },
     {
       label: 'Storage Used',
       value: formatBytes(stats.totalStorageBytes),
       icon: <CloudIcon />,
       variant: 'info' as const,
-      trend: { value: 3, positive: true },
-      change: 'vs last week',
+      limit: limits?.maxStorageMB,
+      usage: usage?.storageMB ?? Math.round(stats.totalStorageBytes / (1024 * 1024)),
+      isStorage: true,
     },
     // Only show API Tokens when a specific database is selected
     ...(selectedDb ? [{
@@ -120,26 +139,44 @@ export default function OverviewStatsCards({ databases, selectedDatabaseId }: Ov
       value: apiTokensCount.toString(),
       icon: <KeyIcon />,
       variant: 'primary' as const,
-      change: 'active tokens',
+      limit: limits?.maxApiTokens,
+      usage: usage?.apiTokens ?? apiTokensCount,
     }] : []),
   ];
 
   return (
     <StatsGrid>
-      {statsConfig.map((stat) => (
-        <StatCard key={stat.label}>
-          <StatHeader>
-            <StatIconBox variant={stat.variant}>
-              {stat.icon}
-            </StatIconBox>
-
-          </StatHeader>
-          <StatContent>
-            <StatValue>{stat.value}</StatValue>
-            <StatLabel>{stat.label}</StatLabel>
-          </StatContent>
-        </StatCard>
-      ))}
+      {statsConfig.map((stat) => {
+        const hasLimit = stat.limit !== undefined && stat.limit > 0;
+        const percentage = hasLimit ? (stat.usage! / stat.limit!) * 100 : 0;
+        
+        return (
+          <StatCard key={stat.label}>
+            <StatHeader>
+              <StatIconBox variant={stat.variant}>
+                {stat.icon}
+              </StatIconBox>
+            </StatHeader>
+            <StatContent>
+              <StatValue>{stat.value}</StatValue>
+              <StatLabel>{stat.label}</StatLabel>
+              {hasLimit && (
+                <>
+                  <LimitBar>
+                    <LimitBarFill percentage={percentage} variant={getBarVariant(percentage)} />
+                  </LimitBar>
+                  <LimitText>
+                    {stat.isStorage 
+                      ? `${stat.usage} / ${stat.limit} MB`
+                      : `${stat.usage} / ${stat.limit}`
+                    }
+                  </LimitText>
+                </>
+              )}
+            </StatContent>
+          </StatCard>
+        );
+      })}
     </StatsGrid>
   );
 }

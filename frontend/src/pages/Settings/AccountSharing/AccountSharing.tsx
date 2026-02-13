@@ -94,6 +94,9 @@ function ShareAccountForm({ onShareCreated }: ShareAccountFormProps) {
         onShareCreated(share, share.tempPassword);
       }
       toastService.success('Account shared successfully!');
+      if (data.warning) {
+        toastService.warning(data.warning);
+      }
       setEmail('');
       setPermissions({ ...DEFAULT_SHARE_PERMISSIONS });
       reset();

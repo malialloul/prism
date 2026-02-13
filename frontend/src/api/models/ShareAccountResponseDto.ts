@@ -11,4 +11,5 @@ export interface ShareAccountResponseDto {
     share: SharedAccountDto;
     message: string;
   };
+  warning?: string;
 }

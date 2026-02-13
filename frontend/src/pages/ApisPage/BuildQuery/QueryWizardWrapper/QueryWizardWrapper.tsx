@@ -412,7 +412,7 @@ export default function QueryWizardWrapper({
         };
       });
 
-      await SchemaService.saveQuery(databaseId, saveName.trim(), sqlForApi, {
+      const response = await SchemaService.saveQuery(databaseId, saveName.trim(), sqlForApi, {
         description: saveDescription.trim(),
         isPublic,
         parameters: parameters.length > 0 ? parameters : undefined,
@@ -420,8 +420,13 @@ export default function QueryWizardWrapper({
 
       // Invalidate saved queries cache
       queryClient.invalidateQueries({ queryKey: [SAVED_QUERIES_KEY, databaseId] });
+      // Invalidate version limits to update usage counts
+      queryClient.invalidateQueries({ queryKey: ['versionLimits'] });
 
       toastService.success('API saved successfully');
+      if (response.warning) {
+        toastService.warning(response.warning);
+      }
       setSaveDialogOpen(false);
       onApiSaved?.();
     } catch (error: any) {

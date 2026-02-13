@@ -39,6 +39,10 @@ export function useExecuteQuery(databaseId: number, options: UseExecuteQueryOpti
       if (DDL_KEYWORDS.test(sql) && !isDemoModeActive()) {
         queryClient.invalidateQueries({ queryKey: [...SCHEMA_OBJECTS_QUERY_KEY, databaseId] });
       }
+      // Invalidate version limits to update request count (only in non-demo mode)
+      if (!isDemoModeActive()) {
+        queryClient.invalidateQueries({ queryKey: ['versionLimits'] });
+      }
       options.onSuccess?.(result);
     },
     onError: (error) => {

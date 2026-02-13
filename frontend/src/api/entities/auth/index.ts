@@ -19,3 +19,4 @@ export { useDeleteNotification } from './useDeleteNotification';
 export { useSharedLogin } from './useSharedLogin';
 export { useMyPermissionRequests, usePermissionRequests, useCreatePermissionRequest, useRespondPermissionRequest, useCancelPermissionRequest } from './usePermissionRequests';
 export { useApiTokens, useCreateApiToken, useRevokeApiToken, useRevealApiToken } from './useApiTokens';
+export { useVersionLimits } from './useVersionLimits';

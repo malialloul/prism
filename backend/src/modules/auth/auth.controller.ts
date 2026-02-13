@@ -1,5 +1,6 @@
 // src/modules/auth/auth.controller.ts
 import { Request, Response, NextFunction } from 'express';
+import { enforceApiTokenLimit, enforceSharedAccountLimit, getUserLimitsAndUsage } from '../../services/limits.service';
 import { 
   loginService, 
   signupService, 
@@ -312,11 +313,16 @@ export const shareAccountHandler = asyncHandler(async (
   _next: NextFunction,
 ) => {
   const userId = req.user!.userId;
+  
+  // Enforce shared account limit for current version
+  const limitResult = await enforceSharedAccountLimit(userId);
+  
   const data = await shareAccountService(userId, req.body);
   const result: ShareAccountResponseDto = {
     status: 'success',
     message: data.message,
     data,
+    warning: limitResult.warning,
   };
   res.json(result);
 });
@@ -703,11 +709,15 @@ export const createApiTokenHandler = asyncHandler(async (
     throw new AuthorizationError('User not authenticated');
   }
   
+  // Enforce API token limit for current version
+  const limitResult = await enforceApiTokenLimit(req.user.userId);
+  
   const data = await createApiTokenService(req.user.userId, req.body);
   const result: CreateApiTokenResponseDto = {
     status: 'success',
     message: 'API token created successfully',
     data,
+    warning: limitResult.warning,
   };
   res.status(201).json(result);
 });
@@ -774,4 +784,28 @@ export const revealApiTokenHandler = asyncHandler(async (
     data,
   };
   res.json(result);
+});
+
+// =====================
+// Version & Limits Handler
+// =====================
+
+/**
+ * Get current version info and user's limits/usage
+ */
+export const getVersionLimitsHandler = asyncHandler(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+) => {
+  if (!req.user?.userId) {
+    throw new AuthorizationError('User not authenticated');
+  }
+  
+  const data = await getUserLimitsAndUsage(req.user.userId);
+  res.json({
+    status: 'success',
+    message: 'Version and limits retrieved',
+    data,
+  });
 });

@@ -16,6 +16,8 @@ export function useDeleteDatabase(options: UseDeleteDatabaseOptions = {}) {
     onSuccess: (response) => {
       // Invalidate databases list to trigger refresh
       queryClient.invalidateQueries({ queryKey: DATABASES_QUERY_KEY });
+      // Invalidate version limits to update usage counts
+      queryClient.invalidateQueries({ queryKey: ['versionLimits'] });
       options.onSuccess?.(response);
     },
     onError: (error) => {

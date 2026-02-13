@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import { Snackbar, Alert, AlertColor } from '@mui/material';
+import { Snackbar, Alert, AlertColor, Link } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import { toastService } from '../../services/toastService';
 
 interface ToastOptions {
@@ -24,8 +25,51 @@ const ToastContext = createContext<ToastContextType | null>(null);
 
 let toastId = 0;
 
+// Parse message for links in format [text](/path)
+const parseMessageWithLinks = (message: string, onNavigate: (path: string) => void) => {
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts: (string | JSX.Element)[] = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = linkRegex.exec(message)) !== null) {
+    // Add text before the link
+    if (match.index > lastIndex) {
+      parts.push(message.slice(lastIndex, match.index));
+    }
+    // Add the link
+    const linkText = match[1];
+    const linkPath = match[2];
+    parts.push(
+      <Link
+        key={match.index}
+        component="button"
+        onClick={() => onNavigate(linkPath)}
+        sx={{
+          color: 'inherit',
+          textDecoration: 'underline',
+          fontWeight: 600,
+          cursor: 'pointer',
+          '&:hover': { opacity: 0.8 },
+        }}
+      >
+        {linkText}
+      </Link>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text
+  if (lastIndex < message.length) {
+    parts.push(message.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : message;
+};
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const navigate = useNavigate();
 
   const showToast = useCallback((message: string, severity: AlertColor, options?: ToastOptions) => {
     const id = ++toastId;
@@ -48,6 +92,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     });
   }, [showToast]);
 
+  const handleNavigate = useCallback((path: string) => {
+    navigate(path);
+  }, [navigate]);
+
   return (
     <ToastContext.Provider value={{ showError, showSuccess, showWarning, showInfo }}>
       {children}
@@ -68,7 +116,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             variant="filled"
             sx={{ width: '100%', minWidth: 300 }}
           >
-            {toast.message}
+            {parseMessageWithLinks(toast.message, handleNavigate)}
           </Alert>
         </Snackbar>
       ))}

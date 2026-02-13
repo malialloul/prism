@@ -39,6 +39,7 @@ import {
   getApiTokensHandler,
   revokeApiTokenHandler,
   revealApiTokenHandler,
+  getVersionLimitsHandler,
 } from './auth.controller';
 import { authMiddleware, blockSharedAccess, requireSharedAccess } from '../../middleware/auth';
 
@@ -103,5 +104,8 @@ router.post('/api-tokens', authMiddleware, blockSharedAccess, createApiTokenHand
 router.get('/api-tokens', authMiddleware, blockSharedAccess, getApiTokensHandler);
 router.get('/api-tokens/:tokenId/reveal', authMiddleware, blockSharedAccess, revealApiTokenHandler);
 router.delete('/api-tokens/:tokenId', authMiddleware, blockSharedAccess, revokeApiTokenHandler);
+
+// Version & Limits route (protected) - all users can see their limits
+router.get('/version', authMiddleware, getVersionLimitsHandler);
 
 export default router;

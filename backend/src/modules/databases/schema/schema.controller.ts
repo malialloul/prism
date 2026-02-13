@@ -1,5 +1,6 @@
 // src/modules/databases/schema/schema.controller.ts
 import { Request, Response, NextFunction } from 'express';
+import { enforceSaveApiLimit } from '../../../services/limits.service';
 import {
   getSchemaObjectsService,
   getTableDetailsService,
@@ -175,6 +176,9 @@ export const saveQuery = async (
       return;
     }
 
+    // Enforce API limit for current version
+    const limitResult = await enforceSaveApiLimit(userId);
+
     // Pass permissions for shared access validation
     const query = await saveQueryService(
       userId, 
@@ -191,7 +195,8 @@ export const saveQuery = async (
 
     res.status(201).json({ 
       message: 'Query saved successfully',
-      query 
+      query,
+      warning: limitResult.warning,
     });
   } catch (error) {
     next(error);

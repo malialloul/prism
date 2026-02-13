@@ -94,8 +94,11 @@ export default function DatabaseActionsPanel({
 
   // API hooks
   const { mutate: submitCreateDatabase, isPending: isCreating } = useCreateDatabase({
-    onSuccess: (database, message) => {
+    onSuccess: (database, message, warning) => {
       toastService.success(message);
+      if (warning) {
+        toastService.warning(warning);
+      }
       onCloseCreateDialog();
       createFormik.resetForm();
       if (createAutoConnectRef.current) {
@@ -108,8 +111,11 @@ export default function DatabaseActionsPanel({
   });
 
   const { mutate: submitConnectDatabase, isPending: isConnecting } = useConnectDatabase({
-    onSuccess: (database, message) => {
+    onSuccess: (database, message, warning) => {
       toastService.success(message);
+      if (warning) {
+        toastService.warning(warning);
+      }
       onCloseConnectDialog();
       connectFormik.resetForm();
       setConnectionTestStatus('idle');

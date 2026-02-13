@@ -103,6 +103,9 @@ export default function QueryEditor({
   const { mutate: saveQuery, isPending: isSaving } = useSaveQuery(databaseId ?? 0, {
     onSuccess: (response) => {
       toastService.success(response.message);
+      if (response.warning) {
+        toastService.warning(response.warning);
+      }
       setSaveDialogOpen(false);
       setQueryName('');
       refetchSavedQueries();

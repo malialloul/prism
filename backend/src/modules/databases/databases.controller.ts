@@ -14,6 +14,7 @@ import {
 } from './databases.service';
 import { getQueryStats } from './queryStats.service';
 import { CreateDatabaseSchema, ConnectDatabaseSchema, UpdateDatabaseSchema, TestConnectionSchema } from '../../schemas/database.schema';
+import { enforceCreateDatabaseLimit } from '../../services/limits.service';
 
 /**
  * POST /databases/test
@@ -46,12 +47,17 @@ export const createDatabase = async (
 ): Promise<void> => {
   try {
     const userId = req.user!.userId;
+    
+    // Check database limit before creating
+    const limitResult = await enforceCreateDatabaseLimit(userId);
+    
     const body = CreateDatabaseSchema.parse(req.body);
     const database = await createDatabaseService(userId, body);
 
     res.status(201).json({ 
       message: `Successfully created database ${database.name}`,
-      database 
+      database,
+      warning: limitResult.warning,
     });
   } catch (error) {
     next(error);
@@ -69,12 +75,17 @@ export const connectDatabase = async (
 ): Promise<void> => {
   try {
     const userId = req.user!.userId;
+    
+    // Check database limit before connecting
+    const limitResult = await enforceCreateDatabaseLimit(userId);
+    
     const body = ConnectDatabaseSchema.parse(req.body);
     const database = await connectDatabaseService(userId, body);
 
     res.status(201).json({ 
       message: `Successfully connected to ${database.name}`,
-      database 
+      database,
+      warning: limitResult.warning,
     });
   } catch (error) {
     next(error);

@@ -27,7 +27,7 @@ export function useSavedQueries(databaseId: number | undefined) {
 }
 
 interface UseSaveQueryOptions {
-  onSuccess?: (response: { query: SavedQueryDto; message: string }) => void;
+  onSuccess?: (response: { query: SavedQueryDto; message: string; warning?: string }) => void;
   onError?: (error: ApiError) => void;
 }
 
@@ -49,13 +49,15 @@ interface SaveQueryInput {
 export function useSaveQuery(databaseId: number, options: UseSaveQueryOptions = {}) {
   const queryClient = useQueryClient();
 
-  return useMutation<{ query: SavedQueryDto; message: string }, ApiError, SaveQueryInput>({
+  return useMutation<{ query: SavedQueryDto; message: string; warning?: string }, ApiError, SaveQueryInput>({
     mutationFn: ({ name, sql, description, parameters, method, isPublic }) => 
       SchemaService.saveQuery(databaseId, name, sql, { description, parameters, method, isPublic }),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: [...SAVED_QUERIES_KEY, databaseId] });
       // Also invalidate databases to update the apis count
       queryClient.invalidateQueries({ queryKey: DATABASES_QUERY_KEY });
+      // Invalidate version limits to update usage counts
+      queryClient.invalidateQueries({ queryKey: ['versionLimits'] });
       options.onSuccess?.(response);
     },
     onError: (error) => {
@@ -78,6 +80,8 @@ export function useDeleteSavedQuery(databaseId: number, options: UseDeleteSavedQ
       queryClient.invalidateQueries({ queryKey: [...SAVED_QUERIES_KEY, databaseId] });
       // Also invalidate databases to update the apis count
       queryClient.invalidateQueries({ queryKey: DATABASES_QUERY_KEY });
+      // Invalidate version limits to update usage counts
+      queryClient.invalidateQueries({ queryKey: ['versionLimits'] });
       options.onSuccess?.();
     },
     onError: (error) => {

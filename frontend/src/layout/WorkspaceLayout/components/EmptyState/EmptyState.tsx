@@ -1,6 +1,7 @@
 import StorageIcon from '@mui/icons-material/Storage';
 import LinkIcon from '@mui/icons-material/Link';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { toastService } from '../../../../services';
 import {
   EmptyStateContainer,
   EmptyStateIcon,
@@ -22,7 +23,9 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onCreatePostgres,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onCreateMySQL,
   onConnect,
 }: EmptyStateProps) {
@@ -32,8 +35,11 @@ export default function EmptyState({
     'Query analytics',
     'SSL connections',
     'Real-time monitoring',
-    'Role-based access',
   ];
+
+  const handleComingSoon = () => {
+    toastService.info('Create Database - Coming Soon! Use "Connect Existing" for now.');
+  };
 
   return (
     <EmptyStateContainer>
@@ -48,20 +54,24 @@ export default function EmptyState({
       </EmptyStateDescription>
 
       <EmptyStateActions>
-        <ActionCard cardVariant="postgres" onClick={onCreatePostgres}>
+        {/* TODO: Re-enable when create database feature is ready */}
+        {/* <ActionCard cardVariant="postgres" onClick={onCreatePostgres}> */}
+        <ActionCard cardVariant="postgres" onClick={handleComingSoon}>
           <ActionCardIcon variant="postgres">
             <StorageIcon />
           </ActionCardIcon>
           <ActionCardTitle variant="postgres">Create PostgreSQL</ActionCardTitle>
-          <ActionCardSubtitle>New managed database</ActionCardSubtitle>
+          <ActionCardSubtitle>Coming Soon</ActionCardSubtitle>
         </ActionCard>
 
-        <ActionCard cardVariant="mysql" onClick={onCreateMySQL}>
+        {/* TODO: Re-enable when create database feature is ready */}
+        {/* <ActionCard cardVariant="mysql" onClick={onCreateMySQL}> */}
+        <ActionCard cardVariant="mysql" onClick={handleComingSoon}>
           <ActionCardIcon variant="mysql">
             <StorageIcon />
           </ActionCardIcon>
           <ActionCardTitle variant="mysql">Create MySQL</ActionCardTitle>
-          <ActionCardSubtitle>New managed database</ActionCardSubtitle>
+          <ActionCardSubtitle>Coming Soon</ActionCardSubtitle>
         </ActionCard>
 
         <ActionCard cardVariant="connect" onClick={onConnect}>

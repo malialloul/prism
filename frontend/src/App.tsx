@@ -30,6 +30,7 @@ const ForgotPassword = lazy(() => import("./pages/ForgotPassword/ForgotPassword"
 const OAuthCallback = lazy(() => import("./pages/OAuthCallback/OAuthCallback"));
 const Settings = lazy(() => import("./pages/Settings/Settings"));
 const Feedback = lazy(() => import("./pages/Feedback/Feedback"));
+const Limits = lazy(() => import("./pages/Limits/Limits"));
 
 // Workspace layout (shared between Dashboard and APIs)
 const WorkspaceLayout = lazy(() => import("./layout/WorkspaceLayout/WorkspaceLayout").then(m => ({ default: m.default })));
@@ -90,9 +91,9 @@ const App: React.FC = () => {
         <ThemeProvider theme={appTheme}>
           <AppContext.Provider value={{ darkMode, setDarkMode }}>
             <CssBaseline />
-            <ToastProvider>
-              <PermissionsProvider>
-                <Router>
+            <PermissionsProvider>
+              <Router>
+                <ToastProvider>
                   <TourProvider>
                     <DemoBanner />
                     <Suspense fallback={null}>
@@ -151,13 +152,20 @@ const App: React.FC = () => {
                         </ProtectedRoute>
                       } />
 
+                      {/* Limits */}
+                      <Route path={ROUTES.LIMITS} element={
+                        <ProtectedRoute>
+                          <Limits />
+                        </ProtectedRoute>
+                      } />
+
                       <Route path="*" element={<ProtectedNotFoundRoute />} />
                       </Routes>
                     </Suspense>
                   </TourProvider>
-                </Router>
-              </PermissionsProvider>
-            </ToastProvider>
+                </ToastProvider>
+              </Router>
+            </PermissionsProvider>
           </AppContext.Provider>
         </ThemeProvider>
       </QueryClientProvider>

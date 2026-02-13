@@ -27,6 +27,8 @@ export function useCreateApiToken(options: UseCreateApiTokenOptions = {}) {
     mutationFn: (data) => ApiTokenService.createApiToken(data),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['apiTokens'] });
+      // Invalidate version limits to update usage counts
+      queryClient.invalidateQueries({ queryKey: ['versionLimits'] });
       onSuccess?.(data);
     },
     onError: (error) => {
@@ -85,6 +87,8 @@ export function useRevokeApiToken(options: UseRevokeApiTokenOptions = {}) {
     mutationFn: (tokenId) => ApiTokenService.revokeApiToken(tokenId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['apiTokens'] });
+      // Invalidate version limits to update usage counts
+      queryClient.invalidateQueries({ queryKey: ['versionLimits'] });
       onSuccess?.();
     },
     onError: (error) => {

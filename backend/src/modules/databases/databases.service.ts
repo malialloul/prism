@@ -4,6 +4,7 @@ import { Pool } from 'pg';
 import mysql from 'mysql2/promise';
 import { pool } from '../../config/db';
 import { config } from '../../config/env';
+import { limits, formatLimit } from '../../config/version';
 import { NotFoundError, ValidationError } from '../../utils/errors';
 import type {
   CreateDatabaseDto,
@@ -315,13 +316,30 @@ export const connectDatabaseService = async (
   // Encrypt the decrypted password for storage
   const passwordEncrypted = encrypt(decryptedPassword);
 
+  // Check if the database exceeds version limits before saving
+  const actualTables = testResult.tables || 0;
+  const actualStorageBytes = testResult.storageBytes || 0;
+  const actualStorageMB = actualStorageBytes / (1024 * 1024);
+
+  if (limits.maxTablesPerDatabase > 0 && actualTables > limits.maxTablesPerDatabase) {
+    throw new ValidationError(
+      `This database has ${actualTables} tables which exceeds the limit of ${limits.maxTablesPerDatabase} tables. Please reduce the number of tables before connecting.`
+    );
+  }
+
+  if (limits.maxStorageMB > 0 && actualStorageMB > limits.maxStorageMB) {
+    throw new ValidationError(
+      `This database uses ${actualStorageMB.toFixed(1)}MB which exceeds the limit of ${formatLimit('maxStorageMB')}. Please reduce the database size before connecting.`
+    );
+  }
+
   // Insert into database
   const result = await pool.query<DbDatabaseConnectionDto>(
     `INSERT INTO database_connections 
      (user_id, name, engine, host, port, username, password_encrypted, database, ssl, status, last_connected_at, tables, storage_bytes, is_hosted)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), $11, $12, false)
      RETURNING *`,
-    [userId, name, engine, host, port, username, passwordEncrypted, database, ssl, initialStatus, testResult.tables || 0, testResult.storageBytes || 0]
+    [userId, name, engine, host, port, username, passwordEncrypted, database, ssl, initialStatus, actualTables, actualStorageBytes]
   );
 
   return mapToDto(result.rows[0]);

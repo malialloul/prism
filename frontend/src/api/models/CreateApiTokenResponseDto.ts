@@ -8,4 +8,5 @@ export interface CreateApiTokenResponseDto {
   status: string;
   message: string;
   data: CreateApiTokenResultDto;
+  warning?: string;
 }

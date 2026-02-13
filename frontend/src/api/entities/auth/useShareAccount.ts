@@ -18,6 +18,8 @@ export function useShareAccount(options: UseShareAccountOptions = {}) {
     onSuccess: (data) => {
       // Invalidate shared accounts query to refresh the list
       queryClient.invalidateQueries({ queryKey: ['sharedAccounts'] });
+      // Invalidate version limits to update usage counts
+      queryClient.invalidateQueries({ queryKey: ['versionLimits'] });
       onSuccess?.(data);
     },
     onError: (error) => {

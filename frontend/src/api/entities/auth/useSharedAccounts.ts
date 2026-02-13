@@ -74,6 +74,8 @@ export function useRevokeShare(options: UseRevokeShareOptions = {}) {
     mutationFn: (shareId) => AccountSharingService.revokeShare(shareId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sharedAccounts'] });
+      // Invalidate version limits to update usage counts
+      queryClient.invalidateQueries({ queryKey: ['versionLimits'] });
       onSuccess?.();
     },
     onError: (error) => {
@@ -130,6 +132,8 @@ export function useDeleteShare(options: UseDeleteShareOptions = {}) {
     mutationFn: (shareId) => AccountSharingService.deleteShare(shareId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sharedAccounts'] });
+      // Invalidate version limits to update usage counts
+      queryClient.invalidateQueries({ queryKey: ['versionLimits'] });
       onSuccess?.();
     },
     onError: (error) => {

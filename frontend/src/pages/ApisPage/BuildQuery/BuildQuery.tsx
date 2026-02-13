@@ -1,14 +1,22 @@
-import { Box } from "@mui/material";
+import { Box, Alert } from "@mui/material";
+import { Link } from "react-router-dom";
 import { ApisContent } from "./BuildQuery.styles";
 import QueryWizardWrapper from "./QueryWizardWrapper/QueryWizardWrapper";
 import { useWorkspace } from "../../../layout";
 import { useApisContext } from "../../../layout";
 import { usePermissions, AccessRestricted } from "../../../components";
+import { useVersionLimits } from "../../../api/entities/auth";
+import { ROUTES } from "../../../constants";
 
 export default function BuildQuery() {
   const workspace = useWorkspace();
   const { triggerOpenApiRefresh } = useApisContext();
   const { canCreateApi } = usePermissions();
+  const { data: versionData } = useVersionLimits();
+
+  const limits = versionData?.data?.limits;
+  const usage = versionData?.data?.usage;
+  const isApiLimitReached = limits?.maxSavedApis && limits.maxSavedApis > 0 && usage && usage.savedApis >= limits.maxSavedApis;
 
   if (!workspace) return null;
 
@@ -34,10 +42,28 @@ export default function BuildQuery() {
 
   return (
     <ApisContent>
-      <QueryWizardWrapper
-        connectedDatabase={connectedDatabase}
-        onApiSaved={triggerOpenApiRefresh}
-      />
+      <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        {isApiLimitReached && (
+          <Alert 
+            severity="warning" 
+            sx={{ 
+              borderRadius: 0,
+              '& .MuiAlert-message': { width: '100%' }
+            }}
+          >
+            You've reached your saved API limit ({usage?.savedApis}/{limits?.maxSavedApis}). 
+            <Link to={ROUTES.LIMITS} style={{ marginLeft: 4, color: 'inherit', fontWeight: 600 }}>
+              View Limits
+            </Link>
+          </Alert>
+        )}
+        <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <QueryWizardWrapper
+            connectedDatabase={connectedDatabase}
+            onApiSaved={triggerOpenApiRefresh}
+          />
+        </Box>
+      </Box>
     </ApisContent>
   );
 }

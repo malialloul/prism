@@ -133,3 +133,42 @@ export const StatChange = styled('span')(({ theme }) => {
     color: colors.textMuted,
   };
 });
+
+export const LimitBar = styled(Box)(({ theme }) => {
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
+  return {
+    width: '100%',
+    height: '4px',
+    borderRadius: '2px',
+    backgroundColor: colors.border,
+    overflow: 'hidden',
+    marginTop: '0.5rem',
+  };
+});
+
+export const LimitBarFill = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'percentage' && prop !== 'variant',
+})<{ percentage: number; variant?: 'normal' | 'warning' | 'danger' }>(({ theme, percentage, variant = 'normal' }) => {
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
+  const fillColors = {
+    normal: colors.primary,
+    warning: colors.warning,
+    danger: colors.error,
+  };
+  return {
+    height: '100%',
+    width: `${Math.min(percentage, 100)}%`,
+    backgroundColor: fillColors[variant],
+    borderRadius: '2px',
+    transition: 'width 0.3s ease',
+  };
+});
+
+export const LimitText = styled('span')(({ theme }) => {
+  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
+  return {
+    fontSize: '0.6875rem',
+    color: colors.textMuted,
+    marginTop: '0.25rem',
+  };
+});

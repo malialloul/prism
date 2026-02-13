@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -6,10 +7,11 @@ import CheckIcon from '@mui/icons-material/Check';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import KeyIcon from '@mui/icons-material/Key';
-import { CircularProgress, Box } from '@mui/material';
-import { useApiTokens, useCreateApiToken, useRevokeApiToken, useRevealApiToken } from '../../../api/entities/auth';
+import { CircularProgress, Box, Alert } from '@mui/material';
+import { useApiTokens, useCreateApiToken, useRevokeApiToken, useRevealApiToken, useVersionLimits } from '../../../api/entities/auth';
 import { ApiTokensSkeleton } from '../../../components/Skeletons';
 import { toastService } from '../../../services/toastService';
+import { ROUTES } from '../../../constants';
 import CreateTokenModal from './CreateTokenModal';
 import {
   TokensContainer,
@@ -36,6 +38,11 @@ const ApiTokens = () => {
 
   const { data: tokensData, isLoading: loading } = useApiTokens();
   const tokens = tokensData?.data?.tokens ?? [];
+  
+  const { data: versionData } = useVersionLimits();
+  const limits = versionData?.data?.limits;
+  const usage = versionData?.data?.usage;
+  const isTokenLimitReached = limits?.maxApiTokens && limits.maxApiTokens > 0 && usage && usage.apiTokens >= limits.maxApiTokens;
 
   const { createTokenAsync } = useCreateApiToken({
     onSuccess: (data) => {
@@ -43,6 +50,9 @@ const ApiTokens = () => {
       setRevealedTokens(prev => ({ ...prev, [data.data.token.id]: data.data.plainToken }));
       setCreateModalOpen(false);
       toastService.success('API token created successfully');
+      if (data.warning) {
+        toastService.warning(data.warning);
+      }
     },
     onError: (error) => {
       const message = error.body?.message || 'Failed to create API token';
@@ -135,6 +145,20 @@ const ApiTokens = () => {
 
   return (
     <TokensContainer>
+      {isTokenLimitReached && (
+        <Alert 
+          severity="warning" 
+          sx={{ 
+            marginBottom: '1rem',
+            '& .MuiAlert-message': { width: '100%' }
+          }}
+        >
+          You've reached your API token limit ({usage?.apiTokens}/{limits?.maxApiTokens}). 
+          <Link to={ROUTES.LIMITS} style={{ marginLeft: 4, color: 'inherit', fontWeight: 600 }}>
+            View Limits
+          </Link>
+        </Alert>
+      )}
       <TokensHeader>
         <HeaderText>
           API tokens allow external applications to authenticate with your auto-generated APIs.
