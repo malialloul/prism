@@ -13,6 +13,7 @@ export interface UserUsage {
   storageMB: number;
   requestsThisMonth: number;
   savedApis: number;
+  savedQueries: number;
   tables: number;
   sharedAccounts: number;
   apiTokens: number;
@@ -66,12 +67,19 @@ export const getUserUsage = async (userId: string): Promise<UserUsage> => {
     requestsThisMonth = 0;
   }
 
-  // Get saved APIs count
+  // Get saved APIs count (from Build Query page)
   const apisResult = await pool.query(
-    'SELECT COUNT(*) as count FROM saved_queries WHERE user_id = $1',
+    `SELECT COUNT(*) as count FROM saved_queries WHERE user_id = $1 AND (save_type = 'api' OR save_type IS NULL)`,
     [userId]
   );
   const savedApis = parseInt(apisResult.rows[0].count, 10);
+
+  // Get saved queries count (from Query Editor page)
+  const queriesResult = await pool.query(
+    `SELECT COUNT(*) as count FROM saved_queries WHERE user_id = $1 AND save_type = 'query'`,
+    [userId]
+  );
+  const savedQueries = parseInt(queriesResult.rows[0].count, 10);
 
   // Get shared accounts count
   const sharedResult = await pool.query(
@@ -100,6 +108,7 @@ export const getUserUsage = async (userId: string): Promise<UserUsage> => {
     storageMB,
     requestsThisMonth,
     savedApis,
+    savedQueries,
     tables,
     sharedAccounts,
     apiTokens,
@@ -296,6 +305,38 @@ export const enforceApiTokenLimit = async (userId: string): Promise<EnforceLimit
 };
 
 /**
+ * Check if user can save a query (Query Editor)
+ */
+export const canSaveQuery = async (userId: string): Promise<LimitCheckResult> => {
+  const usage = await getUserUsage(userId);
+  const allowed = limits.maxSavedQueries === 0 || usage.savedQueries < limits.maxSavedQueries;
+  
+  return {
+    allowed,
+    currentUsage: usage.savedQueries,
+    limit: limits.maxSavedQueries,
+    limitFormatted: formatLimit('maxSavedQueries'),
+    message: allowed ? undefined : `You've reached your saved query limit (${usage.savedQueries}/${limits.maxSavedQueries}). [View Limits](/limits)`,
+  };
+};
+
+/**
+ * Enforce saved query limit - throws if limit exceeded
+ * Returns warning if this action reaches the limit
+ */
+export const enforceSaveQueryLimit = async (userId: string): Promise<EnforceLimitResult> => {
+  const check = await canSaveQuery(userId);
+  if (!check.allowed) {
+    throw new ValidationError(check.message || 'Saved query limit reached');
+  }
+  
+  const willReachLimit = check.limit > 0 && (check.currentUsage + 1) >= check.limit;
+  return {
+    warning: willReachLimit ? `You've reached your saved query limit (${check.currentUsage + 1}/${check.limit}). [View Limits](/limits)` : undefined,
+  };
+};
+
+/**
  * Get all limits and current usage for a user
  */
 export const getUserLimitsAndUsage = async (userId: string) => {
@@ -309,6 +350,7 @@ export const getUserLimitsAndUsage = async (userId: string) => {
       maxStorageMB: limits.maxStorageMB,
       maxRequestsPerMonth: limits.maxRequestsPerMonth,
       maxSavedApis: limits.maxSavedApis,
+      maxSavedQueries: limits.maxSavedQueries,
       maxTablesPerDatabase: limits.maxTablesPerDatabase,
       maxSharedAccounts: limits.maxSharedAccounts,
       maxApiTokens: limits.maxApiTokens,
@@ -318,6 +360,7 @@ export const getUserLimitsAndUsage = async (userId: string) => {
       storageMB: usage.storageMB,
       requestsThisMonth: usage.requestsThisMonth,
       savedApis: usage.savedApis,
+      savedQueries: usage.savedQueries,
       tables: usage.tables,
       sharedAccounts: usage.sharedAccounts,
       apiTokens: usage.apiTokens,

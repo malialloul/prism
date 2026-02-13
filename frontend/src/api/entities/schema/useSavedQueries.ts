@@ -8,17 +8,17 @@ import { getDemoSavedQueries } from '../../../context/demoData';
 
 export const SAVED_QUERIES_KEY = ['saved-queries'];
 
-export function useSavedQueries(databaseId: number | undefined) {
+export function useSavedQueries(databaseId: number | undefined, type?: 'api' | 'query') {
   const isDemo = isDemoModeActive();
   const demoData = { queries: getDemoSavedQueries(databaseId) };
   
   return useQuery({
-    queryKey: [...SAVED_QUERIES_KEY, isDemo ? 'demo' : databaseId],
+    queryKey: [...SAVED_QUERIES_KEY, isDemo ? 'demo' : databaseId, type],
     queryFn: () => {
       if (isDemo) {
         return Promise.resolve(demoData);
       }
-      return SchemaService.getSavedQueries(databaseId!);
+      return SchemaService.getSavedQueries(databaseId!, type);
     },
     enabled: isDemo || !!databaseId,
     staleTime: isDemo ? Infinity : undefined,
@@ -44,14 +44,15 @@ interface SaveQueryInput {
   }>;
   method?: string;
   isPublic?: boolean;
+  type?: 'query' | 'api';
 }
 
 export function useSaveQuery(databaseId: number, options: UseSaveQueryOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation<{ query: SavedQueryDto; message: string; warning?: string }, ApiError, SaveQueryInput>({
-    mutationFn: ({ name, sql, description, parameters, method, isPublic }) => 
-      SchemaService.saveQuery(databaseId, name, sql, { description, parameters, method, isPublic }),
+    mutationFn: ({ name, sql, description, parameters, method, isPublic, type }) => 
+      SchemaService.saveQuery(databaseId, name, sql, { description, parameters, method, isPublic, type }),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: [...SAVED_QUERIES_KEY, databaseId] });
       // Also invalidate databases to update the apis count

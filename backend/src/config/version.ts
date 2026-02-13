@@ -9,7 +9,8 @@ export interface VersionLimits {
   maxDatabases: number;           // Maximum number of databases per user
   maxStorageMB: number;           // Maximum storage in MB per user
   maxRequestsPerMonth: number;    // Maximum API requests per month
-  maxSavedApis: number;           // Maximum saved/custom APIs per user
+  maxSavedApis: number;           // Maximum saved/custom APIs per user (Build Query)
+  maxSavedQueries: number;        // Maximum saved queries per user (Query Editor)
   maxTablesPerDatabase: number;   // Maximum tables per database (0 = unlimited)
   maxSharedAccounts: number;      // Maximum shared accounts per user
   maxApiTokens: number;           // Maximum API tokens per user
@@ -36,7 +37,8 @@ const versions: Record<string, VersionConfig> = {
       maxDatabases: 0,             // Unlimited
       maxStorageMB: 0,             // Unlimited
       maxRequestsPerMonth: 0,      // Unlimited
-      maxSavedApis: 100,
+      maxSavedApis: 20,
+      maxSavedQueries: 10,
       maxTablesPerDatabase: 0,     // Unlimited
       maxSharedAccounts: 0,        // Disabled for testing
       maxApiTokens: 5,
@@ -53,6 +55,7 @@ const versions: Record<string, VersionConfig> = {
       maxStorageMB: 1024,         // 1GB
       maxRequestsPerMonth: 10000,
       maxSavedApis: 500,
+      maxSavedQueries: 100,
       maxTablesPerDatabase: 200,  // 200 tables total
       maxSharedAccounts: 10,
       maxApiTokens: 20,

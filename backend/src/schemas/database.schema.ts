@@ -43,6 +43,7 @@ export const SavedQuerySchema = registerTable(
     parameters: z.string().optional(), // JSON string of parameter definitions
     method: z.string().default('GET'), // HTTP method
     isPublic: z.boolean().default(false),
+    saveType: z.enum(['api', 'query']).default('api'), // api = from APIs page, query = from Query Editor
   }),
   {
     withId: true,
@@ -56,6 +57,7 @@ export const SavedQuerySchema = registerTable(
       description: { type: "TEXT", nullable: true },
       method: { type: "VARCHAR(10)", defaultValue: "'GET'" },
       isPublic: { type: "BOOLEAN", defaultValue: "false" },
+      saveType: { type: "VARCHAR(10)", defaultValue: "'api'" },
     },
   }
 );

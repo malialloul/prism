@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { ButtonLoadingSkeleton, usePermissions, AccessRestrictedDialog } from '../../../../components';
 import {
   Tooltip,
@@ -8,6 +9,7 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  Alert,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SaveIcon from '@mui/icons-material/Save';
@@ -16,10 +18,12 @@ import DownloadIcon from '@mui/icons-material/Download';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CodeIcon from '@mui/icons-material/Code';
 import { useExecuteQuery, useSavedQueries, useSaveQuery, useDeleteSavedQuery } from '../../../../api/entities/schema';
+import { useVersionLimits } from '../../../../api/entities/auth';
 import type { QueryResultDto, SavedQueryDto } from '../../../../api/models/SchemaDto';
 import { toastService } from '../../../../services';
 import { Pagination } from '../../../../components';
 import { useWorkspace } from '../../../../layout';
+import { ROUTES } from '../../../../constants';
 import {
   EditorWrapper,
   EditorHeader,
@@ -85,8 +89,13 @@ export default function QueryEditor({
   const startRow = totalRows > 0 ? page * pageSize + 1 : 0;
   const endRow = Math.min((page + 1) * pageSize, totalRows);
 
-  const { data: savedQueriesData, refetch: refetchSavedQueries } = useSavedQueries(databaseId);
+  const { data: savedQueriesData, refetch: refetchSavedQueries } = useSavedQueries(databaseId, 'query');
   const savedQueries = savedQueriesData?.queries || [];
+
+  const { data: versionData } = useVersionLimits();
+  const limits = versionData?.data?.limits;
+  const usage = versionData?.data?.usage;
+  const isQueryLimitReached = limits?.maxSavedQueries && limits.maxSavedQueries > 0 && usage && usage.savedQueries >= limits.maxSavedQueries;
 
   const { mutate: executeQuery, isPending: isExecuting } = useExecuteQuery(databaseId ?? 0, {
     onSuccess: (queryResult) => {
@@ -182,7 +191,7 @@ export default function QueryEditor({
 
   const handleSaveQuery = useCallback(() => {
     if (!queryName.trim() || !sql.trim()) return;
-    saveQuery({ name: queryName, sql });
+    saveQuery({ name: queryName, sql, type: 'query' });
   }, [queryName, sql, saveQuery]);
 
   const handleLoadQuery = useCallback((query: SavedQueryDto) => {
@@ -243,6 +252,20 @@ export default function QueryEditor({
 
   return (
     <EditorWrapper>
+      {isQueryLimitReached && (
+        <Alert 
+          severity="warning" 
+          sx={{ 
+            borderRadius: 0,
+            '& .MuiAlert-message': { width: '100%' }
+          }}
+        >
+          You've reached your saved query limit ({usage?.savedQueries}/{limits?.maxSavedQueries}). 
+          <Link to={ROUTES.LIMITS} style={{ marginLeft: 4, color: 'inherit', fontWeight: 600 }}>
+            View Limits
+          </Link>
+        </Alert>
+      )}
       <EditorHeader>
         <EditorTitle>Query Editor</EditorTitle>
         <EditorActions>

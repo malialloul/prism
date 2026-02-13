@@ -10,6 +10,7 @@ export interface VersionLimits {
   maxStorageMB: number;
   maxRequestsPerMonth: number;
   maxSavedApis: number;
+  maxSavedQueries: number;
   maxTablesPerDatabase: number;
   maxSharedAccounts: number;
   maxApiTokens: number;
@@ -20,6 +21,7 @@ export interface UserUsage {
   storageMB: number;
   requestsThisMonth: number;
   savedApis: number;
+  savedQueries: number;
   tables: number;
   sharedAccounts: number;
   apiTokens: number;

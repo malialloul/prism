@@ -150,15 +150,18 @@ export class SchemaService {
   /**
    * Get saved queries for a database
    * @param databaseId Database ID
+   * @param type Filter by save type - 'api' for APIs page, 'query' for Query Editor
    * @returns SavedQueryDto[] List of saved queries
    * @throws ApiError
    */
   public static getSavedQueries(
-    databaseId: number
+    databaseId: number,
+    type?: 'api' | 'query'
   ): CancelablePromise<{ queries: SavedQueryDto[] }> {
+    const queryParams = type ? `?type=${type}` : '';
     return __request(OpenAPI, {
       method: 'GET',
-      url: `/databases/${databaseId}/queries`,
+      url: `/databases/${databaseId}/queries${queryParams}`,
       errors: {
         401: 'Unauthorized',
         404: 'Database not found',
@@ -190,6 +193,7 @@ export class SchemaService {
       }>;
       method?: string;
       isPublic?: boolean;
+      type?: 'query' | 'api';
     }
   ): CancelablePromise<{ query: SavedQueryDto; message: string }> {
     return __request(OpenAPI, {
@@ -202,6 +206,7 @@ export class SchemaService {
         parameters: options?.parameters,
         method: options?.method || 'GET',
         isPublic: options?.isPublic || false,
+        type: options?.type,
       },
       mediaType: 'application/json',
       errors: {

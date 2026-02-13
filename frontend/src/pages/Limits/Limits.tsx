@@ -8,6 +8,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import KeyIcon from '@mui/icons-material/Key';
 import DataUsageIcon from '@mui/icons-material/DataUsage';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
 import { Box, IconButton, Skeleton, Tooltip } from '@mui/material';
 import { useTheme as useMuiTheme } from '@mui/material/styles';
 import { getWorkspaceColors } from '../../styles/theme';
@@ -203,6 +204,12 @@ const Limits = () => {
                   title="Saved APIs"
                   current={usage?.savedApis || 0}
                   max={limits?.maxSavedApis || 0}
+                />
+                <LimitItem
+                  icon={<BookmarkIcon />}
+                  title="Saved Queries"
+                  current={usage?.savedQueries || 0}
+                  max={limits?.maxSavedQueries || 0}
                 />
                 <LimitItem
                   icon={<SpeedIcon />}

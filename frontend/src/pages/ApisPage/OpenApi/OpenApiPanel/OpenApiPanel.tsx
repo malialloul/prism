@@ -39,7 +39,7 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
     border: themeColors.border,
   };
   const databaseId = Number(connectedDatabase.id);
-  const { data: savedQueriesData, isLoading, refetch } = useSavedQueries(databaseId);
+  const { data: savedQueriesData, isLoading, refetch } = useSavedQueries(databaseId, 'api');
   const { mutate: deleteQuery } = useDeleteSavedQuery(databaseId || 0, {
     onSuccess: () => refetch(),
   });

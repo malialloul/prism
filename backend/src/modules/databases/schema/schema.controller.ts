@@ -1,6 +1,6 @@
 // src/modules/databases/schema/schema.controller.ts
 import { Request, Response, NextFunction } from 'express';
-import { enforceSaveApiLimit } from '../../../services/limits.service';
+import { enforceSaveApiLimit, enforceSaveQueryLimit } from '../../../services/limits.service';
 import {
   getSchemaObjectsService,
   getTableDetailsService,
@@ -140,6 +140,7 @@ export const getTableData = async (
 /**
  * GET /databases/:id/queries
  * Get saved queries for a database
+ * Query params: type - 'api' for APIs page, 'query' for Query Editor
  */
 export const getSavedQueries = async (
   req: Request,
@@ -149,7 +150,8 @@ export const getSavedQueries = async (
   try {
     const userId = req.user!.userId;
     const databaseId = req.params.id as string;
-    const queries = await getSavedQueriesService(userId, databaseId);
+    const saveType = req.query.type as 'api' | 'query' | undefined;
+    const queries = await getSavedQueriesService(userId, databaseId, saveType);
 
     res.status(200).json({ queries });
   } catch (error) {
@@ -169,17 +171,23 @@ export const saveQuery = async (
   try {
     const userId = req.user!.userId;
     const databaseId = req.params.id as string;
-    const { name, sql, description, parameters, method, isPublic } = req.body;
+    const { name, sql, description, parameters, method, isPublic, type } = req.body;
 
     if (!name || !sql) {
       res.status(400).json({ message: 'Name and SQL are required' });
       return;
     }
 
-    // Enforce API limit for current version
-    const limitResult = await enforceSaveApiLimit(userId);
+    // Enforce appropriate limit based on type:
+    // 'query' = saved from Query Editor (10 limit)
+    // 'api' or undefined = saved from APIs page (100 limit)
+    const limitResult = type === 'query'
+      ? await enforceSaveQueryLimit(userId)
+      : await enforceSaveApiLimit(userId);
 
     // Pass permissions for shared access validation
+    // saveType determines which limit applies ('api' = APIs page, 'query' = Query Editor)
+    const saveType = type === 'query' ? 'query' : 'api';
     const query = await saveQueryService(
       userId, 
       databaseId, 
@@ -190,7 +198,8 @@ export const saveQuery = async (
       method || 'GET',
       isPublic || false,
       req.user!.permissions,
-      req.user!.isSharedAccess
+      req.user!.isSharedAccess,
+      saveType
     );
 
     res.status(201).json({ 

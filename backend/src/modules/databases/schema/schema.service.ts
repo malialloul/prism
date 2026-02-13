@@ -1316,18 +1316,40 @@ export const getTableDataService = async (
 
 /**
  * Get saved queries for a database
+ * @param saveType - 'api' for APIs page, 'query' for Query Editor, undefined for all
  */
 export const getSavedQueriesService = async (
   userId: string,
-  databaseId: string
+  databaseId: string,
+  saveType?: 'api' | 'query'
 ): Promise<SavedQueryDto[]> => {
-  const result = await pool.query(
-    `SELECT id, database_id, name, slug, description, sql, parameters, method, is_public, created_at, updated_at
+  let query: string;
+  let params: any[];
+
+  if (saveType === 'api') {
+    // APIs page: get save_type = 'api' or NULL (legacy records)
+    query = `SELECT id, database_id, name, slug, description, sql, parameters, method, is_public, created_at, updated_at
+     FROM saved_queries
+     WHERE user_id = $1 AND database_id = $2 AND (save_type = 'api' OR save_type IS NULL)
+     ORDER BY updated_at DESC`;
+    params = [userId, databaseId];
+  } else if (saveType === 'query') {
+    // Query Editor: get save_type = 'query' only
+    query = `SELECT id, database_id, name, slug, description, sql, parameters, method, is_public, created_at, updated_at
+     FROM saved_queries
+     WHERE user_id = $1 AND database_id = $2 AND save_type = 'query'
+     ORDER BY updated_at DESC`;
+    params = [userId, databaseId];
+  } else {
+    // All queries (for backwards compatibility)
+    query = `SELECT id, database_id, name, slug, description, sql, parameters, method, is_public, created_at, updated_at
      FROM saved_queries
      WHERE user_id = $1 AND database_id = $2
-     ORDER BY updated_at DESC`,
-    [userId, databaseId]
-  );
+     ORDER BY updated_at DESC`;
+    params = [userId, databaseId];
+  }
+
+  const result = await pool.query(query, params);
 
   return result.rows.map((row: any) => ({
     id: row.id,
@@ -1369,7 +1391,8 @@ export const saveQueryService = async (
   method: string = 'GET',
   isPublic: boolean = false,
   permissions?: SharePermissions,
-  isSharedAccess: boolean = false
+  isSharedAccess: boolean = false,
+  saveType: 'api' | 'query' = 'api'
 ): Promise<SavedQueryDto> => {
   // Validate permissions for shared access users
   // Users should only be able to create APIs for operations they have permission to execute
@@ -1390,22 +1413,23 @@ export const saveQueryService = async (
   // Generate slug from name
   const slug = generateSlug(name);
   
-  // Check if slug already exists for this database
+  // Check if slug already exists for this database within the same scope (api vs query)
   const existingSlug = await pool.query(
-    'SELECT id, name FROM saved_queries WHERE database_id = $1 AND slug = $2',
-    [databaseId, slug]
+    `SELECT id, name FROM saved_queries WHERE database_id = $1 AND slug = $2 AND (save_type = $3 OR (save_type IS NULL AND $3 = 'api'))`,
+    [databaseId, slug, saveType]
   );
   if (existingSlug.rowCount && existingSlug.rowCount > 0) {
-    throw new ValidationError(`A query with a similar name already exists: "${existingSlug.rows[0].name}". Please choose a different name.`);
+    const scopeName = saveType === 'query' ? 'query' : 'API';
+    throw new ValidationError(`A ${scopeName} with a similar name already exists: "${existingSlug.rows[0].name}". Please choose a different name.`);
   }
 
   const parametersJson = parameters ? JSON.stringify(parameters) : null;
 
   const result = await pool.query(
-    `INSERT INTO saved_queries (user_id, database_id, name, slug, description, sql, parameters, method, is_public)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `INSERT INTO saved_queries (user_id, database_id, name, slug, description, sql, parameters, method, is_public, save_type)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING id, database_id, name, slug, description, sql, parameters, method, is_public, created_at, updated_at`,
-    [userId, databaseId, name, slug, description, sql, parametersJson, method, isPublic]
+    [userId, databaseId, name, slug, description, sql, parametersJson, method, isPublic, saveType]
   );
 
   // Increment the apis count in database_connections
