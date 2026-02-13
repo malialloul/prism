@@ -49,9 +49,9 @@ const tourSteps: TourStepConfig[] = [
   },
   {
     target: '[data-tour="add-database"]',
-    content: 'Click here to connect a new database. We support PostgreSQL, MySQL, SQL Server, and more.',
+    content: 'Click here to add a new database. We support PostgreSQL and MySQL.',
     placement: 'right',
-    title: 'Connect Database',
+    title: 'Create Database',
   },
   {
     target: '[data-tour="dashboard-tabs"]',
