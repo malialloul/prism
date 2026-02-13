@@ -33,7 +33,8 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cancelPermissionRequestHandler = exports.respondPermissionRequestHandler = exports.getMyPermissionRequestsHandler = exports.getPermissionRequestsHandler = exports.createPermissionRequestHandler = exports.deleteNotificationHandler = exports.markAllNotificationsReadHandler = exports.markNotificationReadHandler = exports.getNotificationsHandler = exports.sharedLoginHandler = exports.deleteShareHandler = exports.updateSharePermissionsHandler = exports.revokeShareHandler = exports.getSharedAccountsHandler = exports.shareAccountHandler = exports.deleteAccountHandler = exports.deactivateAccountHandler = exports.login2FAHandler = exports.disable2FAHandler = exports.verify2FAHandler = exports.setup2FAHandler = exports.get2FAStatusHandler = exports.changeEmailHandler = exports.changePasswordHandler = exports.resetPasswordHandler = exports.verifyResetCodeHandler = exports.forgotPasswordHandler = exports.loginHandler = exports.signupHandler = void 0;
+exports.getVersionLimitsHandler = exports.revealApiTokenHandler = exports.revokeApiTokenHandler = exports.getApiTokensHandler = exports.createApiTokenHandler = exports.githubOAuthCallbackHandler = exports.githubOAuthHandler = exports.googleOAuthCallbackHandler = exports.googleOAuthHandler = exports.getMyPermissionsHandler = exports.cancelPermissionRequestHandler = exports.respondPermissionRequestHandler = exports.getMyPermissionRequestsHandler = exports.getPermissionRequestsHandler = exports.createPermissionRequestHandler = exports.deleteNotificationHandler = exports.markAllNotificationsReadHandler = exports.markNotificationReadHandler = exports.getNotificationsHandler = exports.sharedLoginHandler = exports.deleteShareHandler = exports.updateSharePermissionsHandler = exports.revokeShareHandler = exports.getSharedAccountsHandler = exports.shareAccountHandler = exports.deleteAccountHandler = exports.deactivateAccountHandler = exports.login2FAHandler = exports.disable2FAHandler = exports.verify2FAHandler = exports.setup2FAHandler = exports.get2FAStatusHandler = exports.changeEmailHandler = exports.changePasswordHandler = exports.resetPasswordHandler = exports.verifyResetCodeHandler = exports.forgotPasswordHandler = exports.loginHandler = exports.signupHandler = void 0;
+const limits_service_1 = require("../../services/limits.service");
 const auth_service_1 = require("./auth.service");
 const errorHandler_1 = require("../../middleware/errorHandler");
 const errors_1 = require("../../utils/errors");
@@ -184,11 +185,14 @@ exports.deleteAccountHandler = (0, errorHandler_1.asyncHandler)(async (req, res,
 // ============================================================================
 exports.shareAccountHandler = (0, errorHandler_1.asyncHandler)(async (req, res, _next) => {
     const userId = req.user.userId;
+    // Enforce shared account limit for current version
+    const limitResult = await (0, limits_service_1.enforceSharedAccountLimit)(userId);
     const data = await (0, auth_service_1.shareAccountService)(userId, req.body);
     const result = {
         status: 'success',
         message: data.message,
         data,
+        warning: limitResult.warning,
     };
     res.json(result);
 });
@@ -348,5 +352,182 @@ exports.cancelPermissionRequestHandler = (0, errorHandler_1.asyncHandler)(async 
         message: data.message,
     };
     res.json(result);
+});
+exports.getMyPermissionsHandler = (0, errorHandler_1.asyncHandler)(async (req, res, _next) => {
+    const shareId = req.user.shareId;
+    if (!shareId) {
+        throw new errors_1.AuthorizationError('Share ID not found in token');
+    }
+    const { getMyPermissionsService } = await Promise.resolve().then(() => __importStar(require('./auth.service')));
+    const data = await getMyPermissionsService(shareId);
+    res.json({
+        status: 'success',
+        message: 'Permissions retrieved',
+        data,
+    });
+});
+// OAuth Handlers
+/**
+ * Redirect to Google OAuth
+ */
+exports.googleOAuthHandler = (0, errorHandler_1.asyncHandler)(async (req, res, _next) => {
+    const { oauthConfig } = await Promise.resolve().then(() => __importStar(require('../../config/oauth')));
+    const params = new URLSearchParams({
+        client_id: oauthConfig.google.clientId,
+        redirect_uri: oauthConfig.google.redirectUri,
+        response_type: 'code',
+        scope: oauthConfig.google.scope,
+        access_type: 'offline',
+        prompt: 'consent',
+    });
+    res.redirect(`${oauthConfig.google.authUrl}?${params.toString()}`);
+});
+/**
+ * Handle Google OAuth callback
+ */
+exports.googleOAuthCallbackHandler = (0, errorHandler_1.asyncHandler)(async (req, res, _next) => {
+    const { oauthConfig } = await Promise.resolve().then(() => __importStar(require('../../config/oauth')));
+    const { exchangeGoogleCodeService, oauthLoginService } = await Promise.resolve().then(() => __importStar(require('./auth.service')));
+    const code = req.query.code;
+    const error = req.query.error;
+    if (error) {
+        return res.redirect(`${oauthConfig.frontendUrl}/signin?error=${encodeURIComponent(error)}`);
+    }
+    if (!code) {
+        return res.redirect(`${oauthConfig.frontendUrl}/signin?error=missing_code`);
+    }
+    try {
+        const userData = await exchangeGoogleCodeService(code);
+        const { token } = await oauthLoginService(userData);
+        // Redirect to frontend with token
+        res.redirect(`${oauthConfig.frontendUrl}/oauth/callback?token=${token}`);
+    }
+    catch (err) {
+        console.error('Google OAuth error:', err);
+        const errorMessage = err.message || 'Authentication failed';
+        res.redirect(`${oauthConfig.frontendUrl}/signin?error=${encodeURIComponent(errorMessage)}`);
+    }
+});
+/**
+ * Redirect to GitHub OAuth
+ */
+exports.githubOAuthHandler = (0, errorHandler_1.asyncHandler)(async (req, res, _next) => {
+    const { oauthConfig } = await Promise.resolve().then(() => __importStar(require('../../config/oauth')));
+    const params = new URLSearchParams({
+        client_id: oauthConfig.github.clientId,
+        redirect_uri: oauthConfig.github.redirectUri,
+        scope: oauthConfig.github.scope,
+    });
+    res.redirect(`${oauthConfig.github.authUrl}?${params.toString()}`);
+});
+/**
+ * Handle GitHub OAuth callback
+ */
+exports.githubOAuthCallbackHandler = (0, errorHandler_1.asyncHandler)(async (req, res, _next) => {
+    const { oauthConfig } = await Promise.resolve().then(() => __importStar(require('../../config/oauth')));
+    const { exchangeGithubCodeService, oauthLoginService } = await Promise.resolve().then(() => __importStar(require('./auth.service')));
+    const code = req.query.code;
+    const error = req.query.error;
+    if (error) {
+        return res.redirect(`${oauthConfig.frontendUrl}/signin?error=${encodeURIComponent(error)}`);
+    }
+    if (!code) {
+        return res.redirect(`${oauthConfig.frontendUrl}/signin?error=missing_code`);
+    }
+    try {
+        const userData = await exchangeGithubCodeService(code);
+        const { token } = await oauthLoginService(userData);
+        // Redirect to frontend with token
+        res.redirect(`${oauthConfig.frontendUrl}/oauth/callback?token=${token}`);
+    }
+    catch (err) {
+        console.error('GitHub OAuth error:', err);
+        const errorMessage = err.message || 'Authentication failed';
+        res.redirect(`${oauthConfig.frontendUrl}/signin?error=${encodeURIComponent(errorMessage)}`);
+    }
+});
+// =====================
+// API Token Handlers
+// =====================
+/**
+ * Create a new API token
+ */
+exports.createApiTokenHandler = (0, errorHandler_1.asyncHandler)(async (req, res, _next) => {
+    if (!req.user?.userId) {
+        throw new errors_1.AuthorizationError('User not authenticated');
+    }
+    // Enforce API token limit for current version
+    const limitResult = await (0, limits_service_1.enforceApiTokenLimit)(req.user.userId);
+    const data = await (0, auth_service_1.createApiTokenService)(req.user.userId, req.body);
+    const result = {
+        status: 'success',
+        message: 'API token created successfully',
+        data,
+        warning: limitResult.warning,
+    };
+    res.status(201).json(result);
+});
+/**
+ * Get all API tokens for the current user
+ */
+exports.getApiTokensHandler = (0, errorHandler_1.asyncHandler)(async (req, res, _next) => {
+    if (!req.user?.userId) {
+        throw new errors_1.AuthorizationError('User not authenticated');
+    }
+    const data = await (0, auth_service_1.getApiTokensService)(req.user.userId);
+    const result = {
+        status: 'success',
+        message: 'API tokens retrieved successfully',
+        data,
+    };
+    res.json(result);
+});
+/**
+ * Revoke an API token
+ */
+exports.revokeApiTokenHandler = (0, errorHandler_1.asyncHandler)(async (req, res, _next) => {
+    if (!req.user?.userId) {
+        throw new errors_1.AuthorizationError('User not authenticated');
+    }
+    const tokenId = parseInt(req.params.tokenId, 10);
+    const data = await (0, auth_service_1.revokeApiTokenService)(req.user.userId, tokenId);
+    const result = {
+        status: 'success',
+        message: data.message,
+    };
+    res.json(result);
+});
+/**
+ * Reveal (get plain text) an API token
+ */
+exports.revealApiTokenHandler = (0, errorHandler_1.asyncHandler)(async (req, res, _next) => {
+    if (!req.user?.userId) {
+        throw new errors_1.AuthorizationError('User not authenticated');
+    }
+    const tokenId = parseInt(req.params.tokenId, 10);
+    const data = await (0, auth_service_1.revealApiTokenService)(req.user.userId, tokenId);
+    const result = {
+        status: 'success',
+        message: 'Token retrieved successfully',
+        data,
+    };
+    res.json(result);
+});
+// =====================
+// Version & Limits Handler
+// =====================
+/**
+ * Get current version info and user's limits/usage
+ */
+exports.getVersionLimitsHandler = (0, errorHandler_1.asyncHandler)(async (req, res, _next) => {
+    if (!req.user?.userId) {
+        throw new errors_1.AuthorizationError('User not authenticated');
+    }
+    const data = await (0, limits_service_1.getUserLimitsAndUsage)(req.user.userId);
+    res.json({
+        status: 'success',
+        message: 'Version and limits retrieved',
+        data,
+    });
 });
 //# sourceMappingURL=auth.controller.js.map

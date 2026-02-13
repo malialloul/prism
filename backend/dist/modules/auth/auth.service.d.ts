@@ -1,4 +1,4 @@
-import type { SignupDto, LoginDto, ForgotPasswordDto, VerifyResetCodeDto, ResetPasswordDto, ChangePasswordDto, ChangeEmailDto, Setup2FADto, Verify2FADto, Disable2FADto, Login2FADto, DeactivateAccountDto, DeleteAccountDto, ShareAccountDto, RevokeShareDto, SharedLoginDto, TokenResponseDto, TwoFactorRequiredDto, VerifyCodeResultDto, Setup2FAResultDto, Verify2FAResultDto, TwoFactorStatusDto, ChangeEmailResultDto, MessageResponseDto, ShareAccountResultDto, SharedAccountsListDto, SharedAccountDto, NotificationsListDto, SharePermissions, CreatePermissionRequestDto, RespondPermissionRequestDto, PermissionRequestDto, PermissionRequestsListDto } from './auth.types';
+import type { SignupDto, LoginDto, ForgotPasswordDto, VerifyResetCodeDto, ResetPasswordDto, ChangePasswordDto, ChangeEmailDto, Setup2FADto, Verify2FADto, Disable2FADto, Login2FADto, DeactivateAccountDto, DeleteAccountDto, ShareAccountDto, RevokeShareDto, SharedLoginDto, TokenResponseDto, TwoFactorRequiredDto, VerifyCodeResultDto, Setup2FAResultDto, Verify2FAResultDto, TwoFactorStatusDto, ChangeEmailResultDto, MessageResponseDto, ShareAccountResultDto, SharedAccountsListDto, SharedAccountDto, NotificationsListDto, SharePermissions, CreatePermissionRequestDto, RespondPermissionRequestDto, PermissionRequestDto, PermissionRequestsListDto, ApiTokenDto } from './auth.types';
 export declare const signupService: (body: SignupDto) => Promise<TokenResponseDto>;
 export declare const loginService: (body: LoginDto) => Promise<TokenResponseDto | TwoFactorRequiredDto>;
 /**
@@ -122,4 +122,68 @@ export declare const respondPermissionRequestService: (userId: string, body: Res
  * Cancel a pending permission request (by the requester)
  */
 export declare const cancelPermissionRequestService: (userId: string, requestId: string, shareId: number) => Promise<MessageResponseDto>;
+/**
+ * Get current permissions for a shared user from the database
+ * This is used to fetch fresh permissions on page load (since JWT may be stale)
+ */
+export declare const getMyPermissionsService: (shareId: number) => Promise<{
+    permissions: SharePermissions;
+}>;
+export interface OAuthUserData {
+    email: string;
+    name: string;
+    provider: 'google' | 'github';
+    providerId: string;
+    avatarUrl?: string;
+}
+/**
+ * Handle OAuth login/signup
+ * If user exists with this OAuth provider, log them in
+ * If user exists with email but different provider, link the account
+ * If user doesn't exist, create a new account
+ */
+export declare const oauthLoginService: (userData: OAuthUserData) => Promise<TokenResponseDto>;
+/**
+ * Exchange OAuth authorization code for access token (Google)
+ */
+export declare const exchangeGoogleCodeService: (code: string) => Promise<OAuthUserData>;
+/**
+ * Exchange OAuth authorization code for access token (GitHub)
+ */
+export declare const exchangeGithubCodeService: (code: string) => Promise<OAuthUserData>;
+/**
+ * Create a new API token for a user
+ */
+export declare const createApiTokenService: (userId: string, body: {
+    name: string;
+    expiresInDays?: number;
+}) => Promise<{
+    token: ApiTokenDto;
+    plainToken: string;
+}>;
+/**
+ * Get all API tokens for a user
+ */
+export declare const getApiTokensService: (userId: string) => Promise<{
+    tokens: ApiTokenDto[];
+}>;
+/**
+ * Revoke an API token
+ */
+export declare const revokeApiTokenService: (userId: string, tokenId: number) => Promise<MessageResponseDto>;
+/**
+ * Reveal (decrypt) an API token for the user
+ */
+export declare const revealApiTokenService: (userId: string, tokenId: number) => Promise<{
+    plainToken: string;
+}>;
+/**
+ * Validate an API token and return the user info
+ * Used by auth middleware for API token authentication
+ */
+export declare const validateApiTokenService: (token: string) => Promise<{
+    userId: string;
+    email: string;
+    fullName?: string;
+} | null>;
 //# sourceMappingURL=auth.service.d.ts.map

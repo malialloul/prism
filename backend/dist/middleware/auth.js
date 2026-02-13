@@ -3,31 +3,79 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.requirePermission = exports.requireSharedAccess = exports.blockSharedAccess = exports.authMiddleware = void 0;
+exports.requirePermissions = exports.requirePermission = exports.requireSharedAccess = exports.blockSharedAccess = exports.authMiddleware = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const env_1 = require("../config/env");
 const errors_1 = require("../utils/errors");
 const config_1 = require("../config");
-const authMiddleware = (req, _res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new errors_1.AuthenticationError('No token provided');
-    }
-    const token = authHeader.substring(7);
+const auth_service_1 = require("../modules/auth/auth.service");
+const authMiddleware = async (req, _res, next) => {
     try {
+        // Check for X-API-Key header first
+        const apiKey = req.headers['x-api-key'];
+        if (apiKey && apiKey.startsWith('prism_')) {
+            const userInfo = await (0, auth_service_1.validateApiTokenService)(apiKey);
+            if (!userInfo) {
+                throw new errors_1.AuthenticationError('Invalid or expired API token');
+            }
+            req.user = {
+                userId: userInfo.userId,
+                email: userInfo.email,
+                fullName: userInfo.fullName,
+                isApiToken: true,
+                iat: Math.floor(Date.now() / 1000),
+                exp: Math.floor(Date.now() / 1000) + 3600, // Placeholder, not used for API tokens
+            };
+            next();
+            return;
+        }
+        // Check for Authorization header
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            throw new errors_1.AuthenticationError('No token provided');
+        }
+        const token = authHeader.substring(7);
+        // Check if it's an API token (starts with prism_)
+        if (token.startsWith('prism_')) {
+            const userInfo = await (0, auth_service_1.validateApiTokenService)(token);
+            if (!userInfo) {
+                throw new errors_1.AuthenticationError('Invalid or expired API token');
+            }
+            req.user = {
+                userId: userInfo.userId,
+                email: userInfo.email,
+                fullName: userInfo.fullName,
+                isApiToken: true,
+                iat: Math.floor(Date.now() / 1000),
+                exp: Math.floor(Date.now() / 1000) + 3600, // Placeholder, not used for API tokens
+            };
+            next();
+            return;
+        }
+        // Regular JWT token
         const decoded = jsonwebtoken_1.default.verify(token, env_1.config.jwt.secret);
         req.user = decoded;
         next();
     }
     catch (error) {
-        throw new errors_1.AuthenticationError('Invalid or expired token');
+        if (error instanceof errors_1.AuthenticationError) {
+            next(error);
+            return;
+        }
+        next(new errors_1.AuthenticationError('Invalid or expired token'));
     }
 };
 exports.authMiddleware = authMiddleware;
 /**
  * Middleware to block shared access users from certain routes (like settings)
+ * API token users are allowed (they have full access like account owners)
  */
 const blockSharedAccess = (req, _res, next) => {
+    // API token users have full access, not shared access
+    if (req.user?.isApiToken) {
+        next();
+        return;
+    }
     if (req.user?.isSharedAccess) {
         throw new errors_1.AuthorizationError('This action is not available for shared access accounts');
     }
@@ -81,6 +129,44 @@ const requirePermission = (permission) => {
 };
 exports.requirePermission = requirePermission;
 /**
+ * Middleware to check if shared user has ALL of the specified permissions
+ * All permissions must be granted for access
+ */
+const requirePermissions = (...permissions) => {
+    return async (req, _res, next) => {
+        try {
+            // Non-shared users (account owners) have full access
+            if (!req.user?.isSharedAccess) {
+                next();
+                return;
+            }
+            // Fetch current permissions from database to ensure we have the latest
+            const shareId = req.user.shareId;
+            if (!shareId) {
+                throw new errors_1.AuthorizationError('Invalid shared access session');
+            }
+            const result = await config_1.pool.query('SELECT permissions FROM shared_accounts WHERE id = $1 AND status = $2 AND expires_at > NOW()', [shareId, 'accepted']);
+            if (result.rows.length === 0) {
+                throw new errors_1.AuthorizationError('Shared access session is no longer valid');
+            }
+            const currentPermissions = result.rows[0].permissions;
+            // Check all required permissions
+            for (const permission of permissions) {
+                if (!currentPermissions || !currentPermissions[permission]) {
+                    throw new errors_1.AuthorizationError(`You do not have permission to ${formatPermissionName(permission)}`);
+                }
+            }
+            // Update req.user.permissions with current DB permissions for downstream use
+            req.user.permissions = currentPermissions;
+            next();
+        }
+        catch (error) {
+            next(error);
+        }
+    };
+};
+exports.requirePermissions = requirePermissions;
+/**
  * Format permission name for user-friendly error messages
  */
 function formatPermissionName(permission) {
@@ -93,7 +179,9 @@ function formatPermissionName(permission) {
         deleteColumn: 'delete columns',
         deleteTable: 'delete tables',
         viewTableData: 'view table data',
-        editTableData: 'edit table data',
+        addRecord: 'add records',
+        editRecord: 'edit records',
+        deleteRecord: 'delete records',
         runQuery: 'run queries',
         createApiInQueryBuilder: 'create APIs in query builder',
         tryAutoGeneratedApis: 'try auto-generated APIs',

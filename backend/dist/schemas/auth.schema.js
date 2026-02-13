@@ -1,16 +1,19 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PublicUserSchema = exports.SharedLoginSchema = exports.RevokeShareSchema = exports.AcceptShareSchema = exports.ShareAccountSchema = exports.Login2FASchema = exports.Disable2FASchema = exports.Verify2FASchema = exports.Setup2FASchema = exports.ChangeEmailSchema = exports.ChangePasswordSchema = exports.ResetPasswordSchema = exports.VerifyResetCodeSchema = exports.ForgotPasswordSchema = exports.LoginSchema = exports.SignupSchema = exports.PermissionRequestSchema = exports.NotificationSchema = exports.SharedAccountSchema = exports.BackupCodeSchema = exports.PasswordResetTokenSchema = exports.UserSchema = void 0;
+exports.PublicUserSchema = exports.SharedLoginSchema = exports.RevokeShareSchema = exports.AcceptShareSchema = exports.ShareAccountSchema = exports.Login2FASchema = exports.Disable2FASchema = exports.Verify2FASchema = exports.Setup2FASchema = exports.ChangeEmailSchema = exports.ChangePasswordSchema = exports.ResetPasswordSchema = exports.VerifyResetCodeSchema = exports.ForgotPasswordSchema = exports.LoginSchema = exports.SignupSchema = exports.ApiTokenSchema = exports.PermissionRequestSchema = exports.NotificationSchema = exports.SharedAccountSchema = exports.BackupCodeSchema = exports.PasswordResetTokenSchema = exports.UserSchema = void 0;
 const zod_1 = require("zod");
 const schema_registry_1 = require("../config/schema-registry");
 // User table schema - automatically creates 'users' table
 exports.UserSchema = (0, schema_registry_1.registerTable)("users", zod_1.z.object({
     email: zod_1.z.string().email(),
-    passwordHash: zod_1.z.string(),
+    passwordHash: zod_1.z.string().optional(), // Optional for OAuth users
     fullName: zod_1.z.string().optional(),
     twoFactorSecret: zod_1.z.string().optional(),
     twoFactorEnabled: zod_1.z.boolean().default(false),
     deactivatedAt: zod_1.z.date().optional(),
+    oauthProvider: zod_1.z.enum(['google', 'github']).optional(),
+    oauthProviderId: zod_1.z.string().optional(),
+    avatarUrl: zod_1.z.string().optional(),
 }), {
     withId: true,
     withTimestamps: true,
@@ -50,6 +53,7 @@ exports.SharedAccountSchema = (0, schema_registry_1.registerTable)("shared_accou
     sharedWithEmail: zod_1.z.string().email(),
     sharedWithUserId: zod_1.z.number().int().optional(),
     tempPasswordHash: zod_1.z.string(),
+    tempPassword: zod_1.z.string().optional(), // Plain text password, cleared after acceptance/expiry
     status: zod_1.z.enum(['pending', 'accepted', 'revoked']).default('pending'),
     permissions: zod_1.z.string().default('{}'), // JSONB stored as string
     expiresAt: zod_1.z.date(),
@@ -96,6 +100,24 @@ exports.PermissionRequestSchema = (0, schema_registry_1.registerTable)("permissi
         shareId: { references: { table: "shared_accounts", column: "id" } },
         requestedBy: { references: { table: "users", column: "id" } },
         ownerUserId: { references: { table: "users", column: "id" } },
+    },
+});
+// API tokens table - stores user-generated API tokens for auto-generated APIs
+exports.ApiTokenSchema = (0, schema_registry_1.registerTable)("api_tokens", zod_1.z.object({
+    userId: zod_1.z.number().int(),
+    name: zod_1.z.string().max(100),
+    tokenHash: zod_1.z.string(), // Hashed token for validation
+    tokenEncrypted: zod_1.z.string(), // Encrypted token for retrieval
+    tokenPrefix: zod_1.z.string().max(12), // First 12 chars of token for identification (prism_xxxxx)
+    lastUsedAt: zod_1.z.date().optional(),
+    expiresAt: zod_1.z.date().optional(), // Optional expiration
+    revokedAt: zod_1.z.date().optional(),
+}), {
+    withId: true,
+    withTimestamps: true,
+    columnOverrides: {
+        userId: { references: { table: "users", column: "id" } },
+        tokenHash: { unique: true },
     },
 });
 // Request/Response schemas (not registered as tables)

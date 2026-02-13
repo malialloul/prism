@@ -32,6 +32,18 @@ export declare const config: {
         apiKey: string;
         orgId: string;
     };
+    oauth: {
+        google: {
+            clientId: string;
+            clientSecret: string;
+        };
+        github: {
+            clientId: string;
+            clientSecret: string;
+        };
+        callbackBaseUrl: string;
+        frontendUrl: string;
+    };
     features: {
         enableHostedDatabases: boolean;
         enableMySQLHosted: boolean;

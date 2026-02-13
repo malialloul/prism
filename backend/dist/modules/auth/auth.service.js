@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cancelPermissionRequestService = exports.respondPermissionRequestService = exports.getMyPermissionRequestsService = exports.getPermissionRequestsService = exports.createPermissionRequestService = exports.deleteNotificationService = exports.markAllNotificationsReadService = exports.markNotificationReadService = exports.getNotificationsService = exports.sharedLoginService = exports.deleteShareService = exports.updateSharePermissionsService = exports.revokeShareService = exports.getSharedAccountsService = exports.shareAccountService = exports.deleteAccountService = exports.reactivateAccountService = exports.deactivateAccountService = exports.login2FAService = exports.disable2FAService = exports.verify2FAService = exports.setup2FAService = exports.get2FAStatusService = exports.changeEmailService = exports.changePasswordService = exports.resetPasswordService = exports.verifyResetCodeService = exports.forgotPasswordService = exports.loginService = exports.signupService = void 0;
+exports.validateApiTokenService = exports.revealApiTokenService = exports.revokeApiTokenService = exports.getApiTokensService = exports.createApiTokenService = exports.exchangeGithubCodeService = exports.exchangeGoogleCodeService = exports.oauthLoginService = exports.getMyPermissionsService = exports.cancelPermissionRequestService = exports.respondPermissionRequestService = exports.getMyPermissionRequestsService = exports.getPermissionRequestsService = exports.createPermissionRequestService = exports.deleteNotificationService = exports.markAllNotificationsReadService = exports.markNotificationReadService = exports.getNotificationsService = exports.sharedLoginService = exports.deleteShareService = exports.updateSharePermissionsService = exports.revokeShareService = exports.getSharedAccountsService = exports.shareAccountService = exports.deleteAccountService = exports.reactivateAccountService = exports.deactivateAccountService = exports.login2FAService = exports.disable2FAService = exports.verify2FAService = exports.setup2FAService = exports.get2FAStatusService = exports.changeEmailService = exports.changePasswordService = exports.resetPasswordService = exports.verifyResetCodeService = exports.forgotPasswordService = exports.loginService = exports.signupService = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const crypto_1 = __importDefault(require("crypto"));
@@ -73,6 +73,11 @@ const loginService = async (body) => {
         throw new errors_1.AuthenticationError('Invalid email or password');
     }
     const user = result.rows[0];
+    // Check if user registered via OAuth (no password)
+    if (!user.password_hash) {
+        const provider = user.oauth_provider || 'OAuth';
+        throw new errors_1.AuthenticationError(`This account was created with ${provider}. Please sign in with ${provider}.`);
+    }
     const valid = await bcrypt_1.default.compare(password, user.password_hash);
     if (!valid)
         throw new errors_1.AuthenticationError('Invalid email or password');
@@ -202,6 +207,10 @@ const changePasswordService = async (userId, body) => {
         throw new errors_1.NotFoundError('User not found');
     }
     const user = userResult.rows[0];
+    // Check if user has a password (OAuth users don't)
+    if (!user.password_hash) {
+        throw new errors_1.ValidationError('Cannot change password for OAuth accounts. Please manage your password through your OAuth provider.');
+    }
     // Verify current password
     const validCurrentPassword = await bcrypt_1.default.compare(currentPassword, user.password_hash);
     if (!validCurrentPassword) {
@@ -230,6 +239,10 @@ const changeEmailService = async (userId, body) => {
         throw new errors_1.NotFoundError('User not found');
     }
     const user = userResult.rows[0];
+    // Check if user has a password (OAuth users don't)
+    if (!user.password_hash) {
+        throw new errors_1.ValidationError('Cannot change email for OAuth accounts. Please manage your email through your OAuth provider.');
+    }
     // Verify password
     const validPassword = await bcrypt_1.default.compare(password, user.password_hash);
     if (!validPassword) {
@@ -277,6 +290,10 @@ const setup2FAService = async (userId, body) => {
         throw new errors_1.NotFoundError('User not found');
     }
     const user = userResult.rows[0];
+    // Check if user has a password (OAuth users don't)
+    if (!user.password_hash) {
+        throw new errors_1.ValidationError('Two-factor authentication is not available for OAuth accounts.');
+    }
     // Verify password
     const validPassword = await bcrypt_1.default.compare(password, user.password_hash);
     if (!validPassword) {
@@ -350,6 +367,10 @@ const disable2FAService = async (userId, body) => {
         throw new errors_1.NotFoundError('User not found');
     }
     const user = userResult.rows[0];
+    // Check if user has a password (OAuth users don't)
+    if (!user.password_hash) {
+        throw new errors_1.ValidationError('Two-factor authentication is not available for OAuth accounts.');
+    }
     // Verify password
     const validPassword = await bcrypt_1.default.compare(password, user.password_hash);
     if (!validPassword) {
@@ -453,6 +474,10 @@ const deactivateAccountService = async (userId, body) => {
         throw new errors_1.NotFoundError('User not found');
     }
     const user = userResult.rows[0];
+    // Check if user has a password (OAuth users don't)
+    if (!user.password_hash) {
+        throw new errors_1.ValidationError('Please enter your password to deactivate your account.');
+    }
     // Verify password
     const validPassword = await bcrypt_1.default.compare(password, user.password_hash);
     if (!validPassword) {
@@ -462,8 +487,20 @@ const deactivateAccountService = async (userId, body) => {
     if (user.deactivated_at) {
         throw new errors_1.ValidationError('Account is already deactivated');
     }
+    // Get all active shared accounts for this owner to notify them
+    const sharesResult = await db_1.pool.query(`SELECT id FROM shared_accounts WHERE owner_user_id = $1 AND status = 'accepted'`, [userId]);
+    const shareIds = sharesResult.rows.map(row => row.id);
     // Deactivate the account
     await db_1.pool.query('UPDATE users SET deactivated_at = NOW(), updated_at = NOW() WHERE id = $1', [userId]);
+    // Notify all shared users to log out
+    if (shareIds.length > 0) {
+        const { emitOwnerAccountAction } = await Promise.resolve().then(() => __importStar(require('../../websocket/notificationEmitter')));
+        emitOwnerAccountAction(shareIds, {
+            reason: 'account_deactivated',
+            message: 'The account owner has deactivated their account. You have been logged out.',
+            ownerUserId: userId,
+        });
+    }
     return { message: 'Account deactivated successfully. You can reactivate by logging in again.' };
 };
 exports.deactivateAccountService = deactivateAccountService;
@@ -489,15 +526,54 @@ const deleteAccountService = async (userId, body) => {
         throw new errors_1.NotFoundError('User not found');
     }
     const user = userResult.rows[0];
+    // Check if user has a password (OAuth users don't)
+    if (!user.password_hash) {
+        throw new errors_1.ValidationError('Please enter your password to delete your account.');
+    }
     // Verify password
     const validPassword = await bcrypt_1.default.compare(password, user.password_hash);
     if (!validPassword) {
         throw new errors_1.ValidationError('Password is incorrect');
     }
-    // Delete related data first (foreign key constraints)
+    // Get all shared accounts for this owner to notify them BEFORE deleting
+    const sharesResult = await db_1.pool.query(`SELECT id FROM shared_accounts WHERE owner_user_id = $1`, [userId]);
+    const shareIds = sharesResult.rows.map(row => row.id);
+    // Notify all shared users to log out BEFORE deleting data
+    if (shareIds.length > 0) {
+        const { emitOwnerAccountAction } = await Promise.resolve().then(() => __importStar(require('../../websocket/notificationEmitter')));
+        emitOwnerAccountAction(shareIds, {
+            reason: 'account_deleted',
+            message: 'The account owner has deleted their account. You have been logged out.',
+            ownerUserId: userId,
+        });
+    }
+    // Get all database connections for this user (needed to delete related data)
+    const dbResult = await db_1.pool.query('SELECT id FROM database_connections WHERE user_id = $1', [userId]);
+    const dbIds = dbResult.rows.map(row => row.id);
+    // Delete related data in correct order (respecting foreign key constraints)
+    // 1. Delete permission requests (references shared_accounts and users)
+    await db_1.pool.query('DELETE FROM permission_requests WHERE owner_user_id = $1 OR requested_by = $1', [userId]);
+    // 2. Delete shared accounts (references users)
+    await db_1.pool.query('DELETE FROM shared_accounts WHERE owner_user_id = $1 OR shared_with_user_id = $1', [userId]);
+    // 3. Delete notifications (references users)
+    await db_1.pool.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
+    // 4. Delete query execution logs (references database_connections and users)
+    if (dbIds.length > 0) {
+        await db_1.pool.query('DELETE FROM query_execution_logs WHERE database_id = ANY($1::int[])', [dbIds]);
+    }
+    await db_1.pool.query('DELETE FROM query_execution_logs WHERE user_id = $1', [userId]);
+    // 5. Delete saved queries (references database_connections and users)
+    if (dbIds.length > 0) {
+        await db_1.pool.query('DELETE FROM saved_queries WHERE database_id = ANY($1::int[])', [dbIds]);
+    }
+    await db_1.pool.query('DELETE FROM saved_queries WHERE user_id = $1', [userId]);
+    // 6. Delete database connections (references users)
+    await db_1.pool.query('DELETE FROM database_connections WHERE user_id = $1', [userId]);
+    // 7. Delete backup codes (references users)
     await db_1.pool.query('DELETE FROM backup_codes WHERE user_id = $1', [userId]);
+    // 8. Delete password reset tokens (references users)
     await db_1.pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [userId]);
-    // Delete the user
+    // Finally delete the user
     await db_1.pool.query('DELETE FROM users WHERE id = $1', [userId]);
     return { message: 'Account deleted permanently' };
 };
@@ -536,9 +612,13 @@ const shareAccountService = async (userId, body) => {
     if (owner.email.toLowerCase() === email.toLowerCase()) {
         throw new errors_1.ValidationError('You cannot share your account with yourself');
     }
-    // Check if target user exists
+    // Check if target user exists - must be a registered user
     const targetResult = await db_1.pool.query('SELECT id, email, full_name FROM users WHERE LOWER(email) = LOWER($1)', [email]);
-    const targetUserId = targetResult.rowCount ? targetResult.rows[0].id : null;
+    if (!targetResult.rowCount) {
+        throw new errors_1.NotFoundError('No account found with this email. The user must be registered first.');
+    }
+    const targetUser = targetResult.rows[0];
+    const targetUserId = targetUser.id;
     // Check for existing pending/accepted share
     const existingShare = await db_1.pool.query(`SELECT id FROM shared_accounts 
      WHERE owner_user_id = $1 AND LOWER(shared_with_email) = LOWER($2) 
@@ -553,42 +633,40 @@ const shareAccountService = async (userId, body) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiresInDays);
     // Create the share record with permissions
-    const shareResult = await db_1.pool.query(`INSERT INTO shared_accounts (owner_user_id, shared_with_email, shared_with_user_id, temp_password_hash, status, permissions, expires_at)
-     VALUES ($1, $2, $3, $4, 'pending', $5, $6)
-     RETURNING *`, [userId, email, targetUserId, tempPasswordHash, JSON.stringify(permissions), expiresAt]);
+    const shareResult = await db_1.pool.query(`INSERT INTO shared_accounts (owner_user_id, shared_with_email, shared_with_user_id, temp_password_hash, temp_password, status, permissions, expires_at)
+     VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7)
+     RETURNING *`, [userId, email, targetUserId, tempPasswordHash, tempPassword, JSON.stringify(permissions), expiresAt]);
     const share = shareResult.rows[0];
-    // Create notification for the target user if they exist
-    if (targetUserId) {
-        await db_1.pool.query(`INSERT INTO notifications (user_id, type, title, message, metadata)
-       VALUES ($1, 'account_shared', $2, $3, $4)`, [
-            targetUserId,
-            'Account Shared With You',
-            `${owner.full_name || owner.email} has shared their account with you.`,
-            JSON.stringify({
-                shareId: share.id,
-                ownerEmail: owner.email,
-                ownerName: owner.full_name,
-                tempPassword, // Include temp password in notification
-            }),
-        ]);
-        // Emit real-time notification via WebSocket
-        const { emitNotification } = await Promise.resolve().then(() => __importStar(require('../../websocket/notificationEmitter')));
-        emitNotification(targetUserId.toString(), {
-            id: 0, // Will be updated with actual ID
-            userId: Number(targetUserId),
-            type: 'account_shared',
-            title: 'Account Shared With You',
-            message: `${owner.full_name || owner.email} has shared their account with you.`,
-            metadata: JSON.stringify({
-                shareId: share.id,
-                ownerEmail: owner.email,
-                ownerName: owner.full_name,
-                tempPassword,
-            }),
-            readAt: null,
-            createdAt: new Date(),
-        });
-    }
+    // Create notification for the target user
+    await db_1.pool.query(`INSERT INTO notifications (user_id, type, title, message, metadata)
+     VALUES ($1, 'account_shared', $2, $3, $4)`, [
+        targetUserId,
+        'Account Shared With You',
+        `${owner.full_name || owner.email} has shared their account with you.`,
+        JSON.stringify({
+            shareId: share.id,
+            ownerEmail: owner.email,
+            ownerName: owner.full_name,
+            tempPassword, // Include temp password in notification
+        }),
+    ]);
+    // Emit real-time notification via WebSocket
+    const { emitNotification } = await Promise.resolve().then(() => __importStar(require('../../websocket/notificationEmitter')));
+    emitNotification(targetUserId.toString(), {
+        id: 0, // Will be updated with actual ID
+        userId: Number(targetUserId),
+        type: 'account_shared',
+        title: 'Account Shared With You',
+        message: `${owner.full_name || owner.email} has shared their account with you.`,
+        metadata: JSON.stringify({
+            shareId: share.id,
+            ownerEmail: owner.email,
+            ownerName: owner.full_name,
+            tempPassword,
+        }),
+        readAt: null,
+        createdAt: new Date(),
+    });
     return {
         share: {
             id: share.id,
@@ -640,6 +718,7 @@ const getSharedAccountsService = async (userId) => {
         sharedWithUserId: row.shared_with_user_id ? Number(row.shared_with_user_id) : null,
         status: row.status,
         permissions: typeof row.permissions === 'string' ? JSON.parse(row.permissions) : (row.permissions || auth_types_1.DEFAULT_SHARE_PERMISSIONS),
+        tempPassword: row.temp_password || undefined,
         expiresAt: row.expires_at,
         acceptedAt: row.accepted_at,
         revokedAt: row.revoked_at,
@@ -717,33 +796,38 @@ const updateSharePermissionsService = async (userId, body) => {
     // Get owner info
     const ownerResult = await db_1.pool.query('SELECT email, full_name FROM users WHERE id = $1', [userId]);
     const owner = ownerResult.rows[0];
-    // Notify the shared user if they have accepted the share
-    if (share.shared_with_user_id && share.status === 'accepted') {
-        // Insert notification into database
-        const notificationResult = await db_1.pool.query(`INSERT INTO notifications (user_id, type, title, message, metadata)
-       VALUES ($1, 'permissions_updated', $2, $3, $4)
-       RETURNING *`, [
-            share.shared_with_user_id,
-            'Permissions Updated',
-            `${owner.full_name || owner.email} has updated your access permissions.`,
-            JSON.stringify({ shareId, ownerEmail: owner.email, permissions }),
-        ]);
-        const notification = notificationResult.rows[0];
-        // Emit real-time notification for the bell icon
+    console.log(`[updateSharePermissions] Share ID: ${share.id}, Status: ${share.status}, shared_with_user_id: ${share.shared_with_user_id}`);
+    // Notify the shared user if the share has been accepted
+    // Note: shared_with_user_id may be null if the shared user doesn't have a Prism account
+    if (share.status === 'accepted') {
+        console.log(`[updateSharePermissions] Sending WebSocket event to share ${share.id}`);
         const { emitNotification, emitPermissionsUpdated } = await Promise.resolve().then(() => __importStar(require('../../websocket/notificationEmitter')));
-        // Emit notification for the bell
-        emitNotification(String(share.shared_with_user_id), {
-            id: notification.id,
-            userId: notification.user_id,
-            type: notification.type,
-            title: notification.title,
-            message: notification.message,
-            metadata: notification.metadata,
-            readAt: notification.read_at,
-            createdAt: notification.created_at,
-        });
-        // Emit permissions update for auto-refresh of UI
-        emitPermissionsUpdated(String(share.shared_with_user_id), {
+        // Insert notification into database only if shared_with_user_id exists
+        if (share.shared_with_user_id) {
+            const notificationResult = await db_1.pool.query(`INSERT INTO notifications (user_id, type, title, message, metadata)
+         VALUES ($1, 'permissions_updated', $2, $3, $4)
+         RETURNING *`, [
+                share.shared_with_user_id,
+                'Permissions Updated',
+                `${owner.full_name || owner.email} has updated your access permissions.`,
+                JSON.stringify({ shareId, ownerEmail: owner.email, permissions }),
+            ]);
+            const notification = notificationResult.rows[0];
+            // Emit notification for the bell
+            emitNotification(String(share.shared_with_user_id), {
+                id: notification.id,
+                userId: notification.user_id,
+                type: notification.type,
+                title: notification.title,
+                message: notification.message,
+                metadata: notification.metadata,
+                readAt: notification.read_at,
+                createdAt: notification.created_at,
+            });
+        }
+        // Always emit permissions update for auto-refresh of UI (works even without shared_with_user_id)
+        // The shared user is connected to the share room via their shareId in the JWT
+        emitPermissionsUpdated('', {
             shareId: share.id,
             permissions: permissions,
             message: `${owner.full_name || owner.email} has updated your access permissions.`,
@@ -834,7 +918,7 @@ const sharedLoginService = async (body) => {
     if (!validShare) {
         throw new errors_1.AuthenticationError('Invalid credentials');
     }
-    // Update share status to accepted if pending
+    // Update share status to accepted if pending (keep temp password for owner reference)
     if (validShare.status === 'pending') {
         await db_1.pool.query(`UPDATE shared_accounts SET status = 'accepted', accepted_at = NOW(), updated_at = NOW() WHERE id = $1`, [validShare.id]);
         // Notify the owner that share was accepted
@@ -845,6 +929,24 @@ const sharedLoginService = async (body) => {
             `${validShare.shared_with_email} has accepted access to your account.`,
             JSON.stringify({ shareId: validShare.id, sharedWithEmail: validShare.shared_with_email }),
         ]);
+        // Emit real-time notification to owner via WebSocket
+        const { emitNotification, emitShareStatusChanged } = await Promise.resolve().then(() => __importStar(require('../../websocket/notificationEmitter')));
+        emitNotification(owner.id.toString(), {
+            id: 0,
+            userId: Number(owner.id),
+            type: 'share_accepted',
+            title: 'Account Access Accepted',
+            message: `${validShare.shared_with_email} has accepted access to your account.`,
+            metadata: JSON.stringify({ shareId: validShare.id, sharedWithEmail: validShare.shared_with_email }),
+            readAt: null,
+            createdAt: new Date(),
+        });
+        // Also emit share status changed event for UI refresh
+        emitShareStatusChanged(owner.id.toString(), {
+            shareId: validShare.id,
+            status: 'accepted',
+            sharedWithEmail: validShare.shared_with_email,
+        });
     }
     // Parse permissions from the share
     const sharePermissions = typeof validShare.permissions === 'string'
@@ -961,7 +1063,9 @@ const formatPermissionName = (permission) => {
         deleteColumn: 'delete columns',
         deleteTable: 'delete tables',
         viewTableData: 'view table data',
-        editTableData: 'edit table data',
+        addRecord: 'add records',
+        editRecord: 'edit records',
+        deleteRecord: 'delete records',
         runQuery: 'run queries',
         createApiInQueryBuilder: 'create APIs in query builder',
         tryAutoGeneratedApis: 'try auto-generated APIs',
@@ -1229,4 +1333,340 @@ const cancelPermissionRequestService = async (userId, requestId, shareId) => {
     return { message: 'Permission request cancelled' };
 };
 exports.cancelPermissionRequestService = cancelPermissionRequestService;
+/**
+ * Get current permissions for a shared user from the database
+ * This is used to fetch fresh permissions on page load (since JWT may be stale)
+ */
+const getMyPermissionsService = async (shareId) => {
+    const result = await db_1.pool.query('SELECT permissions FROM shared_accounts WHERE id = $1 AND status = $2 AND expires_at > NOW()', [shareId, 'accepted']);
+    if (!result.rowCount) {
+        throw new errors_1.NotFoundError('Shared access session is no longer valid');
+    }
+    return { permissions: result.rows[0].permissions || auth_types_1.DEFAULT_SHARE_PERMISSIONS };
+};
+exports.getMyPermissionsService = getMyPermissionsService;
+/**
+ * Handle OAuth login/signup
+ * If user exists with this OAuth provider, log them in
+ * If user exists with email but different provider, link the account
+ * If user doesn't exist, create a new account
+ */
+const oauthLoginService = async (userData) => {
+    const { email, name, provider, providerId, avatarUrl } = userData;
+    // Check if user exists with this OAuth provider
+    let userResult = await db_1.pool.query('SELECT * FROM users WHERE oauth_provider = $1 AND oauth_provider_id = $2', [provider, providerId]);
+    let user = userResult.rows[0];
+    if (!user) {
+        // Check if user exists with this email (may have registered with password or different OAuth)
+        userResult = await db_1.pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        user = userResult.rows[0];
+        if (user) {
+            // User exists but with different auth method
+            if (user.oauth_provider && user.oauth_provider !== provider) {
+                throw new errors_1.ConflictError(`This email is already registered with ${user.oauth_provider}. Please sign in with ${user.oauth_provider}.`);
+            }
+            // User exists with password auth - link the OAuth provider
+            if (!user.oauth_provider) {
+                await db_1.pool.query(`UPDATE users SET 
+            oauth_provider = $1, 
+            oauth_provider_id = $2, 
+            avatar_url = COALESCE($3, avatar_url),
+            full_name = COALESCE(full_name, $4)
+          WHERE id = $5`, [provider, providerId, avatarUrl, name, user.id]);
+            }
+        }
+        else {
+            // Create new user
+            const insertResult = await db_1.pool.query(`INSERT INTO users (email, full_name, oauth_provider, oauth_provider_id, avatar_url)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`, [email, name, provider, providerId, avatarUrl]);
+            user = insertResult.rows[0];
+        }
+    }
+    // Check if account is deactivated
+    if (user.deactivated_at) {
+        throw new errors_1.AuthenticationError('This account has been deactivated');
+    }
+    // Generate JWT token
+    const token = jsonwebtoken_1.default.sign({
+        userId: user.id,
+        email: user.email,
+        fullName: user.full_name ?? undefined,
+    }, env_1.config.jwt.secret, { expiresIn: env_1.config.jwt.expiresIn });
+    return { token };
+};
+exports.oauthLoginService = oauthLoginService;
+/**
+ * Exchange OAuth authorization code for access token (Google)
+ */
+const exchangeGoogleCodeService = async (code) => {
+    const { oauthConfig } = await Promise.resolve().then(() => __importStar(require('../../config/oauth')));
+    // Exchange code for tokens
+    const tokenResponse = await fetch(oauthConfig.google.tokenUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            code,
+            client_id: oauthConfig.google.clientId,
+            client_secret: oauthConfig.google.clientSecret,
+            redirect_uri: oauthConfig.google.redirectUri,
+            grant_type: 'authorization_code',
+        }),
+    });
+    if (!tokenResponse.ok) {
+        const error = await tokenResponse.text();
+        console.error('Google token exchange error:', error);
+        throw new errors_1.AuthenticationError('Failed to exchange authorization code');
+    }
+    const tokens = await tokenResponse.json();
+    // Get user info
+    const userInfoResponse = await fetch(oauthConfig.google.userInfoUrl, {
+        headers: {
+            Authorization: `Bearer ${tokens.access_token}`,
+        },
+    });
+    if (!userInfoResponse.ok) {
+        throw new errors_1.AuthenticationError('Failed to get user info from Google');
+    }
+    const userInfo = await userInfoResponse.json();
+    return {
+        email: userInfo.email,
+        name: userInfo.name,
+        provider: 'google',
+        providerId: userInfo.id,
+        avatarUrl: userInfo.picture,
+    };
+};
+exports.exchangeGoogleCodeService = exchangeGoogleCodeService;
+/**
+ * Exchange OAuth authorization code for access token (GitHub)
+ */
+const exchangeGithubCodeService = async (code) => {
+    const { oauthConfig } = await Promise.resolve().then(() => __importStar(require('../../config/oauth')));
+    // Exchange code for tokens
+    const tokenResponse = await fetch(oauthConfig.github.tokenUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+        },
+        body: new URLSearchParams({
+            code,
+            client_id: oauthConfig.github.clientId,
+            client_secret: oauthConfig.github.clientSecret,
+            redirect_uri: oauthConfig.github.redirectUri,
+        }),
+    });
+    if (!tokenResponse.ok) {
+        const error = await tokenResponse.text();
+        console.error('GitHub token exchange error:', error);
+        throw new errors_1.AuthenticationError('Failed to exchange authorization code');
+    }
+    const tokens = await tokenResponse.json();
+    if (tokens.error) {
+        console.error('GitHub token error:', tokens.error);
+        throw new errors_1.AuthenticationError('Failed to exchange authorization code');
+    }
+    // Get user info
+    const userInfoResponse = await fetch(oauthConfig.github.userInfoUrl, {
+        headers: {
+            Authorization: `Bearer ${tokens.access_token}`,
+            'Accept': 'application/json',
+        },
+    });
+    if (!userInfoResponse.ok) {
+        throw new errors_1.AuthenticationError('Failed to get user info from GitHub');
+    }
+    const userInfo = await userInfoResponse.json();
+    // If email is private, fetch from emails endpoint
+    let email = userInfo.email;
+    if (!email) {
+        const emailsResponse = await fetch(oauthConfig.github.userEmailsUrl, {
+            headers: {
+                Authorization: `Bearer ${tokens.access_token}`,
+                'Accept': 'application/json',
+            },
+        });
+        if (emailsResponse.ok) {
+            const emails = await emailsResponse.json();
+            const primaryEmail = emails.find((e) => e.primary && e.verified);
+            email = primaryEmail?.email || emails[0]?.email;
+        }
+    }
+    if (!email) {
+        throw new errors_1.AuthenticationError('Could not get email from GitHub. Please ensure your email is public or grant email access.');
+    }
+    return {
+        email,
+        name: userInfo.name || userInfo.login,
+        provider: 'github',
+        providerId: String(userInfo.id),
+        avatarUrl: userInfo.avatar_url,
+    };
+};
+exports.exchangeGithubCodeService = exchangeGithubCodeService;
+// =====================
+// API Token Services
+// =====================
+/**
+ * Generate a secure random API token
+ * Format: prism_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ */
+const generateApiToken = () => {
+    const randomBytes = crypto_1.default.randomBytes(32);
+    return `prism_${randomBytes.toString('hex')}`;
+};
+/**
+ * Encrypt a token for storage (can be decrypted later)
+ */
+const encryptToken = (plainToken) => {
+    const algorithm = 'aes-256-gcm';
+    const key = crypto_1.default.scryptSync(env_1.config.jwt.secret, 'salt', 32);
+    const iv = crypto_1.default.randomBytes(16);
+    const cipher = crypto_1.default.createCipheriv(algorithm, key, iv);
+    let encrypted = cipher.update(plainToken, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    const authTag = cipher.getAuthTag();
+    // Return IV + authTag + encrypted data
+    return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
+};
+/**
+ * Decrypt a stored token
+ */
+const decryptToken = (encryptedData) => {
+    const algorithm = 'aes-256-gcm';
+    const key = crypto_1.default.scryptSync(env_1.config.jwt.secret, 'salt', 32);
+    const [ivHex, authTagHex, encrypted] = encryptedData.split(':');
+    const iv = Buffer.from(ivHex, 'hex');
+    const authTag = Buffer.from(authTagHex, 'hex');
+    const decipher = crypto_1.default.createDecipheriv(algorithm, key, iv);
+    decipher.setAuthTag(authTag);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+};
+/**
+ * Create a new API token for a user
+ */
+const createApiTokenService = async (userId, body) => {
+    const { name, expiresInDays } = body;
+    // Generate the token
+    const plainToken = generateApiToken();
+    const tokenPrefix = plainToken.substring(0, 12); // prism_xxxxx
+    // Hash the token for validation
+    const tokenHash = await bcrypt_1.default.hash(plainToken, 10);
+    // Encrypt the token for retrieval
+    const tokenEncrypted = encryptToken(plainToken);
+    // Calculate expiration date if provided
+    let expiresAt = null;
+    if (expiresInDays && expiresInDays > 0) {
+        expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+    }
+    const result = await db_1.pool.query(`INSERT INTO api_tokens (user_id, name, token_hash, token_encrypted, token_prefix, expires_at)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, user_id, name, token_prefix, last_used_at, expires_at, revoked_at, created_at`, [userId, name, tokenHash, tokenEncrypted, tokenPrefix, expiresAt]);
+    const row = result.rows[0];
+    return {
+        token: {
+            id: row.id,
+            userId: parseInt(row.user_id.toString()),
+            name: row.name,
+            tokenPrefix: row.token_prefix,
+            lastUsedAt: row.last_used_at,
+            expiresAt: row.expires_at,
+            revokedAt: row.revoked_at,
+            createdAt: row.created_at,
+        },
+        plainToken,
+    };
+};
+exports.createApiTokenService = createApiTokenService;
+/**
+ * Get all API tokens for a user
+ */
+const getApiTokensService = async (userId) => {
+    const result = await db_1.pool.query(`SELECT id, user_id, name, token_prefix, last_used_at, expires_at, revoked_at, created_at
+     FROM api_tokens
+     WHERE user_id = $1 AND revoked_at IS NULL
+     ORDER BY created_at DESC`, [userId]);
+    const tokens = result.rows.map((row) => ({
+        id: row.id,
+        userId: parseInt(row.user_id.toString()),
+        name: row.name,
+        tokenPrefix: row.token_prefix,
+        lastUsedAt: row.last_used_at,
+        expiresAt: row.expires_at,
+        revokedAt: row.revoked_at,
+        createdAt: row.created_at,
+    }));
+    return { tokens };
+};
+exports.getApiTokensService = getApiTokensService;
+/**
+ * Revoke an API token
+ */
+const revokeApiTokenService = async (userId, tokenId) => {
+    const result = await db_1.pool.query(`UPDATE api_tokens
+     SET revoked_at = NOW(), updated_at = NOW()
+     WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL
+     RETURNING id`, [tokenId, userId]);
+    if (!result.rowCount) {
+        throw new errors_1.NotFoundError('API token not found or already revoked');
+    }
+    return { message: 'API token revoked successfully' };
+};
+exports.revokeApiTokenService = revokeApiTokenService;
+/**
+ * Reveal (decrypt) an API token for the user
+ */
+const revealApiTokenService = async (userId, tokenId) => {
+    const result = await db_1.pool.query(`SELECT token_encrypted
+     FROM api_tokens
+     WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL`, [tokenId, userId]);
+    if (!result.rowCount) {
+        throw new errors_1.NotFoundError('API token not found');
+    }
+    const plainToken = decryptToken(result.rows[0].token_encrypted);
+    return { plainToken };
+};
+exports.revealApiTokenService = revealApiTokenService;
+/**
+ * Validate an API token and return the user info
+ * Used by auth middleware for API token authentication
+ */
+const validateApiTokenService = async (token) => {
+    // Extract prefix for faster lookup
+    const tokenPrefix = token.substring(0, 12);
+    // Find all non-revoked tokens with this prefix
+    const result = await db_1.pool.query(`SELECT t.id, t.user_id, t.token_hash, t.expires_at, t.revoked_at,
+            u.email, u.full_name
+     FROM api_tokens t
+     JOIN users u ON t.user_id = u.id
+     WHERE t.token_prefix = $1 AND t.revoked_at IS NULL`, [tokenPrefix]);
+    if (!result.rowCount) {
+        return null;
+    }
+    // Verify the token hash against each matching token
+    for (const row of result.rows) {
+        // Check expiration
+        if (row.expires_at && new Date(row.expires_at) < new Date()) {
+            continue;
+        }
+        const isValid = await bcrypt_1.default.compare(token, row.token_hash);
+        if (isValid) {
+            // Update last used timestamp
+            await db_1.pool.query('UPDATE api_tokens SET last_used_at = NOW() WHERE id = $1', [row.id]);
+            return {
+                userId: row.user_id.toString(),
+                email: row.email,
+                fullName: row.full_name ?? undefined,
+            };
+        }
+    }
+    return null;
+};
+exports.validateApiTokenService = validateApiTokenService;
 //# sourceMappingURL=auth.service.js.map

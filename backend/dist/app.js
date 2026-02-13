@@ -46,6 +46,8 @@ const crud_1 = require("./modules/databases/crud");
 const springboot_1 = require("./modules/databases/springboot");
 const express_2 = require("./modules/databases/express");
 const dotnet_1 = require("./modules/databases/dotnet");
+const feedback_1 = require("./modules/feedback");
+const contact_1 = require("./modules/contact");
 const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
 const openapi_1 = require("./openapi");
 const errorHandler_1 = require("./middleware/errorHandler");
@@ -85,6 +87,8 @@ app.use((0, cors_1.default)({
 app.use(express_1.default.json());
 app.use("/auth", auth_routes_1.default);
 app.use("/logs", logs_routes_1.default);
+app.use("/feedback", feedback_1.feedbackRoutes);
+app.use("/contact", contact_1.contactRoutes);
 // Public schema routes MUST come first (no auth required)
 app.use("/databases", schema_routes_1.publicSchemaRoutes);
 // Then authenticated routes

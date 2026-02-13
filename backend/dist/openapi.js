@@ -615,19 +615,18 @@ registry.registerPath({
         },
     },
 });
-// CRUD API - Update Record (PUT)
+// CRUD API - Update Records (PUT) - filter-based
 registry.registerPath({
     method: "put",
-    path: "/databases/{id}/api/{table}/{recordId}",
-    summary: "Update record (full)",
-    description: "Fully update a record by its primary key",
+    path: "/databases/{id}/api/{table}",
+    summary: "Update records (full)",
+    description: "Fully update records matching the specified filters. Filters are passed as query parameters (e.g., ?id=1 or ?status__eq=active)",
     tags: ["CRUD API"],
     security: [{ bearerAuth: [] }],
     request: {
         params: zod_1.z.object({
             id: zod_1.z.string().describe("Database ID"),
             table: zod_1.z.string().describe("Table name"),
-            recordId: zod_1.z.string().describe("Record primary key"),
         }),
         body: {
             content: {
@@ -639,31 +638,34 @@ registry.registerPath({
     },
     responses: {
         200: {
-            description: "Record updated",
+            description: "Records updated",
             content: {
                 "application/json": {
-                    schema: CreateRecordResponseSchema,
+                    schema: zod_1.z.object({
+                        success: zod_1.z.boolean(),
+                        message: zod_1.z.string(),
+                        updatedCount: zod_1.z.number(),
+                    }),
                 },
             },
         },
-        404: {
-            description: "Record not found",
+        400: {
+            description: "At least one filter is required",
         },
     },
 });
-// CRUD API - Update Record (PATCH)
+// CRUD API - Update Records (PATCH) - filter-based
 registry.registerPath({
     method: "patch",
-    path: "/databases/{id}/api/{table}/{recordId}",
-    summary: "Update record (partial)",
-    description: "Partially update a record by its primary key",
+    path: "/databases/{id}/api/{table}",
+    summary: "Update records (partial)",
+    description: "Partially update records matching the specified filters. Filters are passed as query parameters (e.g., ?id=1 or ?status__eq=active)",
     tags: ["CRUD API"],
     security: [{ bearerAuth: [] }],
     request: {
         params: zod_1.z.object({
             id: zod_1.z.string().describe("Database ID"),
             table: zod_1.z.string().describe("Table name"),
-            recordId: zod_1.z.string().describe("Record primary key"),
         }),
         body: {
             content: {
@@ -675,47 +677,51 @@ registry.registerPath({
     },
     responses: {
         200: {
-            description: "Record updated",
+            description: "Records updated",
             content: {
                 "application/json": {
-                    schema: CreateRecordResponseSchema,
+                    schema: zod_1.z.object({
+                        success: zod_1.z.boolean(),
+                        message: zod_1.z.string(),
+                        updatedCount: zod_1.z.number(),
+                    }),
                 },
             },
         },
-        404: {
-            description: "Record not found",
+        400: {
+            description: "At least one filter is required",
         },
     },
 });
-// CRUD API - Delete Record
+// CRUD API - Delete Records - filter-based
 registry.registerPath({
     method: "delete",
-    path: "/databases/{id}/api/{table}/{recordId}",
-    summary: "Delete record",
-    description: "Delete a record by its primary key",
+    path: "/databases/{id}/api/{table}",
+    summary: "Delete records",
+    description: "Delete records matching the specified filters. Filters are passed as query parameters (e.g., ?id=1 or ?status__eq=active)",
     tags: ["CRUD API"],
     security: [{ bearerAuth: [] }],
     request: {
         params: zod_1.z.object({
             id: zod_1.z.string().describe("Database ID"),
             table: zod_1.z.string().describe("Table name"),
-            recordId: zod_1.z.string().describe("Record primary key"),
         }),
     },
     responses: {
         200: {
-            description: "Record deleted",
+            description: "Records deleted",
             content: {
                 "application/json": {
                     schema: zod_1.z.object({
                         success: zod_1.z.boolean(),
                         message: zod_1.z.string(),
+                        deletedCount: zod_1.z.number(),
                     }),
                 },
             },
         },
-        404: {
-            description: "Record not found",
+        400: {
+            description: "At least one filter is required",
         },
     },
 });

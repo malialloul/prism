@@ -9,6 +9,7 @@ export interface ApiResponseDto<T = unknown> {
     status: ApiResponseStatus;
     message: string;
     data?: T;
+    warning?: string;
 }
 /**
  * API Error Response type

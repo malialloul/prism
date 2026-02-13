@@ -1,25 +1,34 @@
 import { z } from "zod";
 export declare const UserSchema: z.ZodObject<{
     email: z.ZodString;
-    passwordHash: z.ZodString;
+    passwordHash: z.ZodOptional<z.ZodString>;
     fullName: z.ZodOptional<z.ZodString>;
     twoFactorSecret: z.ZodOptional<z.ZodString>;
     twoFactorEnabled: z.ZodDefault<z.ZodBoolean>;
     deactivatedAt: z.ZodOptional<z.ZodDate>;
+    oauthProvider: z.ZodOptional<z.ZodEnum<["google", "github"]>>;
+    oauthProviderId: z.ZodOptional<z.ZodString>;
+    avatarUrl: z.ZodOptional<z.ZodString>;
 }, z.UnknownKeysParam, z.ZodTypeAny, {
     email: string;
-    passwordHash: string;
     twoFactorEnabled: boolean;
     fullName?: string | undefined;
+    avatarUrl?: string | undefined;
+    passwordHash?: string | undefined;
     twoFactorSecret?: string | undefined;
     deactivatedAt?: Date | undefined;
+    oauthProvider?: "google" | "github" | undefined;
+    oauthProviderId?: string | undefined;
 }, {
     email: string;
-    passwordHash: string;
     fullName?: string | undefined;
+    avatarUrl?: string | undefined;
+    passwordHash?: string | undefined;
     twoFactorSecret?: string | undefined;
     twoFactorEnabled?: boolean | undefined;
     deactivatedAt?: Date | undefined;
+    oauthProvider?: "google" | "github" | undefined;
+    oauthProviderId?: string | undefined;
 }>;
 export declare const PasswordResetTokenSchema: z.ZodObject<{
     userId: z.ZodNumber;
@@ -55,6 +64,7 @@ export declare const SharedAccountSchema: z.ZodObject<{
     sharedWithEmail: z.ZodString;
     sharedWithUserId: z.ZodOptional<z.ZodNumber>;
     tempPasswordHash: z.ZodString;
+    tempPassword: z.ZodOptional<z.ZodString>;
     status: z.ZodDefault<z.ZodEnum<["pending", "accepted", "revoked"]>>;
     permissions: z.ZodDefault<z.ZodString>;
     expiresAt: z.ZodDate;
@@ -67,6 +77,7 @@ export declare const SharedAccountSchema: z.ZodObject<{
     expiresAt: Date;
     ownerUserId: number;
     tempPasswordHash: string;
+    tempPassword?: string | undefined;
     sharedWithUserId?: number | undefined;
     acceptedAt?: Date | undefined;
     revokedAt?: Date | undefined;
@@ -76,6 +87,7 @@ export declare const SharedAccountSchema: z.ZodObject<{
     ownerUserId: number;
     tempPasswordHash: string;
     permissions?: string | undefined;
+    tempPassword?: string | undefined;
     status?: "pending" | "accepted" | "revoked" | undefined;
     sharedWithUserId?: number | undefined;
     acceptedAt?: Date | undefined;
@@ -130,6 +142,34 @@ export declare const PermissionRequestSchema: z.ZodObject<{
     status?: "pending" | "approved" | "rejected" | undefined;
     responseMessage?: string | undefined;
     respondedAt?: Date | undefined;
+}>;
+export declare const ApiTokenSchema: z.ZodObject<{
+    userId: z.ZodNumber;
+    name: z.ZodString;
+    tokenHash: z.ZodString;
+    tokenEncrypted: z.ZodString;
+    tokenPrefix: z.ZodString;
+    lastUsedAt: z.ZodOptional<z.ZodDate>;
+    expiresAt: z.ZodOptional<z.ZodDate>;
+    revokedAt: z.ZodOptional<z.ZodDate>;
+}, z.UnknownKeysParam, z.ZodTypeAny, {
+    userId: number;
+    name: string;
+    tokenHash: string;
+    tokenEncrypted: string;
+    tokenPrefix: string;
+    expiresAt?: Date | undefined;
+    revokedAt?: Date | undefined;
+    lastUsedAt?: Date | undefined;
+}, {
+    userId: number;
+    name: string;
+    tokenHash: string;
+    tokenEncrypted: string;
+    tokenPrefix: string;
+    expiresAt?: Date | undefined;
+    revokedAt?: Date | undefined;
+    lastUsedAt?: Date | undefined;
 }>;
 export declare const SignupSchema: z.ZodObject<{
     email: z.ZodString;

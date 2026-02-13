@@ -13,6 +13,11 @@ router.post('/login/shared', auth_controller_1.sharedLoginHandler);
 router.post('/forgot-password', auth_controller_1.forgotPasswordHandler);
 router.post('/verify-reset-code', auth_controller_1.verifyResetCodeHandler);
 router.post('/reset-password', auth_controller_1.resetPasswordHandler);
+// OAuth routes (public)
+router.get('/oauth/google', auth_controller_1.googleOAuthHandler);
+router.get('/oauth/google/callback', auth_controller_1.googleOAuthCallbackHandler);
+router.get('/oauth/github', auth_controller_1.githubOAuthHandler);
+router.get('/oauth/github/callback', auth_controller_1.githubOAuthCallbackHandler);
 // Protected routes - blocked for shared access users (settings)
 router.post('/change-password', auth_1.authMiddleware, auth_1.blockSharedAccess, auth_controller_1.changePasswordHandler);
 router.post('/change-email', auth_1.authMiddleware, auth_1.blockSharedAccess, auth_controller_1.changeEmailHandler);
@@ -43,5 +48,14 @@ router.post('/permission-requests/respond', auth_1.authMiddleware, auth_1.blockS
 router.get('/permission-requests/my', auth_1.authMiddleware, auth_1.requireSharedAccess, auth_controller_1.getMyPermissionRequestsHandler);
 router.post('/permission-requests/:shareId', auth_1.authMiddleware, auth_1.requireSharedAccess, auth_controller_1.createPermissionRequestHandler);
 router.delete('/permission-requests/:requestId', auth_1.authMiddleware, auth_1.requireSharedAccess, auth_controller_1.cancelPermissionRequestHandler);
+// Get current permissions for shared user (fetches from DB, not from stale JWT)
+router.get('/my-permissions', auth_1.authMiddleware, auth_1.requireSharedAccess, auth_controller_1.getMyPermissionsHandler);
+// API Token routes (protected) - blocked for shared access users
+router.post('/api-tokens', auth_1.authMiddleware, auth_1.blockSharedAccess, auth_controller_1.createApiTokenHandler);
+router.get('/api-tokens', auth_1.authMiddleware, auth_1.blockSharedAccess, auth_controller_1.getApiTokensHandler);
+router.get('/api-tokens/:tokenId/reveal', auth_1.authMiddleware, auth_1.blockSharedAccess, auth_controller_1.revealApiTokenHandler);
+router.delete('/api-tokens/:tokenId', auth_1.authMiddleware, auth_1.blockSharedAccess, auth_controller_1.revokeApiTokenHandler);
+// Version & Limits route (protected) - all users can see their limits
+router.get('/version', auth_1.authMiddleware, auth_controller_1.getVersionLimitsHandler);
 exports.default = router;
 //# sourceMappingURL=auth.routes.js.map
