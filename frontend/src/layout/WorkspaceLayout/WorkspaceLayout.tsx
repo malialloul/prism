@@ -18,7 +18,7 @@ import DeleteDatabaseDialog from "./components/DeleteDatabaseDialog/DeleteDataba
 import SwitchDatabaseDialog from "./components/SwitchDatabaseDialog/SwitchDatabaseDialog";
 import EmptyState from "./components/EmptyState/EmptyState";
 import { AccessRestrictedDialog, usePermissions } from "../../components";
-import { CircularProgress } from "@mui/material";
+import { Box, CircularProgress } from "@mui/material";
 import { useDatabases, useRefreshDatabase, useDisconnectDatabase, useReconnectDatabase } from "../../api/entities/databases";
 import { DatabaseDto } from "../../api/models/DatabaseDto";
 import { isDemoModeActive } from "../../context/TourContext";
@@ -311,11 +311,13 @@ export default function WorkspaceLayout() {
                         />
                         <WorkspaceContent>
                             {mainTab === 0 ? (
-                                <EmptyState
-                                    onCreatePostgres={() => handleCreateDatabase("postgres")}
-                                    onCreateMySQL={() => handleCreateDatabase("mysql")}
-                                    onConnect={handleConnectDatabase}
-                                />
+                                <Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                  <EmptyState
+                                      onCreatePostgres={() => handleCreateDatabase("postgres")}
+                                      onCreateMySQL={() => handleCreateDatabase("mysql")}
+                                      onConnect={handleConnectDatabase}
+                                  />
+                                </Box>
                             ) : (
                                 <Outlet />
                             )}

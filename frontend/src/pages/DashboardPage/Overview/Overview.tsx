@@ -14,6 +14,7 @@ import UsageCharts from "./UsageCharts/UsageCharts";
 import AddIcon from "@mui/icons-material/Add";
 import LinkIcon from "@mui/icons-material/Link";
 import { OverviewSkeleton } from "../../../components/Skeletons";
+import { toastService } from "../../../services";
 
 export default function Overview() {
   const workspace = useWorkspace();

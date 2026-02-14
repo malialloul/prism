@@ -125,27 +125,9 @@ export const CardWrapper = styled(motion(Card))({
 export const LogoBox = styled(Box)({
   display: 'flex',
   alignItems: 'center',
+  justifyContent: 'center',
   gap: '0.75rem',
   marginBottom: '0.5rem',
-});
-
-export const LogoIcon = styled(Box)({
-  width: '2.5rem',
-  height: '2.5rem',
-  borderRadius: '0.625rem',
-  background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  color: 'white',
-  fontSize: '1.25rem',
-});
-
-export const BrandName = styled('h1')({
-  margin: 0,
-  fontSize: '1.5rem',
-  fontWeight: 700,
-  color: colors.text,
 });
 
 export const Tagline = styled('p')({

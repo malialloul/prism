@@ -14,7 +14,6 @@ export const EmptyStateContainer = styled(Box)(({ theme }) => {
     border: `1px dashed ${colors.border}`,
     borderRadius: '20px',
     textAlign: 'center',
-    marginTop: '24px',
   };
 });
 

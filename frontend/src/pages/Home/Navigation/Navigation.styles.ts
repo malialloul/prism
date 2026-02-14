@@ -18,10 +18,10 @@ export const LogoBox = styled(Box)({
 })
 
 export const LogoIcon = styled(Box)({
-  width: '40px',
-  height: '40px',
+  width: '50px',
+  height: '50px',
   borderRadius: '8px',
-  background: `linear-gradient(135deg, ${authColors.primary} 0%, ${authColors.secondary} 100%)`,
+  background: 'white',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

@@ -20,6 +20,7 @@ import {
   NavLinks,
   RightBox,
 } from "./Navigation.styles";
+import logo from "../../../../public/prism.png";
 
 export default function Navigation() {
   const { darkMode, setDarkMode } = useContext(AppContext);
@@ -31,7 +32,7 @@ export default function Navigation() {
         <StyledToolbar disableGutters>
           <LogoBox>
             <LogoIcon>
-              <Storage sx={{ color: "white", fontSize: 24 }} />
+              <img src={logo} alt="Prism Logo" style={{ width: 75, height: 75 }} />
             </LogoIcon>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
               Prism

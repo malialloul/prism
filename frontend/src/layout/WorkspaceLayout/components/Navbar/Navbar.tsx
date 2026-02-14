@@ -18,6 +18,7 @@ import {
 } from './Navbar.styles';
 import { UserAvatar, NotificationBell } from '../../../../components';
 import { AppContext } from '../../../../App';
+import logo from "../../../../../public/prism.png";
 
 // Icons
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -43,7 +44,9 @@ export default function Navbar({ onRefresh, activeMainTab = 0, onMainTabChange, 
     <NavbarWrapper>
       <LeftSection>
         <Logo onClick={() => navigate(ROUTES.HOME)}>
-          <LogoIcon>⬡</LogoIcon>
+          <LogoIcon>
+            <img src={logo} alt="Prism Logo" style={{ width: 24, height: 24 }} />
+          </LogoIcon>
           <LogoText>Prism</LogoText>
         </Logo>
 

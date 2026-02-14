@@ -6,11 +6,21 @@ import type { CreateApiTokenResponseDto } from '../../models/CreateApiTokenRespo
 import type { RevealApiTokenResponseDto } from '../../models/RevealApiTokenResponseDto';
 import type { CreateApiTokenDto } from '../../models/ApiTokenDto';
 import type { PasswordActionResponseDto } from '../../models/PasswordActionResponseDto';
+import { isDemoModeActive } from '../../../context/TourContext';
 
 export function useApiTokens() {
+  const isDemo = isDemoModeActive();
+  const demoData: ApiTokensResponseDto = {
+    status: 'success',
+    message: 'Demo mode - no API tokens',
+    data: { tokens: [] },
+  };
+
   return useQuery<ApiTokensResponseDto, ApiError>({
     queryKey: ['apiTokens'],
-    queryFn: () => ApiTokenService.getApiTokens(),
+    queryFn: () => (isDemo ? Promise.resolve(demoData) : ApiTokenService.getApiTokens()),
+    staleTime: isDemo ? Infinity : 0,
+    placeholderData: isDemo ? demoData : undefined,
   });
 }
 

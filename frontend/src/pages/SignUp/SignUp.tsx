@@ -1,17 +1,36 @@
-import { useMemo, useState, useEffect } from 'react';
-import { Formik, Form } from 'formik';
-import * as Yup from 'yup';
-import { Box, Typography, InputAdornment, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
-import { styled } from '@mui/material/styles';
-import { ButtonLoadingSkeleton } from '../../components';
-import { Google, GitHub, Api, ArrowBack, DatabaseIcon, BrushIcon, LightningIcon, DocumentationIcon } from '../../assets/icons';
-import { Visibility, VisibilityOff, Check, Close } from '@mui/icons-material';
-import { Link as RouterLink, useSearchParams } from 'react-router-dom';
-import { authColors } from '../../styles/theme';
-import { useSignUp } from '../../api/entities/auth';
-import { hashPassword } from '../../utils/crypto';
-import { toastService } from '../../services';
-import { ROUTES } from '../../constants';
+import { useMemo, useState, useEffect } from "react";
+import { Formik, Form } from "formik";
+import * as Yup from "yup";
+import {
+  Box,
+  Typography,
+  InputAdornment,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
+import { ButtonLoadingSkeleton } from "../../components";
+import {
+  Google,
+  GitHub,
+  Api,
+  ArrowBack,
+  DatabaseIcon,
+  BrushIcon,
+  LightningIcon,
+  DocumentationIcon,
+} from "../../assets/icons";
+import { Visibility, VisibilityOff, Check, Close } from "@mui/icons-material";
+import { Link as RouterLink, useSearchParams } from "react-router-dom";
+import { authColors } from "../../styles/theme";
+import { useSignUp } from "../../api/entities/auth";
+import { hashPassword } from "../../utils/crypto";
+import { toastService } from "../../services";
+import { ROUTES } from "../../constants";
 import {
   AuthWrapper,
   LeftPanel,
@@ -24,8 +43,6 @@ import {
   RightPanel,
   CardWrapper,
   LogoBox,
-  LogoIcon,
-  BrandName,
   Tagline,
   FormGroup,
   InputLabel,
@@ -46,25 +63,25 @@ import {
   StyledLink,
   IllustrationContainer,
   HomeLink,
-} from './SignUp.styles';
+} from "./SignUp.styles";
+import logo from "../../../public/prism.png";
 
 const validationSchema = Yup.object().shape({
   fullName: Yup.string()
-    .min(2, 'Full name must be at least 2 characters')
-    .required('Full name is required'),
+    .min(2, "Full name must be at least 2 characters")
+    .required("Full name is required"),
   email: Yup.string()
-    .email('Please enter a valid email address')
-    .required('Email is required'),
+    .email("Please enter a valid email address")
+    .required("Email is required"),
   password: Yup.string()
-    .min(8, 'Password must be at least 8 characters')
-    .matches(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .matches(/[0-9]/, 'Password must contain at least one number')
-    .required('Password is required'),
+    .min(8, "Password must be at least 8 characters")
+    .matches(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .matches(/[0-9]/, "Password must contain at least one number")
+    .required("Password is required"),
   confirmPassword: Yup.string()
-    .oneOf([Yup.ref('password')], 'Passwords must match')
-    .required('Please confirm your password'),
-  agreeTerms: Yup.boolean()
-    .oneOf([true], 'You must agree to the terms'),
+    .oneOf([Yup.ref("password")], "Passwords must match")
+    .required("Please confirm your password"),
+  agreeTerms: Yup.boolean().oneOf([true], "You must agree to the terms"),
 });
 
 function calculatePasswordStrength(password: string): {
@@ -83,10 +100,11 @@ function calculatePasswordStrength(password: string): {
 
   score = checks.filter(Boolean).length;
 
-  if (score <= 1) return { score: 25, label: 'Weak', color: authColors.error };
-  if (score === 2) return { score: 50, label: 'Fair', color: authColors.warning };
-  if (score === 3) return { score: 75, label: 'Good', color: authColors.info };
-  return { score: 100, label: 'Strong', color: authColors.success };
+  if (score <= 1) return { score: 25, label: "Weak", color: authColors.error };
+  if (score === 2)
+    return { score: 50, label: "Fair", color: authColors.warning };
+  if (score === 3) return { score: 75, label: "Good", color: authColors.info };
+  return { score: 100, label: "Strong", color: authColors.success };
 }
 
 interface FormValues {
@@ -99,77 +117,77 @@ interface FormValues {
 
 // Styled components for Terms Dialog
 const StyledDialog = styled(Dialog)(({ theme }) => ({
-  '& .MuiDialog-paper': {
-    background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)',
-    borderRadius: '16px',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-    maxWidth: '600px',
-    maxHeight: '80vh',
+  "& .MuiDialog-paper": {
+    background: "linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)",
+    borderRadius: "16px",
+    border: "1px solid rgba(255, 255, 255, 0.1)",
+    maxWidth: "600px",
+    maxHeight: "80vh",
   },
 }));
 
 const StyledDialogTitle = styled(DialogTitle)({
-  background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
-  color: '#fff',
+  background: "linear-gradient(90deg, #667eea 0%, #764ba2 100%)",
+  color: "#fff",
   fontWeight: 700,
-  fontSize: '1.25rem',
-  padding: '1.25rem 1.5rem',
+  fontSize: "1.25rem",
+  padding: "1.25rem 1.5rem",
 });
 
 const StyledDialogContent = styled(DialogContent)({
-  padding: '1.5rem',
-  color: 'rgba(255, 255, 255, 0.9)',
-  fontSize: '0.9rem',
+  padding: "1.5rem",
+  color: "rgba(255, 255, 255, 0.9)",
+  fontSize: "0.9rem",
   lineHeight: 1.7,
-  '& h3': {
-    color: '#667eea',
-    fontSize: '1rem',
+  "& h3": {
+    color: "#667eea",
+    fontSize: "1rem",
     fontWeight: 600,
-    marginTop: '1.5rem',
-    marginBottom: '0.75rem',
-    '&:first-of-type': {
+    marginTop: "1.5rem",
+    marginBottom: "0.75rem",
+    "&:first-of-type": {
       marginTop: 0,
     },
   },
-  '& p': {
-    margin: '0.5rem 0',
-    color: 'rgba(255, 255, 255, 0.8)',
+  "& p": {
+    margin: "0.5rem 0",
+    color: "rgba(255, 255, 255, 0.8)",
   },
-  '& ul': {
-    margin: '0.5rem 0',
-    paddingLeft: '1.25rem',
+  "& ul": {
+    margin: "0.5rem 0",
+    paddingLeft: "1.25rem",
   },
-  '& li': {
-    marginBottom: '0.25rem',
-    color: 'rgba(255, 255, 255, 0.75)',
+  "& li": {
+    marginBottom: "0.25rem",
+    color: "rgba(255, 255, 255, 0.75)",
   },
-  '& strong': {
-    color: '#fff',
+  "& strong": {
+    color: "#fff",
   },
 });
 
 const StyledDialogActions = styled(DialogActions)({
-  padding: '1rem 1.5rem',
-  borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+  padding: "1rem 1.5rem",
+  borderTop: "1px solid rgba(255, 255, 255, 0.1)",
 });
 
 const AcceptButton = styled(Button)({
-  background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
-  color: '#fff',
+  background: "linear-gradient(90deg, #667eea 0%, #764ba2 100%)",
+  color: "#fff",
   fontWeight: 600,
-  padding: '0.5rem 1.5rem',
-  borderRadius: '8px',
-  textTransform: 'none',
-  '&:hover': {
-    background: 'linear-gradient(90deg, #5a6fd6 0%, #6a4190 100%)',
+  padding: "0.5rem 1.5rem",
+  borderRadius: "8px",
+  textTransform: "none",
+  "&:hover": {
+    background: "linear-gradient(90deg, #5a6fd6 0%, #6a4190 100%)",
   },
 });
 
 const CloseButton = styled(Button)({
-  color: 'rgba(255, 255, 255, 0.7)',
-  textTransform: 'none',
-  '&:hover': {
-    background: 'rgba(255, 255, 255, 0.1)',
+  color: "rgba(255, 255, 255, 0.7)",
+  textTransform: "none",
+  "&:hover": {
+    background: "rgba(255, 255, 255, 0.1)",
   },
 });
 
@@ -182,11 +200,11 @@ export default function SignUp() {
 
   // Check for OAuth error in URL params
   useEffect(() => {
-    const error = searchParams.get('error');
+    const error = searchParams.get("error");
     if (error) {
       toastService.error(decodeURIComponent(error));
       // Clear the error from URL
-      searchParams.delete('error');
+      searchParams.delete("error");
       setSearchParams(searchParams, { replace: true });
     }
   }, [searchParams, setSearchParams]);
@@ -201,10 +219,10 @@ export default function SignUp() {
   };
 
   const features = [
-    { icon: DatabaseIcon, text: 'Connect PostgreSQL and MySQL' },
-    { icon: BrushIcon, text: 'Visual drag-and-drop schema builder' },
-    { icon: LightningIcon, text: 'Auto-generate REST & GraphQL endpoints' },
-    { icon: DocumentationIcon, text: 'Interactive API documentation included' },
+    { icon: DatabaseIcon, text: "Connect PostgreSQL and MySQL" },
+    { icon: BrushIcon, text: "Visual schema builder" },
+    { icon: LightningIcon, text: "Auto-generate REST & GraphQL endpoints" },
+    { icon: DocumentationIcon, text: "Interactive API documentation included" },
   ];
 
   return (
@@ -212,12 +230,10 @@ export default function SignUp() {
       {/* Left Panel - Features */}
       <LeftPanel>
         <LeftPanelContent>
-          <LeftPanelTitle>
-            Start Building APIs in Minutes
-          </LeftPanelTitle>
+          <LeftPanelTitle>Start Building APIs in Minutes</LeftPanelTitle>
           <LeftPanelText>
-            Join thousands of developers who are shipping faster with
-            Cloud API Builder's no-code API generation platform.
+            Join thousands of developers who are shipping faster with Cloud API
+            Builder's no-code API generation platform.
           </LeftPanelText>
           <FeatureList>
             {features.map((feature, index) => (
@@ -233,7 +249,7 @@ export default function SignUp() {
 
       {/* Right Panel - Sign Up Form */}
       <RightPanel>
-        <RouterLink to={ROUTES.HOME} style={{ textDecoration: 'none' }}>
+        <RouterLink to={ROUTES.HOME} style={{ textDecoration: "none" }}>
           <HomeLink>
             <ArrowBack sx={{ fontSize: 18 }} />
             Back to Home
@@ -246,20 +262,23 @@ export default function SignUp() {
         >
           <Box>
             <LogoBox>
-              <LogoIcon>
-                <Api sx={{ fontSize: 20 }} />
-              </LogoIcon>
-              <BrandName>Cloud API Builder</BrandName>
+              <img
+                src={logo}
+                alt="Prism Logo"
+                style={{ width: 75, height: 75 }}
+              />
             </LogoBox>
-            <Tagline>Create your account and start building APIs today!</Tagline>
+            <Tagline>
+              Welcome! Sign up to start building your APIs.
+            </Tagline>
           </Box>
 
           <Formik
             initialValues={{
-              fullName: '',
-              email: '',
-              password: '',
-              confirmPassword: '',
+              fullName: "",
+              email: "",
+              password: "",
+              confirmPassword: "",
               agreeTerms: false,
             }}
             validationSchema={validationSchema}
@@ -275,11 +294,17 @@ export default function SignUp() {
             }) => {
               const passwordStrength = useMemo(
                 () => calculatePasswordStrength(values.password),
-                [values.password]
+                [values.password],
               );
 
               return (
-                <Form style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <Form
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "1.25rem",
+                  }}
+                >
                   {/* Full Name */}
                   <FormGroup>
                     <InputLabel htmlFor="fullName">Full Name</InputLabel>
@@ -327,7 +352,7 @@ export default function SignUp() {
                       fullWidth
                       id="password"
                       name="password"
-                      type={showPassword ? 'text' : 'password'}
+                      type={showPassword ? "text" : "password"}
                       value={values.password}
                       onChange={handleChange}
                       onBlur={handleBlur}
@@ -341,9 +366,13 @@ export default function SignUp() {
                               onClick={() => setShowPassword(!showPassword)}
                               edge="end"
                               size="small"
-                              sx={{ color: 'rgba(255,255,255,0.5)' }}
+                              sx={{ color: "rgba(255,255,255,0.5)" }}
                             >
-                              {showPassword ? <VisibilityOff /> : <Visibility />}
+                              {showPassword ? (
+                                <VisibilityOff />
+                              ) : (
+                                <Visibility />
+                              )}
                             </IconButton>
                           </InputAdornment>
                         ),
@@ -361,9 +390,9 @@ export default function SignUp() {
                         variant="determinate"
                         value={passwordStrength.score}
                         sx={{
-                          '& .MuiLinearProgress-bar': {
+                          "& .MuiLinearProgress-bar": {
                             background: passwordStrength.color,
-                            transition: 'all 0.3s ease',
+                            transition: "all 0.3s ease",
                           },
                         }}
                       />
@@ -375,35 +404,50 @@ export default function SignUp() {
 
                   {/* Confirm Password */}
                   <FormGroup>
-                    <InputLabel htmlFor="confirmPassword">Confirm Password</InputLabel>
+                    <InputLabel htmlFor="confirmPassword">
+                      Confirm Password
+                    </InputLabel>
                     <StyledTextField
                       fullWidth
                       id="confirmPassword"
                       name="confirmPassword"
-                      type={showConfirmPassword ? 'text' : 'password'}
+                      type={showConfirmPassword ? "text" : "password"}
                       value={values.confirmPassword}
                       onChange={handleChange}
                       onBlur={handleBlur}
                       disabled={isLoading}
                       placeholder="Confirm your password"
-                      error={touched.confirmPassword && Boolean(errors.confirmPassword)}
+                      error={
+                        touched.confirmPassword &&
+                        Boolean(errors.confirmPassword)
+                      }
                       InputProps={{
                         endAdornment: (
                           <InputAdornment position="end">
-                            {values.confirmPassword && values.password && (
-                              values.confirmPassword === values.password ? (
-                                <Check sx={{ color: authColors.success, mr: 1 }} />
+                            {values.confirmPassword &&
+                              values.password &&
+                              (values.confirmPassword === values.password ? (
+                                <Check
+                                  sx={{ color: authColors.success, mr: 1 }}
+                                />
                               ) : (
-                                <Close sx={{ color: authColors.error, mr: 1 }} />
-                              )
-                            )}
+                                <Close
+                                  sx={{ color: authColors.error, mr: 1 }}
+                                />
+                              ))}
                             <IconButton
-                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              onClick={() =>
+                                setShowConfirmPassword(!showConfirmPassword)
+                              }
                               edge="end"
                               size="small"
-                              sx={{ color: 'rgba(255,255,255,0.5)' }}
+                              sx={{ color: "rgba(255,255,255,0.5)" }}
                             >
-                              {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                              {showConfirmPassword ? (
+                                <VisibilityOff />
+                              ) : (
+                                <Visibility />
+                              )}
                             </IconButton>
                           </InputAdornment>
                         ),
@@ -412,37 +456,49 @@ export default function SignUp() {
                     {touched.confirmPassword && errors.confirmPassword && (
                       <ErrorText>{errors.confirmPassword}</ErrorText>
                     )}
-                    {values.confirmPassword && values.password && values.confirmPassword === values.password && (
-                      <Typography sx={{ color: authColors.success, fontSize: '0.75rem', mt: 0.5 }}>
-                        Passwords match
-                      </Typography>
-                    )}
+                    {values.confirmPassword &&
+                      values.password &&
+                      values.confirmPassword === values.password && (
+                        <Typography
+                          sx={{
+                            color: authColors.success,
+                            fontSize: "0.75rem",
+                            mt: 0.5,
+                          }}
+                        >
+                          Passwords match
+                        </Typography>
+                      )}
                   </FormGroup>
 
                   {/* Terms & Conditions */}
                   <TermsContainer>
                     <StyledCheckbox
                       checked={values.agreeTerms}
-                      onChange={(e) => setFieldValue('agreeTerms', e.target.checked)}
+                      onChange={(e) =>
+                        setFieldValue("agreeTerms", e.target.checked)
+                      }
                       disabled={isLoading}
                       size="small"
                     />
                     <TermsLabel>
-                      I agree to the{' '}
+                      I agree to the{" "}
                       <a
                         href="#"
                         onClick={(e) => {
                           e.preventDefault();
                           setShowTermsDialog(true);
                         }}
-                        style={{ cursor: 'pointer' }}
+                        style={{ cursor: "pointer" }}
                       >
                         Terms of Service & Data Policy
                       </a>
                     </TermsLabel>
                   </TermsContainer>
                   {touched.agreeTerms && errors.agreeTerms && (
-                    <ErrorText style={{ marginTop: '-0.75rem' }}>{errors.agreeTerms}</ErrorText>
+                    <ErrorText style={{ marginTop: "-0.75rem" }}>
+                      {errors.agreeTerms}
+                    </ErrorText>
                   )}
 
                   {/* Terms & Data Policy Dialog */}
@@ -451,21 +507,31 @@ export default function SignUp() {
                     onClose={() => setShowTermsDialog(false)}
                     scroll="paper"
                   >
-                    <StyledDialogTitle>Terms of Service & Data Policy</StyledDialogTitle>
+                    <StyledDialogTitle>
+                      Terms of Service & Data Policy
+                    </StyledDialogTitle>
                     <StyledDialogContent dividers>
                       <h3>1. Our Commitment to Trust</h3>
                       <p>
-                        At Prism, trust is a core principle of our platform. We build tools that help users create,
-                        manage, and expose databases and APIs efficiently. In doing so, we understand the responsibility
-                        that comes with handling user data.
+                        At Prism, trust is a core principle of our platform. We
+                        build tools that help users create, manage, and expose
+                        databases and APIs efficiently. In doing so, we
+                        understand the responsibility that comes with handling
+                        user data.
                       </p>
                       <p>
-                        Our goal is to provide powerful infrastructure while minimizing unnecessary access and maintaining
+                        Our goal is to provide powerful infrastructure while
+                        minimizing unnecessary access and maintaining
                         transparency about how data is handled.
                       </p>
 
                       <h3>2. Data Ownership</h3>
-                      <p><strong>All data stored in databases created or connected through Prism belongs entirely to the user.</strong></p>
+                      <p>
+                        <strong>
+                          All data stored in databases created or connected
+                          through Prism belongs entirely to the user.
+                        </strong>
+                      </p>
                       <p>Prism does not claim ownership over:</p>
                       <ul>
                         <li>Database records</li>
@@ -473,11 +539,14 @@ export default function SignUp() {
                         <li>API payloads</li>
                         <li>Application data</li>
                       </ul>
-                      <p>Users may export their data and schemas at any time.</p>
+                      <p>
+                        Users may export their data and schemas at any time.
+                      </p>
 
                       <h3>3. Data Access Policy</h3>
                       <p>
-                        Prism does not view, inspect, analyze, or use user data for any purpose other than operating the platform.
+                        Prism does not view, inspect, analyze, or use user data
+                        for any purpose other than operating the platform.
                       </p>
                       <p>Access to user databases is:</p>
                       <ul>
@@ -485,43 +554,69 @@ export default function SignUp() {
                         <li>Logged and monitored</li>
                         <li>Limited to operational needs</li>
                       </ul>
-                      <p>Human access to user data may occur only in the following cases:</p>
+                      <p>
+                        Human access to user data may occur only in the
+                        following cases:
+                      </p>
                       <ul>
-                        <li>When required to provide technical support with explicit user consent</li>
-                        <li>When necessary to investigate platform stability or security incidents</li>
+                        <li>
+                          When required to provide technical support with
+                          explicit user consent
+                        </li>
+                        <li>
+                          When necessary to investigate platform stability or
+                          security incidents
+                        </li>
                       </ul>
 
                       <h3>4. Data Isolation & Security</h3>
-                      <p>User projects are logically isolated from one another.</p>
-                      <p>Prism applies industry-standard security practices to:</p>
+                      <p>
+                        User projects are logically isolated from one another.
+                      </p>
+                      <p>
+                        Prism applies industry-standard security practices to:
+                      </p>
                       <ul>
                         <li>Protect databases from unauthorized access</li>
                         <li>Prevent cross-project data exposure</li>
                         <li>Secure infrastructure and access credentials</li>
                       </ul>
                       <p>
-                        While no system can guarantee absolute security, Prism continuously works to reduce risk and follow
-                        security best practices appropriate for early-stage platforms.
+                        While no system can guarantee absolute security, Prism
+                        continuously works to reduce risk and follow security
+                        best practices appropriate for early-stage platforms.
                       </p>
 
                       <h3>5. Transparency Over Complexity</h3>
-                      <p>Rather than making unverifiable claims, Prism chooses transparency.</p>
+                      <p>
+                        Rather than making unverifiable claims, Prism chooses
+                        transparency.
+                      </p>
                       <p>We believe users should clearly understand:</p>
                       <ul>
                         <li>Where their data is hosted</li>
                         <li>Who can access it</li>
                         <li>Under what circumstances access may occur</li>
                       </ul>
-                      <p>If our data handling practices change, users will be informed clearly and promptly.</p>
+                      <p>
+                        If our data handling practices change, users will be
+                        informed clearly and promptly.
+                      </p>
 
                       <h3>6. User Responsibility</h3>
                       <p>Users are responsible for:</p>
                       <ul>
                         <li>The data they store in Prism</li>
                         <li>Managing access permissions for collaborators</li>
-                        <li>Deciding whether to use Prism for sensitive or regulated data</li>
+                        <li>
+                          Deciding whether to use Prism for sensitive or
+                          regulated data
+                        </li>
                       </ul>
-                      <p>Prism is designed primarily for development, learning, prototyping, and application backend use cases.</p>
+                      <p>
+                        Prism is designed primarily for development, learning,
+                        prototyping, and application backend use cases.
+                      </p>
 
                       <h3>7. No Hidden Use of Data</h3>
                       <p>Prism does not:</p>
@@ -529,14 +624,23 @@ export default function SignUp() {
                         <li>Sell user data</li>
                         <li>Analyze user data for advertising</li>
                         <li>Train AI models using user data</li>
-                        <li>Share user data with third parties except as required to provide the service</li>
+                        <li>
+                          Share user data with third parties except as required
+                          to provide the service
+                        </li>
                       </ul>
 
                       <h3>8. Our Promise</h3>
-                      <p><strong>Prism is built by developers, for developers.</strong></p>
                       <p>
-                        We treat user data with the same care and respect we expect for our own. Trust is not enforced
-                        by complex systems alone — it is maintained through honesty, restraint, and accountability.
+                        <strong>
+                          Prism is built by developers, for developers.
+                        </strong>
+                      </p>
+                      <p>
+                        We treat user data with the same care and respect we
+                        expect for our own. Trust is not enforced by complex
+                        systems alone — it is maintained through honesty,
+                        restraint, and accountability.
                       </p>
                     </StyledDialogContent>
                     <StyledDialogActions>
@@ -545,7 +649,7 @@ export default function SignUp() {
                       </CloseButton>
                       <AcceptButton
                         onClick={() => {
-                          setFieldValue('agreeTerms', true);
+                          setFieldValue("agreeTerms", true);
                           setShowTermsDialog(false);
                         }}
                       >
@@ -564,7 +668,7 @@ export default function SignUp() {
                     {isLoading ? (
                       <ButtonLoadingSkeleton size="medium" />
                     ) : (
-                      'Create Account'
+                      "Create Account"
                     )}
                   </PrimaryButton>
 
@@ -577,10 +681,14 @@ export default function SignUp() {
                   <OAuthButtonsContainer>
                     <OAuthButton
                       variant="outlined"
-                      startIcon={<Google sx={{ fontSize: 18, color: '#DB4437' }} />}
+                      startIcon={
+                        <Google sx={{ fontSize: 18, color: "#DB4437" }} />
+                      }
                       disabled={isLoading}
                       onClick={() => {
-                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+                        const apiUrl =
+                          import.meta.env.VITE_API_URL ||
+                          "http://localhost:4000";
                         window.location.href = `${apiUrl}/auth/oauth/google`;
                       }}
                     >
@@ -591,7 +699,9 @@ export default function SignUp() {
                       startIcon={<GitHub sx={{ fontSize: 18 }} />}
                       disabled={isLoading}
                       onClick={() => {
-                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+                        const apiUrl =
+                          import.meta.env.VITE_API_URL ||
+                          "http://localhost:4000";
                         window.location.href = `${apiUrl}/auth/oauth/github`;
                       }}
                     >
@@ -601,10 +711,13 @@ export default function SignUp() {
 
                   {/* Sign In Link */}
                   <FooterText>
-                    <Typography component="span" sx={{ color: 'inherit' }}>
-                      Already have an account?{' '}
+                    <Typography component="span" sx={{ color: "inherit" }}>
+                      Already have an account?{" "}
                     </Typography>
-                    <RouterLink to={ROUTES.SIGN_IN} style={{ textDecoration: 'none' }}>
+                    <RouterLink
+                      to={ROUTES.SIGN_IN}
+                      style={{ textDecoration: "none" }}
+                    >
                       <StyledLink as="span">Sign in</StyledLink>
                     </RouterLink>
                   </FooterText>

@@ -27,13 +27,12 @@ export const Logo = styled(Box)({
   cursor: 'pointer',
 });
 
-export const LogoIcon = styled(Box)(({ theme }) => {
-  const colors = getWorkspaceColors(theme.palette.mode === 'dark');
+export const  LogoIcon = styled(Box)(({ theme }) => {
   return {
     width: '2rem',
     height: '2rem',
     borderRadius: '0.5rem',
-    background: colors.gradientPrimary,
+    background: 'white',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
