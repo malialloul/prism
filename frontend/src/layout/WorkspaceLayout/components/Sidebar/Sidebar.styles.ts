@@ -8,7 +8,6 @@ export const SidebarWrapper = styled(Box)(({ theme }) => {
   return {
     width: '280px',
     minWidth: '280px',
-    height: 'calc(100vh - 60px)',
     backgroundColor: colors.backgroundSecondary,
     borderRight: `1px solid ${colors.border}`,
     display: 'flex',
