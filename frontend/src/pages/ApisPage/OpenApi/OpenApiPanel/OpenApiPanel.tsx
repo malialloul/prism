@@ -70,9 +70,10 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
   });
 
   const handleCopyEndpoint = (endpoint: string, type: string) => {
+    const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
     const fullUrl = type === 'public'
       ? getPublicEndpoint({ endpoint } as SavedQueryDto)
-      : `${window.location.origin}${endpoint}`;
+      : `${apiBaseUrl}${endpoint}`;
     navigator.clipboard.writeText(fullUrl);
     setCopiedEndpoint(`${endpoint}-${type}`);
     setTimeout(() => setCopiedEndpoint(null), 2000);
@@ -202,8 +203,9 @@ export default function OpenApiPanel({ connectedDatabase }: OpenApiPanelProps) {
   };
 
   const getPublicEndpoint = (api: SavedQueryDto) => {
+    const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
     const slug = getSlugFromEndpoint(api.endpoint);
-    return `${window.location.origin}/databases/public/${databaseId}/custom-api/${slug}`;
+    return `${apiBaseUrl}/databases/public/${databaseId}/custom-api/${slug}`;
   };
 
   // Show skeleton while loading

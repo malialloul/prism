@@ -402,7 +402,7 @@ export default function TryItPanelComponent({ endpoint, columns, databaseId }: T
                     {/* Endpoint path */}
                     <TryItSection sx={{ py: 1, borderBottom: 1, borderColor: 'divider' }}>
                         <Box sx={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'text.secondary', wordBreak: 'break-all' }}>
-                            {endpoint.path}
+                            {(import.meta.env.VITE_API_URL || 'http://localhost:4000')}{endpoint.path}
                         </Box>
                     </TryItSection>
 

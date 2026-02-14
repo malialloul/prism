@@ -5,6 +5,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { Box, Typography, IconButton, Tooltip, alpha } from '@mui/material';
 import type { ApiEndpointsProps } from './types';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
 export function ApiEndpoints({
   api,
   copiedEndpoint,
@@ -30,7 +32,7 @@ export function ApiEndpoints({
         }}>
           <LockIcon sx={{ fontSize: 16, color: colors.textMuted }} />
           <Typography sx={{ flex: 1, fontFamily: 'monospace', fontSize: '0.8rem' }}>
-            {window.location.origin}{api.endpoint}
+            {API_BASE_URL}{api.endpoint}
           </Typography>
           <Tooltip title={copiedEndpoint === `${api.endpoint}-auth` ? 'Copied!' : 'Copy'}>
             <IconButton size="small" onClick={() => onCopyEndpoint(api.endpoint || '', 'auth')}>
